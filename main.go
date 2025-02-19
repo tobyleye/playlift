@@ -56,9 +56,6 @@ func ensureLogin(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func main() {
-	t := &Template{
-		templates: template.Must(template.ParseGlob("./public/views/*.html")),
-	}
 
 	dbConfig := mysql.Config{
 		User:                 os.Getenv("DB_USER"),
@@ -87,7 +84,9 @@ func main() {
 
 	e.Use(middleware.CORSWithConfig(corsConfig))
 
-	e.Renderer = t
+	e.Renderer = &Template{
+		templates: nil,
+	}
 
 	ctx := context.Background()
 	config := clientcredentials.Config{
