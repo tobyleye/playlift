@@ -1,0 +1,356 @@
+package ytmusicapi
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+)
+
+type SearchResultItem struct {
+	VideoId string
+	Title   string
+	Artists []string
+	Link    string
+}
+
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
+const YTM_DOMAIN = "https://music.youtube.com"
+
+var headers = map[string]string{
+	"user-agent":   USER_AGENT,
+	"accept":       "*/*",
+	"content-type": "application/json",
+	"origin":       YTM_DOMAIN,
+}
+
+var SEPERATOR = " • "
+
+func getSearchParams(filter, scope string, ignoreSpelling bool) string {
+	filteredParam1 := "EgWKAQ"
+	var params string
+	var param1, param2, param3 string
+
+	if filter == "" && scope == "" && !ignoreSpelling {
+		return params
+	}
+
+	if scope == "uploads" {
+		params = "agIYAw%3D%3D"
+	}
+
+	if scope == "library" {
+		if filter != "" {
+			param1 = filteredParam1
+			param2 = getParam2(filter)
+			param3 = "AWoKEAUQCRADEAoYBA%3D%3D"
+		} else {
+			params = "agIYBA%3D%3D"
+		}
+	}
+
+	if scope == "" && filter != "" {
+		if filter == "playlists" {
+			params = "Eg-KAQwIABAAGAAgACgB"
+			if !ignoreSpelling {
+				params += "MABqChAEEAMQCRAFEAo%3D"
+			} else {
+				params += "MABCAggBagoQBBADEAkQBRAK"
+			}
+
+		} else if filter == "featured_playlists" || filter == "community_playlists" {
+			param1 = "EgeKAQQoA"
+			if filter == "featured_playlists" {
+				param2 = "Dg"
+			} else { // community_playlists
+				param2 = "EA"
+			}
+
+			if !ignoreSpelling {
+				param3 = "BagwQDhAKEAMQBBAJEAU%3D"
+			} else {
+				param3 = "BQgIIAWoMEA4QChADEAQQCRAF"
+			}
+
+		} else {
+			param1 = filteredParam1
+			param2 = getParam2(filter)
+			if !ignoreSpelling {
+				param3 = "AWoMEA4QChADEAQQCRAF"
+			} else {
+				param3 = "AUICCAFqDBAOEAoQAxAEEAkQBQ%3D%3D"
+			}
+		}
+	}
+
+	if scope == "" && filter == "" && ignoreSpelling {
+		params = "EhGKAQ4IARABGAEgASgAOAFAAUICCAE%3D"
+	}
+
+	if params != "" {
+		return params
+	}
+
+	return param1 + param2 + param3
+}
+
+// Helper function for param2
+func getParam2(filter string) string {
+	filterParams := map[string]string{
+		"songs":     "II",
+		"videos":    "IQ",
+		"albums":    "IY",
+		"artists":   "Ig",
+		"playlists": "Io",
+		"profiles":  "JY",
+		"podcasts":  "JQ",
+		"episodes":  "JI",
+	}
+
+	return filterParams[filter]
+}
+
+func getArtists(artistsFlexRendererRuns []interface{}) []string {
+	var artists = []string{}
+	for _, artistRun := range artistsFlexRendererRuns {
+		artist := ReadValueString(artistRun, []interface{}{"text"})
+		if artist != "" {
+			artists = append(artists, artist)
+		}
+	}
+	return artists
+}
+
+func parseSearchResultItem(result interface{}) SearchResultItem {
+	result = ReadValue(result, []interface{}{"musicResponsiveListItemRenderer"})
+	flexColumns := ReadValue(result, []interface{}{"flexColumns"})
+
+	var title string = ""
+	// var artist string = ""
+	var artists []string
+
+	flexColumnsSlice, ok := flexColumns.([]interface{})
+	if ok {
+		title = ReadValueString(flexColumnsSlice[0], []interface{}{"musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "text"})
+		artists = getArtists(ReadValue(flexColumnsSlice[1], []interface{}{"musicResponsiveListItemFlexColumnRenderer", "text", "runs"}).([]interface{}))
+		// artist = ReadValueString(flexColumnsSlice[1], []interface{}{"musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "text"})
+	}
+
+	videoId := ReadValueString(result, []interface{}{
+		"overlay",
+		"musicItemThumbnailOverlayRenderer",
+		"content",
+		"musicPlayButtonRenderer",
+		"playNavigationEndpoint",
+		"watchEndpoint",
+		"videoId"})
+
+	return SearchResultItem{
+		VideoId: videoId,
+		Title:   title,
+		Artists: artists,
+		Link:    fmt.Sprintf("https://music.youtube.com/watch?v=%s", videoId),
+	}
+}
+
+func sendRequest(httpClient *http.Client, endpoint string, body map[string]interface{}) ([]byte, interface{}, error) {
+	url := fmt.Sprintf("https://music.youtube.com/youtubei/v1/%s?alt=json", endpoint)
+
+	defaultBody := map[string]interface{}{
+		"context": map[string]interface{}{
+			"client": map[string]interface{}{
+				"clientName":    "WEB_REMIX",
+				"clientVersion": fmt.Sprintf("1.%s.01.00", time.Now().UTC().Format("20060102")),
+			},
+			"user": map[string]interface{}{},
+		},
+	}
+
+	for key, value := range defaultBody {
+		body[key] = value
+	}
+
+	bodyStr, _ := json.Marshal(body)
+	bodyReader := bytes.NewReader(bodyStr)
+
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, url, bodyReader)
+
+	for key, value := range headers {
+		req.Header.Add(key, value)
+	}
+
+	res, err := httpClient.Do(req)
+
+	// fmt.Println("\n\nstatus code:", res.StatusCode)
+
+	if err != nil {
+		fmt.Println("error sending request", err)
+		return []byte(""), nil, err
+
+	}
+
+	defer res.Body.Close()
+
+	resBody, err := io.ReadAll(res.Body)
+	var data interface{}
+	// ignore error
+	json.Unmarshal(resBody, &data)
+	return resBody, data, err
+}
+
+func Search(searchQuery string) ([]SearchResultItem, error) {
+	filter := "songs"
+	scope := ""
+	ignoreSpelling := true
+
+	params := getSearchParams(filter, scope, ignoreSpelling)
+	body := map[string]interface{}{"query": searchQuery}
+	if params != "" {
+		body["params"] = params
+
+	}
+
+	_, data, err := sendRequest(nil, "search", body)
+	if err != nil {
+		return nil, err
+	}
+
+	content := ReadValue(data, []interface{}{"contents", "tabbedSearchResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicShelfRenderer", "contents"})
+
+	var results []SearchResultItem
+
+	if content, ok := content.([]interface{}); ok {
+		for _, item := range content {
+			parsedResult := parseSearchResultItem(item)
+			results = append(results, parsedResult)
+
+		}
+	}
+
+	return results, nil
+}
+
+func FetchPlaylist(playlistId string) (interface{}, error) {
+	browseId := playlistId
+
+	if !strings.HasPrefix(browseId, "VL") {
+		browseId = "VL" + browseId
+	}
+
+	body := map[string]interface{}{
+		"browseId": browseId,
+	}
+	_, jsonResponse, err := sendRequest(nil, "browse", body)
+	if err != nil {
+		return nil, err
+	}
+
+	var playlistTracks []SearchResultItem
+
+	playlistItemsContents := ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "secondaryContents", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
+
+	SaveJson(playlistItemsContents, playlistId)
+
+	if content, ok := playlistItemsContents.([]interface{}); ok {
+		for _, itemContent := range content {
+			item := parseSearchResultItem(itemContent)
+			playlistTracks = append(playlistTracks, item)
+		}
+	}
+
+	return struct {
+		PlaylistTracks []SearchResultItem
+	}{
+		PlaylistTracks: playlistTracks,
+	}, nil
+}
+
+type YoutubePlaylist struct {
+	Title       string   `json:"title"`
+	Thumbnails  []string `json:"thumbnails"`
+	TotalTracks string   `json:"total_tracks"`
+	PlaylistId  string   `json:"playlist_id"`
+	Url         string   `json:"url"`
+}
+
+func getPlaylistTotalTracks(subtitleRuns []interface{}) string {
+	lastTextRun := subtitleRuns[len(subtitleRuns)-1]
+	totalTracksText := ReadValueString(lastTextRun, []interface{}{"text"})
+	totalTracks := strings.Split(totalTracksText, " ")[0]
+	return totalTracks
+}
+
+func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
+	fmt.Println("fetching user playlists...")
+	body := map[string]interface{}{
+		"browseId": "FEmusic_liked_playlists",
+	}
+	_, jsonResponse, err := sendRequest(httpClient, "browse", body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	itemsKey := []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "gridRenderer", "items"}
+	playlistItemsContents := ReadValue(jsonResponse, itemsKey)
+
+	youtubePlaylists := []YoutubePlaylist{}
+
+	if items, ok := playlistItemsContents.([]interface{}); ok {
+		// first item is a  new playlist button
+		// second item is liked music
+		// so we skip the first 2 items
+
+		if len(items) > 2 {
+			for _, item := range items[2:] {
+				itemRow := ReadValue(item, []interface{}{"musicTwoRowItemRenderer"})
+				title := ReadValueString(itemRow, []interface{}{"title", "runs", 0, "text"})
+
+				thumbnails, _ := ReadValue(itemRow, []interface{}{"thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"}).([]interface{})
+
+				thumbnailUrls := []string{}
+
+				subtitleRuns, _ := ReadValue(itemRow, []interface{}{"subtitle", "runs"}).([]interface{})
+
+				for _, thumbnail := range thumbnails {
+					thumnailMap, _ := thumbnail.(map[string]interface{})
+					url, _ := thumnailMap["url"].(string)
+					if url != "" {
+						thumbnailUrls = append(thumbnailUrls, url)
+					}
+
+				}
+
+				totalTracks := getPlaylistTotalTracks(subtitleRuns)
+
+				playlistId := ReadValueString(itemRow, []interface{}{"title", "runs", 0, "navigationEndpoint", "browseEndpoint", "browseId"})
+
+				if len(playlistId) > 2 && playlistId[0:2] == "VL" {
+					playlistId = playlistId[2:]
+				}
+
+				playlist := YoutubePlaylist{
+					Title:       title,
+					Thumbnails:  thumbnailUrls,
+					TotalTracks: totalTracks,
+					PlaylistId:  playlistId,
+					Url:         fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+				}
+
+				youtubePlaylists = append(youtubePlaylists, playlist)
+
+			}
+		}
+	}
+
+	SaveJson(youtubePlaylists, "user_playlists")
+
+	return youtubePlaylists, nil
+}

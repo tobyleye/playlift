@@ -1,0 +1,25 @@
+# Config file for Air
+root = "."
+tmp_dir = "tmp"
+[build]
+  bin = "main"
+  cmd = "go build -o ./tmp/main ."
+  full_bin = "tmp/main"
+  delay = 200
+  exclude_dir = ["tmp", "vendor", "web"]
+  include_ext = ["go"]
+  exclude_ext = ["go"]
+  include = []
+  exclude = []
+  follow_symlink = true
+  follow = []
+  exclude_files = []
+[log]
+  colored = true
+  timestamp = false
+[live]
+  open_browser = false
+  delay = 200
+  open_url = "http://localhost:8080"
+  debug = false
+  addr = ":8080"

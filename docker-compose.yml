@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3308
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=playlistconverter
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+      - /app/tmp
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: playlistconverter
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
