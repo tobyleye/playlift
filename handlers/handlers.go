@@ -38,10 +38,6 @@ type Handlers struct {
 	SessionStore  *sessions.CookieStore
 }
 
-func (h Handlers) Home(c echo.Context) error {
-	return c.Render(200, "home", nil)
-}
-
 var YOUTUBE_MUSIC = "youtube_music"
 var SPOTIFY = "spotify"
 

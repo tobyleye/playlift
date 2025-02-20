@@ -77,7 +77,7 @@ export default function ConvertPlaylist() {
       console.log("Converting playlist:", playlistData, playlistUrl);
       const response = await api.convert(playlistUrl, destination);
       console.log("response --", response);
-      let jobId = response.job_id;
+      const jobId = response.job_id;
       if (jobId) {
         navigate(`/status2/${jobId}`);
       } else {

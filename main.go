@@ -55,6 +55,31 @@ func ensureLogin(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func serveFrontend(e *echo.Echo) {
+	// Serve frontend in production mode
+	// Check environment mode
+	// appEnv := os.Getenv("APP_ENV")
+
+	fmt.Println("registering frontend route")
+	// if appEnv == "production" {
+	// e.Static("/", "./web/dist")
+	// frontendHandler := http.FileServer(http.Dir("client/build"))
+
+	e.Static("/assets", "./web/dist/assets") // Adjust the path if necessary
+	e.Static("/js", "./web/dist/js")         // Serve JS if it's in a separate folder
+	e.Static("/css", "./web/dist/css")       // Serve CSS if in a separate folder
+
+	e.GET("/", func(c echo.Context) error {
+		return c.File("./web/dist/index.html")
+	})
+
+	e.GET("/*", func(c echo.Context) error {
+		fmt.Println("inside global route")
+		return c.File("./web/dist/index.html")
+	})
+
+}
+
 func main() {
 
 	dbConfig := mysql.Config{
@@ -98,13 +123,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(token)
+
 	httpClient := spotifyAuth.New().Client(ctx, token)
-
 	spotifyClient := spotify.New(httpClient)
-
-	// option.WithAPIKey(AppConfig.GOOGLE_API_KEY)
-
 	youtubeClient, _ := youtube.NewService(ctx, option.WithAPIKey(AppConfig.GOOGLE_API_KEY))
 
 	handlers := handlers.Handlers{
@@ -115,12 +136,20 @@ func main() {
 		SessionStore:  SessionStore,
 	}
 
-	// routes
-	e.GET("/", handlers.Home)
-	e.GET("/preview", handlers.PreviewLink)
+	// define api routes
 
 	e.GET("/login/google", handlers.LoginWithGoogle)
 	e.GET("/login/google/callback", handlers.LoginWithGoogleCallback)
+
+	e.Any("/*", func(c echo.Context) error {
+		fmt.Println("global route catch")
+		c.JSON(200, map[string]string{"message": "hello world"})
+		return nil
+	})
+
+	//api routes
+	api := e.Group("/api")
+	api.GET("/preview", handlers.PreviewLink)
 
 	privateRoutes := e.Group("", ensureLogin)
 
@@ -139,5 +168,10 @@ func main() {
 	privateRoutes.GET("/playlists/youtube", handlers.FetchUserYoutubePlaylists)
 	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)
 
-	e.Logger.Fatal(e.Start(":8181"))
+	// serve frontend. this should always be done after routes are registered
+	serveFrontend(e)
+
+	port := os.Getenv("PORT")
+
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
 }

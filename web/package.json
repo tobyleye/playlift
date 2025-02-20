@@ -1,12 +1,14 @@
 {
-  "name": "frontend",
+  "name": "playlist-converter-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port 3500",
     "build": "tsc -b && vite build",
+    "build-w-checks": "tsc --skipLibCheck --noEmitOnError false && vite build",
     "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "preview": "vite preview"
   },
   "dependencies": {
