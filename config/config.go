@@ -29,28 +29,27 @@ func getEnvOrThrow(varname string) string {
 		log.Fatal(varname + " is not set")
 	}
 	return envValue
-
 }
 func init() {
 
 	err := godotenv.Load()
 
 	if err != nil {
-		log.Fatal("Error loading .env file")
-	} else {
-		GOOGLE_API_KEY = getEnvOrThrow("GOOGLE_API_KEY")
-
-		SPOTIFY_CLIENT_ID = getEnvOrThrow("SPOTIFY_CLIENT_ID")
-
-		SPOTIFY_CLIENT_SECRET = getEnvOrThrow("SPOTIFY_CLIENT_SECRET")
-
-		GOOGLE_CLIENT_ID = getEnvOrThrow("GOOGLE_CLIENT_ID")
-
-		GOOGLE_CLIENT_SECRET = getEnvOrThrow("GOOGLE_CLIENT_SECRET")
-
-		STRIPE_SECRET_KEY = getEnvOrThrow("STRIPE_SECRET_KEY")
-		SESSION_KEY = getEnvOrThrow("SESSION_KEY")
-
+		log.Println("Error loading .env file")
 	}
+
+	GOOGLE_API_KEY = getEnvOrThrow("GOOGLE_API_KEY")
+
+	SPOTIFY_CLIENT_ID = getEnvOrThrow("SPOTIFY_CLIENT_ID")
+
+	SPOTIFY_CLIENT_SECRET = getEnvOrThrow("SPOTIFY_CLIENT_SECRET")
+
+	GOOGLE_CLIENT_ID = getEnvOrThrow("GOOGLE_CLIENT_ID")
+
+	GOOGLE_CLIENT_SECRET = getEnvOrThrow("GOOGLE_CLIENT_SECRET")
+
+	SESSION_KEY = getEnvOrThrow("SESSION_KEY")
+
+	STRIPE_SECRET_KEY = os.Getenv("STRIPE_SECRET_KEY")
 
 }

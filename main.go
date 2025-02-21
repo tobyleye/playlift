@@ -141,17 +141,11 @@ func main() {
 	e.GET("/login/google", handlers.LoginWithGoogle)
 	e.GET("/login/google/callback", handlers.LoginWithGoogleCallback)
 
-	e.Any("/*", func(c echo.Context) error {
-		fmt.Println("global route catch")
-		c.JSON(200, map[string]string{"message": "hello world"})
-		return nil
-	})
-
 	//api routes
 	api := e.Group("/api")
 	api.GET("/preview", handlers.PreviewLink)
 
-	privateRoutes := e.Group("", ensureLogin)
+	privateRoutes := api.Group("", ensureLogin)
 
 	privateRoutes.POST("/convert", handlers.Convert)
 	privateRoutes.GET("/conversions/:id", handlers.GetSingleConversion)
