@@ -33,7 +33,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
         bg="blackAlpha.300"
         backdropFilter="blur(6px) hue-rotate(90deg)"
       />
-      <ModalContent>
+      <ModalContent margin={4}>
         <ModalBody>
           <Box textAlign="center" py={4}>
             <Text fontSize="2xl" fontWeight={600} mb={2}>

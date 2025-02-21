@@ -17,12 +17,12 @@ var (
 	SESSION_KEY                string
 	GOOGLE_LOGIN_REDIRECT_URL  string
 	SPOTIFY_LOGIN_REDIRECT_URL string
+	FRONTEND_BASE_URL          string
 )
 
 const (
-	YOUTUBE_HOST      = "music.youtube.com"
-	SPOTIFY_HOST      = "open.spotify.com"
-	FRONTEND_BASE_URL = "http://localhost:3500"
+	YOUTUBE_HOST = "music.youtube.com"
+	SPOTIFY_HOST = "open.spotify.com"
 )
 
 func getEnvOrThrow(varname string) string {
@@ -56,5 +56,6 @@ func init() {
 
 	GOOGLE_LOGIN_REDIRECT_URL = getEnvOrThrow("GOOGLE_LOGIN_REDIRECT_URL")
 	SPOTIFY_LOGIN_REDIRECT_URL = getEnvOrThrow("SPOTIFY_LOGIN_REDIRECT_URL")
+	FRONTEND_BASE_URL = getEnvOrThrow("FRONTEND_BASE_URL")
 
 }

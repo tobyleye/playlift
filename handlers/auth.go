@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/labstack/echo-contrib/session"
+	echoSessionMiddleware "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/models"
+	"github.com/tobyleye/playlist-converter/session"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	oauth2_v2 "google.golang.org/api/oauth2/v2"
@@ -105,7 +106,7 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 			fmt.Print("new token", token)
 
-			session, _ := session.Get("user", c)
+			session, _ := echoSessionMiddleware.Get("user", c)
 			// session.Options = &sessions.Options{
 			// 	Path:     "/",
 			// 	MaxAge:   86400 * 7,
@@ -132,18 +133,17 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 func (h Handlers) GetUserSession(c echo.Context) error {
 
-	session, _ := session.Get("user", c)
+	// session, _ := echoSessionMiddleware.Get("user", c)
 
-	user := make(map[string]interface{})
-
-	user["userId"] = session.Values["userId"]
-	user["email"] = session.Values["email"]
-	user["name"] = session.Values["name"]
-	user["userId"] = session.Values["userId"]
-	user["picture"] = session.Values["picture"]
+	user := session.GetUserFromSession(c)
 
 	fmt.Printf("user: %v\n", user)
 
 	return c.JSON(200, user)
 
+}
+
+func (h Handlers) Logout(c echo.Context) error {
+	// Todo:
+	return nil
 }
