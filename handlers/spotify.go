@@ -16,9 +16,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var redirectURL = "http://localhost:8181/callback/spotify"
-
-var auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURL),
+var auth = spotifyauth.New(spotifyauth.WithRedirectURL(config.SPOTIFY_LOGIN_REDIRECT_URL),
 	spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopeUserLibraryRead),
 	spotifyauth.WithClientID(config.SPOTIFY_CLIENT_ID),
 	spotifyauth.WithClientSecret(config.SPOTIFY_CLIENT_SECRET))

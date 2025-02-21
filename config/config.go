@@ -8,13 +8,15 @@ import (
 )
 
 var (
-	GOOGLE_API_KEY        string
-	SPOTIFY_CLIENT_ID     string
-	SPOTIFY_CLIENT_SECRET string
-	GOOGLE_CLIENT_ID      string
-	GOOGLE_CLIENT_SECRET  string
-	STRIPE_SECRET_KEY     string
-	SESSION_KEY           string
+	GOOGLE_API_KEY             string
+	SPOTIFY_CLIENT_ID          string
+	SPOTIFY_CLIENT_SECRET      string
+	GOOGLE_CLIENT_ID           string
+	GOOGLE_CLIENT_SECRET       string
+	STRIPE_SECRET_KEY          string
+	SESSION_KEY                string
+	GOOGLE_LOGIN_REDIRECT_URL  string
+	SPOTIFY_LOGIN_REDIRECT_URL string
 )
 
 const (
@@ -51,5 +53,8 @@ func init() {
 	SESSION_KEY = getEnvOrThrow("SESSION_KEY")
 
 	STRIPE_SECRET_KEY = os.Getenv("STRIPE_SECRET_KEY")
+
+	GOOGLE_LOGIN_REDIRECT_URL = getEnvOrThrow("GOOGLE_LOGIN_REDIRECT_URL")
+	SPOTIFY_LOGIN_REDIRECT_URL = getEnvOrThrow("SPOTIFY_LOGIN_REDIRECT_URL")
 
 }

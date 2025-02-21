@@ -19,7 +19,7 @@ var googleLoginConfig = oauth2.Config{
 	ClientID:     config.GOOGLE_CLIENT_ID,
 	ClientSecret: config.GOOGLE_CLIENT_SECRET,
 	Endpoint:     google.Endpoint,
-	RedirectURL:  "http://localhost:8181/login/google/callback",
+	RedirectURL:  config.GOOGLE_LOGIN_REDIRECT_URL,
 	Scopes: []string{
 		"https://www.googleapis.com/auth/youtube",
 		"https://www.googleapis.com/auth/userinfo.email",
