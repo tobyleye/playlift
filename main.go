@@ -137,9 +137,14 @@ func main() {
 	}
 
 	// define api routes
-
 	e.GET("/login/google", handlers.LoginWithGoogle)
 	e.GET("/login/google/callback", handlers.LoginWithGoogleCallback)
+
+	e.GET("/connect/spotify", handlers.SpotifyLogin, ensureLogin)
+	e.GET("/callback/spotify", handlers.SpotifyLoginCallback, ensureLogin)
+
+	e.GET("/connect/youtube", handlers.YoutubeConnect, ensureLogin)
+	e.GET("/callback/youtube", handlers.YoutubeConnectCallback, ensureLogin)
 
 	//api routes
 	api := e.Group("/api")
@@ -153,11 +158,6 @@ func main() {
 	privateRoutes.DELETE("/conversions/:id", handlers.DeleteConversion)
 	privateRoutes.GET("/conversions", handlers.GetAllConversions)
 	privateRoutes.GET("/user/session", handlers.GetUserSession)
-	privateRoutes.GET("/connect/spotify", handlers.SpotifyLogin)
-	privateRoutes.GET("/callback/spotify", handlers.SpotifyLoginCallback)
-
-	privateRoutes.GET("/connect/youtube", handlers.YoutubeLogin)
-	privateRoutes.GET("/callback/youtube", handlers.YoutubeLoginCallback)
 
 	privateRoutes.GET("/playlists/youtube", handlers.FetchUserYoutubePlaylists)
 	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)

@@ -9,34 +9,22 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/models"
+	"github.com/tobyleye/playlist-converter/oauth"
 	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
 	"github.com/tobyleye/playlist-converter/session"
-	"github.com/tobyleye/playlist-converter/utils"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 )
 
-var googleConnectConfig = oauth2.Config{
-	ClientID:     config.GOOGLE_CLIENT_ID,
-	ClientSecret: config.GOOGLE_CLIENT_SECRET,
-	Endpoint:     google.Endpoint,
-	RedirectURL:  "http://localhost:8181/callback/youtube",
-	Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/youtube"},
-}
-
-func (h Handlers) YoutubeLogin(c echo.Context) error {
-
-	url := utils.GoogleConnectConfig.AuthCodeURL("state")
-
+func (h Handlers) YoutubeConnect(c echo.Context) error {
+	url := oauth.GoogleOauthConfig.AuthCodeURL("state")
 	return c.Redirect(302, url)
 }
 
-func (h Handlers) YoutubeLoginCallback(c echo.Context) error {
+func (h Handlers) YoutubeConnectCallback(c echo.Context) error {
 	code := c.QueryParam("code")
 
 	user := session.GetUserFromSession(c)
 
-	tokens, err := utils.GoogleConnectConfig.Exchange(c.Request().Context(), code)
+	tokens, err := oauth.GoogleOauthConfig.Exchange(c.Request().Context(), code)
 	fmt.Printf("tokens: %v\n", tokens)
 	fmt.Printf("tokens refresh token: %v\n", tokens.RefreshToken)
 
@@ -63,47 +51,21 @@ func (h Handlers) YoutubeLoginCallback(c echo.Context) error {
 }
 
 func (h Handlers) FetchUserYoutubePlaylists(c echo.Context) error {
-	var token models.Token
 
 	user := session.GetUserFromSession(c)
 
 	fmt.Println("getting playlist for user:", user)
 
-	h.Db.Where(&models.Token{
-		UserId:   user.UserId,
-		Platform: "youtube",
-	}).First(&token)
+	httpClient, err := oauth.CreateYoutubeClient(h.Db, user.UserId)
 
-	if token.UserId == "" {
-		return c.JSON(401, "unauthorized")
+	if err != nil {
+		return c.JSON(401, "token not  missing")
 	}
-
-	oauthToken := &oauth2.Token{
-		AccessToken:  token.AccessToken,
-		RefreshToken: token.RefreshToken,
-		TokenType:    token.TokenType,
-		Expiry:       token.ExpiresIn,
-	}
-
-	// tokenSource := googleConnectConfig.TokenSource(c.Request().Context(), oauthToken)
-	// newToken, err := tokenSource.Token()
-	// if err != nil {
-	// 	log.Println("Token refresh failed:", err)
-	// }
-
-	// log.Println("new token:", newToken)
-	// fmt.Println("oauth token:", oauthToken)
-	// httpClient := oauth2.NewClient(c.Request().Context(), tokenSource)
-
-	httpClient := utils.CreateHTTPClient(c.Request().Context(), oauthToken)
-
-	// service, _ := youtube.NewService(c.Request().Context(), option.WithHTTPClient(httpClient))
-	// playlists, err := service.Playlists.List([]string{"contentDetails", "snippet"}).Mine(true).MaxResults(50).Do()
 
 	playlists, err := ytmusicapi.FetchUserPlaylists(httpClient)
 
 	if err != nil {
-		fmt.Println("fetch playlist error:", err)
+		log.Println("fetch playlist error:", err)
 		return c.JSON(400, "Couldn't fetch playlists")
 	}
 

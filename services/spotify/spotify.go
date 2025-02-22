@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/types"
@@ -134,14 +135,15 @@ func getTrackDetails(client *spotify.Client, ctx context.Context, trackId string
 	return simpleTrack, nil
 }
 
-func SearchSpotify(spotifyClient *spotify.Client, ctx context.Context, query string) (types.SimpleTrack, error) {
+func SearchSpotify(spotifyClient *spotify.Client, ctx context.Context, searchQuery types.SearchQuery) (types.SimpleTrack, error) {
+
+	query := fmt.Sprintf("track:%s artist:%s", searchQuery.Title, strings.Join(searchQuery.Artists, ", "))
 
 	searchResult, err := spotifyClient.Search(ctx, query, spotify.SearchTypeTrack)
 	if err != nil {
 		return types.SimpleTrack{}, err
 	}
 
-	// fmt.Printf("search result: %#v\n", searchResult.Tracks.Tracks)
 	tracks := searchResult.Tracks.Tracks
 
 	if len(tracks) > 0 {
@@ -212,6 +214,31 @@ func GetUserPlaylists(client *spotify.Client, ctx context.Context) (types.Simple
 
 	return playlistPage, nil
 
+}
+
+func CreatePlaylist(client *spotify.Client, ctx context.Context, userID string, playlistName string, description string, trackIds []string) (string, error) {
+	collaborative := false
+	public := true
+
+	playlist, err := client.CreatePlaylistForUser(ctx, userID, playlistName, description, public, collaborative)
+
+	if err != nil {
+		return "", err
+	}
+
+	spotifyIds := []spotify.ID{}
+	for _, id := range trackIds {
+		spotifyId := spotify.ID(id)
+		spotifyIds = append(spotifyIds, spotifyId)
+	}
+
+	_, err = client.AddTracksToPlaylist(ctx, playlist.ID, spotifyIds...)
+
+	if err != nil {
+		return "", err
+	}
+
+	return playlist.ID.String(), nil
 }
 
 func CreateSpotifyClient(ctx context.Context) *spotify.Client {

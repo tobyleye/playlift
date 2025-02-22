@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/tobyleye/playlist-converter/types"
 )
 
 type SearchResultItem struct {
@@ -205,13 +207,15 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 	return resBody, data, err
 }
 
-func Search(searchQuery string) ([]SearchResultItem, error) {
+func Search(searchQuery types.SearchQuery) ([]SearchResultItem, error) {
 	filter := "songs"
 	scope := ""
 	ignoreSpelling := true
 
+	query := searchQuery.Title + " by " + strings.Join(searchQuery.Artists, ", ")
+
 	params := getSearchParams(filter, scope, ignoreSpelling)
-	body := map[string]interface{}{"query": searchQuery}
+	body := map[string]interface{}{"query": query}
 	if params != "" {
 		body["params"] = params
 
@@ -353,4 +357,25 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 	SaveJson(youtubePlaylists, "user_playlists")
 
 	return youtubePlaylists, nil
+}
+
+func CreatePlaylist(client *http.Client, title string, description string, videoIds []string) (string, error) {
+	// privacy_status: Playlists can be ``PUBLIC``, ``PRIVATE``, or ``UNLISTED``. Default: ``PRIVATE``
+	privacyStatus := "PRIVATE"
+
+	endpoint := "playlist/create"
+	body := map[string]interface{}{
+		"title":         title,
+		"description":   description,
+		"privacyStatus": privacyStatus,
+		"videoIds":      videoIds,
+	}
+	_, data, err := sendRequest(client, endpoint, body)
+
+	fmt.Println("create playlist response:", data)
+	if err != nil {
+		return "", err
+	}
+
+	return "done", nil
 }

@@ -24,22 +24,26 @@ type User struct {
 	Picture   string    `json:"picture"`
 	CreatedAt time.Time `json:"created_at"`
 	Tokens    []Token
+	SpotifyId string `json:"spotify_id"`
+	YoutubeId string `json:"youtube_id"`
 }
 
 type Conversion struct {
-	Title               string                 `gorm:"column:title" json:"title"`
-	ID                  string                 `gorm:"primaryKey" json:"id"`
-	Link                string                 `gorm:"column:link" json:"link"`
-	ResourceType        string                 `gorm:"column:resource_type" json:"resource_type"`
-	ResourceId          string                 `gorm:"column:resource_id" json:"resource_id"`
-	SourcePlatform      string                 `gorm:"column:source_platform" json:"source_platform"`
-	DestinationPlatform string                 `gorm:"column:destination_platform" json:"destination_platform"`
-	CreatedAt           time.Time              `gorm:"column:created_at" json:"created_at"`
-	Status              string                 `gorm:"column:status" json:"status"`
-	PlaylistInfo        interface{}            `gorm:"serializer:json;column:playlist_info" json:"playlist_info"`
-	Result              map[string]interface{} `gorm:"serializer:json;column:result" json:"result"`
-	UserId              string                 `gorm:"column:user_id" json:"user_id"`
-	User                User
+	Title                  string                 `gorm:"column:title" json:"title"`
+	ID                     string                 `gorm:"primaryKey" json:"id"`
+	Link                   string                 `gorm:"column:link" json:"link"`
+	ResourceType           string                 `gorm:"column:resource_type" json:"resource_type"`
+	ResourceId             string                 `gorm:"column:resource_id" json:"resource_id"`
+	SourcePlatform         string                 `gorm:"column:source_platform" json:"source_platform"`
+	DestinationPlatform    string                 `gorm:"column:destination_platform" json:"destination_platform"`
+	CreatedAt              time.Time              `gorm:"column:created_at" json:"created_at"`
+	Status                 string                 `gorm:"column:status" json:"status"`
+	PlaylistInfo           interface{}            `gorm:"serializer:json;column:playlist_info" json:"playlist_info"`
+	Result                 map[string]interface{} `gorm:"serializer:json;column:result" json:"result"`
+	UserId                 string                 `gorm:"column:user_id" json:"user_id"`
+	User                   User
+	PlaylistCreationStatus bool   `gorm:"column:playlist_creation_status" json:"playlist_creation_status"`
+	CreatedPlaylistLink    string `gorm:"column:created_playlist_link" json:"created_playlist_link"`
 }
 
 type PlatformsConnectionStatus struct {

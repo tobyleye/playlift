@@ -16,8 +16,9 @@ import (
 	"google.golang.org/api/youtube/v3"
 
 	"github.com/tobyleye/playlist-converter/models"
-	spotify_service "github.com/tobyleye/playlist-converter/services/spotify"
-	youtube_service "github.com/tobyleye/playlist-converter/services/youtube"
+	"github.com/tobyleye/playlist-converter/oauth"
+	SpotifyService "github.com/tobyleye/playlist-converter/services/spotify"
+	YoutubeService "github.com/tobyleye/playlist-converter/services/youtube"
 	ytmusicapi "github.com/tobyleye/playlist-converter/services/ytmusicapi"
 	"github.com/tobyleye/playlist-converter/session"
 	"github.com/tobyleye/playlist-converter/types"
@@ -80,6 +81,7 @@ func (h Handlers) Convert(c echo.Context) error {
 	body := parseBody(c)
 	link := body["link"]
 	user := session.GetUserFromSession(c)
+
 	destinationPlatform := body["to_platform"]
 
 	destinationPlatform = strings.ToLower(destinationPlatform)
@@ -111,9 +113,9 @@ func (h Handlers) Convert(c echo.Context) error {
 	isPreview := false
 
 	if parsedLink.Platform == SPOTIFY {
-		musicLinkInfo, err = spotify_service.GetSpotifyMusicInfo(h.SpotifyClient, h.Context, parsedLink.ID, parsedLink.Type, isPreview)
+		musicLinkInfo, err = SpotifyService.GetSpotifyMusicInfo(h.SpotifyClient, h.Context, parsedLink.ID, parsedLink.Type, isPreview)
 	} else if parsedLink.Platform == YOUTUBE_MUSIC {
-		musicLinkInfo, err = youtube_service.GetYoutubeMusicInfo(h.YoutubeClient, parsedLink.ID, parsedLink.Type)
+		musicLinkInfo, err = YoutubeService.GetYoutubeMusicInfo(h.YoutubeClient, parsedLink.ID, parsedLink.Type)
 	}
 
 	if err != nil {
@@ -125,7 +127,6 @@ func (h Handlers) Convert(c echo.Context) error {
 
 	conversionId := uuid.New().String()
 
-	// preview
 	log.Println("creating conversion...", conversionId, playlistInfo.Name)
 
 	conversion := models.Conversion{
@@ -150,14 +151,16 @@ func (h Handlers) Convert(c echo.Context) error {
 		return c.JSON(500, errorResponse(result.Error.Error()))
 	}
 
-	go startConversion(destinationPlatform, playlistInfo, conversion, h)
+	go startConversion(&conversion, h, user)
 
 	return c.JSON(200, map[string]string{"conversion_id": conversionId})
 }
 
 func (h Handlers) RestartConversion(c echo.Context) error {
+	user := session.GetUserFromSession(c)
 	conversionId := c.Param("id")
 	var conversion models.Conversion
+
 	h.Db.First(&conversion, "id = ?", conversionId)
 	if conversion.ID == "" {
 		return c.JSON(404, struct{}{})
@@ -168,58 +171,62 @@ func (h Handlers) RestartConversion(c echo.Context) error {
 
 	conversion.Status = "pending"
 	conversion.Result = nil
+
 	h.Db.Save(&conversion)
 
-	playlistInfo := conversion.PlaylistInfo
-
-	go startConversion(conversion.DestinationPlatform, playlistInfo, conversion, h)
+	go startConversion(&conversion, h, user)
 
 	return c.JSON(200, struct{}{})
 
 }
 
-func startConversion(destinationPlatform string, playlistInfo interface{}, conversion models.Conversion, h Handlers) {
+func startConversion(conversion *models.Conversion, h Handlers, user session.UserSession) {
+
+	var destinationPlatform string = conversion.DestinationPlatform
+
+	var playlistInfo interface{} = conversion.PlaylistInfo
 
 	// var result map[string]interface{}
 	result := make(map[string]interface{})
 
 	tracks := playlistInfo.(types.SimplePlaylist).Tracks.Tracks
 
+	youtubeIds := []string{}
+	spotifyIds := []string{}
+
 	for _, track := range tracks {
 
-		// var searchedTrack interface{}
-		// var searchResultId string
 		var searchResultLink string
 		var err error
 
+		searchQuery := types.SearchQuery{
+			Title:   track.Name,
+			Artists: track.Artists,
+			Type:    "audio",
+		}
+
+		fmt.Printf("searchQuery: %v\n", searchQuery)
+
 		if destinationPlatform == YOUTUBE_MUSIC {
-			searchQuery := track.Name + " by " + track.Artists[0] + " (audio)"
-			fmt.Println("search query:", searchQuery)
+
 			fmt.Println("searching on youtube...")
+
 			var results []ytmusicapi.SearchResultItem
 			results, err = ytmusicapi.Search(searchQuery)
 			fmt.Printf("results %#v", results)
 			searchedTrack := results[0]
-			// searchResultId = searchedTrack.VideoId
+			youtubeIds = append(youtubeIds, searchedTrack.VideoId)
 			searchResultLink = searchedTrack.Link
 
 		} else if destinationPlatform == SPOTIFY {
-			searchQuery := fmt.Sprintf("track:%s artist:%s", track.Name, strings.Join(track.Artists, ", "))
-			fmt.Println("search query:", searchQuery)
+			fmt.Println("searching on spotify...")
 			var searchedTrack types.SimpleTrack
-			searchedTrack, err = spotify_service.SearchSpotify(h.SpotifyClient, h.Context, searchQuery)
-			fmt.Println("error --", err)
+			searchedTrack, err = SpotifyService.SearchSpotify(h.SpotifyClient, h.Context, searchQuery)
+			spotifyIds = append(spotifyIds, searchedTrack.ID)
 			searchResultLink = searchedTrack.Link
-
 		}
 
-		// fmt.Printf("searchedTrack: %#v\n", searchedTrack)
-		// fmt.Println("error --", err)
-		// fmt.Println("\n")
-
 		if err == nil {
-			// get link
-			// if searchedTrack
 			result[track.ID] = searchResultLink
 		} else {
 			result[track.ID] = "error"
@@ -227,20 +234,34 @@ func startConversion(destinationPlatform string, playlistInfo interface{}, conve
 
 		conversion.Result = result
 
-		if destinationPlatform == YOUTUBE_MUSIC {
-			// create youtube playlist
-
-		} else if destinationPlatform == SPOTIFY {
-			// create spotify playlist
-		}
-
+		err = nil // reset error
 		h.Db.Save(&conversion)
 	}
 
 	conversion.Status = "completed"
 
-	// create playlist here
-	h.Db.Save(&conversion)
+	var transferError error
+
+	// transfer playlist here
+
+	if destinationPlatform == YOUTUBE_MUSIC {
+		// create youtube playlist
+		httpClient, err := oauth.CreateYoutubeClient(h.Db, conversion.UserId)
+		if err == nil {
+			_, err = ytmusicapi.CreatePlaylist(httpClient, conversion.Title, "", youtubeIds)
+		}
+		transferError = err
+
+	} else if destinationPlatform == SPOTIFY {
+		// create spotify playlist
+		_, transferError = SpotifyService.CreatePlaylist(h.SpotifyClient, h.Context, user.SpotifyId, conversion.Title, "", spotifyIds)
+	}
+
+	if transferError == nil {
+		conversion.PlaylistCreationStatus = true
+	}
+
+	h.Db.Save(conversion)
 }
 
 func (h Handlers) GetSingleConversion(c echo.Context) error {
@@ -269,7 +290,6 @@ func (h Handlers) GetAllConversions(c echo.Context) error {
 	var conversions []models.Conversion
 	h.Db.Select([]string{"ID", "Title", "Link", "ResourceType", "ResourceId", "DestinationPlatform", "SourcePlatform", "Status"}).Find(&conversions)
 
-	// fmt.Println("conversions: ", conversions)
 	fmt.Printf("conversions: %#v\n", conversions)
 	return c.JSON(200, conversions)
 }
@@ -283,15 +303,15 @@ func isPlatformKnown(platform string) bool {
 
 func (h Handlers) PreviewLink(c echo.Context) error {
 	link := c.QueryParam("link")
-	query, err := ParseLink(link)
+	parsedLink, err := ParseLink(link)
 
-	fmt.Println("query: ", query.Platform, query.Type, query.ID)
+	fmt.Println("query: ", parsedLink.Platform, parsedLink.Type, parsedLink.ID)
 
 	if err != nil {
 		return c.JSON(400, struct{}{})
 	}
 
-	if !isPlatformKnown(query.Platform) {
+	if !isPlatformKnown(parsedLink.Platform) {
 		return c.JSON(http.StatusBadRequest, "invalid link")
 	}
 
@@ -299,12 +319,11 @@ func (h Handlers) PreviewLink(c echo.Context) error {
 
 	isPreview := true
 
-	if query.Platform == SPOTIFY {
-		queryInfo, err = spotify_service.GetSpotifyMusicInfo(h.SpotifyClient, h.Context, query.ID, query.Type, isPreview)
+	if parsedLink.Platform == SPOTIFY {
+		queryInfo, err = SpotifyService.GetSpotifyMusicInfo(h.SpotifyClient, h.Context, parsedLink.ID, parsedLink.Type, isPreview)
 
-	} else if query.Platform == YOUTUBE_MUSIC {
-		fmt.Println("querying youtube music...")
-		queryInfo, err = youtube_service.GetYoutubeMusicInfo(h.YoutubeClient, query.ID, query.Type)
+	} else if parsedLink.Platform == YOUTUBE_MUSIC {
+		queryInfo, err = YoutubeService.GetYoutubeMusicInfo(h.YoutubeClient, parsedLink.ID, parsedLink.Type)
 
 	}
 
@@ -317,126 +336,7 @@ func (h Handlers) PreviewLink(c echo.Context) error {
 		Type   string      `json:"type"`
 		Object interface{} `json:"object"`
 	}{
-		Type:   query.Type,
+		Type:   parsedLink.Type,
 		Object: queryInfo,
 	})
 }
-
-func youtubeToSpotify(YoutubeClient *youtube.Service, SpotifyClient *spotify.Client, context context.Context, query Query) (interface{}, error) {
-	musicInfo, err := youtube_service.GetYoutubeMusicInfo(YoutubeClient, query.ID, query.Type)
-	if err != nil {
-		return nil, err
-	}
-	if v, ok := musicInfo.(types.SimpleTrack); ok {
-		fmt.Println(">>> searching for artists ", v.Artists)
-		spotifySearchQuery := v.Name + " by " + v.Artists[0] + " (audio)"
-		searchResult, err := spotify_service.SearchSpotify(SpotifyClient, context, spotifySearchQuery)
-		if err != nil {
-			return nil, err
-		}
-		return searchResult, nil
-	} else {
-		// it's probably a playlist
-		return nil, nil
-	}
-}
-
-func spotifyToYoutube(YoutubeClient *youtube.Service, SpotifyClient *spotify.Client, context context.Context, query Query) (interface{}, error) {
-	isPreview := false
-	musicInfo, err := spotify_service.GetSpotifyMusicInfo(SpotifyClient, context, query.ID, query.Type, isPreview)
-	if err != nil {
-		return nil, err
-	}
-	if v, ok := musicInfo.(types.SimpleTrack); ok {
-		youtubeSearchQuery := v.Name + " by " + v.Artists[0] + " (audio)"
-		youtubeSearchResult, err := youtube_service.SearchYoutube(YoutubeClient, youtubeSearchQuery)
-		if err != nil {
-			return nil, err
-		}
-		return youtubeSearchResult, nil
-	}
-
-	return nil, nil
-}
-
-/*
-func (h Handlers) YoutubeToSpotify(c echo.Context) error {
-	body := make(map[string]string)
-	json.NewDecoder(c.Request().Body).Decode(&body)
-
-	youtubeLink := body["youtube_link"]
-
-	query, err := ParseLink(youtubeLink)
-
-	fmt.Println("query: ", query.Platform, query.Type, query.ID)
-
-	if err != nil || query.Platform != "youtube" {
-		return c.JSON(400, struct{}{})
-	}
-
-	musicInfo, err := ymusicservice.GetYoutubeMusicInfo(h.YoutubeClient, query.ID, query.Type)
-	if err != nil {
-		return c.JSON(404, struct{}{})
-	}
-	if v, ok := musicInfo.(types.SimpleTrack); ok {
-		fmt.Println(">>> searching for artists ", v.Artists)
-		spotifySearchQuery := v.Name + " by " + v.Artists[0] + " (audio)"
-		searchResult, err := spotify_service.SearchSpotify(h.SpotifyClient, h.Context, spotifySearchQuery)
-		if err != nil {
-			return c.JSON(404, struct{}{})
-		}
-		return c.JSON(200, struct {
-			Type   string      `json:"type"`
-			Object interface{} `json:"object"`
-		}{
-			Type:   "youtube",
-			Object: searchResult,
-		})
-	} else {
-		return c.JSON(500, struct{}{})
-	}
-
-}
-*/
-
-/*
-func (h Handlers) SpotifyToYoutube(c echo.Context) error {
-
-	body := make(map[string]string)
-	json.NewDecoder(c.Request().Body).Decode(&body)
-
-	spotifyLink := body["spotify_link"]
-
-	query, err := ParseLink(spotifyLink)
-
-	fmt.Println("query: ", query.Platform, query.Type, query.ID)
-
-	if err != nil || query.Platform != SPOTIFY {
-		return c.JSON(400, struct{}{})
-	}
-
-	isPreview := false
-
-	musicInfo, err := spotify_service.GetSpotifyMusicInfo(h.SpotifyClient, h.Context, query.ID, query.Type, isPreview)
-	if err != nil {
-		return c.JSON(404, struct{}{})
-	}
-	if v, ok := musicInfo.(types.SimpleTrack); ok {
-		youtubeSearchQuery := v.Name + " by " + v.Artists[0] + " (audio)"
-		youtubeSearchResult, err := ymusicservice.SearchYoutube(h.YoutubeClient, youtubeSearchQuery)
-		if err != nil {
-			return c.JSON(404, struct{}{})
-		}
-		return c.JSON(200, struct {
-			Type   string      `json:"type"`
-			Object interface{} `json:"object"`
-		}{
-			Type:   "youtube",
-			Object: youtubeSearchResult,
-		})
-	} else {
-		return c.JSON(500, struct{}{})
-	}
-
-}
-*/
