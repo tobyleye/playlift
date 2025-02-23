@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/models"
 	"github.com/tobyleye/playlist-converter/oauth"
 	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
@@ -45,7 +44,7 @@ func (h Handlers) YoutubeConnectCallback(c echo.Context) error {
 		err := models.CreateOrUpdateTokenForUser(h.Db, user.UserId, &token)
 		log.Println("error creating or updating token:", err)
 
-		redirectUrl := config.FRONTEND_BASE_URL + "/convert-playlist"
+		redirectUrl := "/convert-playlist"
 		return c.Redirect(301, redirectUrl)
 	}
 }

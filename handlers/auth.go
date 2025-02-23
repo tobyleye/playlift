@@ -46,7 +46,7 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
-		redirectUrl := config.FRONTEND_BASE_URL + "/home?loginError=true"
+		redirectUrl := "/home?loginError=true"
 		return c.Redirect(301, redirectUrl)
 	} else {
 
@@ -122,11 +122,11 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 			fmt.Println("session save error", err)
 
-			redirectUrl := config.FRONTEND_BASE_URL + "/home"
+			redirectUrl := "/home"
 			return c.Redirect(301, redirectUrl)
 		}
 
-		return c.Redirect(301, config.FRONTEND_BASE_URL+"/home?loginError=true")
+		return c.Redirect(301, "/home?loginError=true")
 
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/models"
 	"github.com/tobyleye/playlist-converter/oauth"
 	spotify_service "github.com/tobyleye/playlist-converter/services/spotify"
@@ -56,7 +55,7 @@ func (h Handlers) SpotifyLoginCallback(c echo.Context) error {
 		log.Printf("error setting user %s session %v\n", user.UserId, err)
 	}
 
-	redirectUrl := config.FRONTEND_BASE_URL + "/convert-playlist"
+	redirectUrl := "/convert-playlist"
 
 	return c.Redirect(301, redirectUrl)
 }
