@@ -8,15 +8,17 @@ import (
 )
 
 var (
-	GOOGLE_API_KEY             string
-	SPOTIFY_CLIENT_ID          string
-	SPOTIFY_CLIENT_SECRET      string
-	GOOGLE_CLIENT_ID           string
-	GOOGLE_CLIENT_SECRET       string
-	STRIPE_SECRET_KEY          string
-	SESSION_KEY                string
-	GOOGLE_LOGIN_REDIRECT_URL  string
-	SPOTIFY_LOGIN_REDIRECT_URL string
+	GOOGLE_API_KEY               string
+	SPOTIFY_CLIENT_ID            string
+	SPOTIFY_CLIENT_SECRET        string
+	GOOGLE_CLIENT_ID             string
+	GOOGLE_CLIENT_SECRET         string
+	STRIPE_SECRET_KEY            string
+	SESSION_KEY                  string
+	SERVER_BASE_URL              string
+	GOOGLE_LOGIN_REDIRECT_URL    string
+	GOOGLE_CONNECT_REDIRECT_URL  string
+	SPOTIFY_CONNECT_REDIRECT_URL string
 )
 
 const (
@@ -53,6 +55,11 @@ func init() {
 
 	STRIPE_SECRET_KEY = os.Getenv("STRIPE_SECRET_KEY")
 
-	GOOGLE_LOGIN_REDIRECT_URL = getEnvOrThrow("GOOGLE_LOGIN_REDIRECT_URL")
-	SPOTIFY_LOGIN_REDIRECT_URL = getEnvOrThrow("SPOTIFY_LOGIN_REDIRECT_URL")
+	SERVER_BASE_URL = getEnvOrThrow("SERVER_BASE_URL")
+
+	GOOGLE_LOGIN_REDIRECT_URL = SERVER_BASE_URL + "/login/google/callback"
+	GOOGLE_CONNECT_REDIRECT_URL = SERVER_BASE_URL + "/callback/google"
+
+	SPOTIFY_CONNECT_REDIRECT_URL = SERVER_BASE_URL + "/callback/spotify"
+
 }

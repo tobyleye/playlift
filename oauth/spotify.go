@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var SpotifyAuthenticator = spotifyauth.New(spotifyauth.WithRedirectURL(config.SPOTIFY_LOGIN_REDIRECT_URL),
+var SpotifyAuthenticator = spotifyauth.New(spotifyauth.WithRedirectURL(config.SPOTIFY_CONNECT_REDIRECT_URL),
 	spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopeUserLibraryRead),
 	spotifyauth.WithClientID(config.SPOTIFY_CLIENT_ID),
 	spotifyauth.WithClientSecret(config.SPOTIFY_CLIENT_SECRET))
