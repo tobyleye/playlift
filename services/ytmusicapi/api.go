@@ -259,9 +259,6 @@ func FetchPlaylist(playlistId string) (interface{}, error) {
 	var playlistTracks []SearchResultItem
 
 	playlistItemsContents := ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "secondaryContents", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
-
-	SaveJson(playlistItemsContents, playlistId)
-
 	if content, ok := playlistItemsContents.([]interface{}); ok {
 		for _, itemContent := range content {
 			item := parseSearchResultItem(itemContent)
@@ -353,8 +350,6 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 			}
 		}
 	}
-
-	SaveJson(youtubePlaylists, "user_playlists")
 
 	return youtubePlaylists, nil
 }

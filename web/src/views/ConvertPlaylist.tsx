@@ -273,7 +273,7 @@ const ConvertPlaylist = () => {
                             onClick={() =>
                               window.open(
                                 config.SERVER_BASE_URL + "/connect/spotify",
-                                "_blank"
+                                "_self"
                               )
                             }
                           >
@@ -306,7 +306,7 @@ const ConvertPlaylist = () => {
                             onClick={() =>
                               window.open(
                                 config.SERVER_BASE_URL + "/connect/youtube",
-                                "_blank"
+                                "_self"
                               )
                             }
                           >
@@ -348,7 +348,7 @@ const ConvertPlaylist = () => {
                 onClick={() =>
                   window.open(
                     config.SERVER_BASE_URL + "/connect/spotify",
-                    "_blank"
+                    "_self"
                   )
                 }
               >
@@ -358,7 +358,7 @@ const ConvertPlaylist = () => {
                 onClick={() =>
                   window.open(
                     config.SERVER_BASE_URL + "/connect/youtube",
-                    "_blank"
+                    "_self"
                   )
                 }
               >
