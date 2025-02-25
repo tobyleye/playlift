@@ -12,15 +12,43 @@ import {
   MenuItem,
   Button,
   Image,
-  ButtonGroup,
+  Modal,
+  ModalContent,
+  ModalBody,
+  ModalOverlay,
 } from "@chakra-ui/react";
 import { ChevronDownIcon, Music } from "lucide-react";
-import { useContext } from "react";
-import { AuthContext } from "../providers/context";
+import { useGlobalStore } from "../store/store";
+import config from "../config";
+
+function LoginModal() {
+  return (
+    <Modal isCentered isOpen={true} onClose={() => null}>
+      <ModalOverlay
+        bg="blackAlpha.300"
+        backdropFilter="blur(6px) hue-rotate(90deg)"
+      />
+      <ModalContent margin={4}>
+        <ModalBody>
+          <Box textAlign="center" py={4}>
+            <Text fontSize="2xl" fontWeight={600} mb={2}>
+              Not so fast!
+            </Text>
+            <Text size="lg" mb={4}>
+              Login with google to get started
+            </Text>
+            <ChakraLink href={`${config.SERVER_BASE_URL}/login/google`}>
+              <Button colorScheme="purple">Login with google</Button>
+            </ChakraLink>
+          </Box>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  );
+}
 
 const AppLayout = () => {
-  const user = useContext(AuthContext);
-
+  const user = useGlobalStore((state) => state.user);
   return (
     <Box display="flex" overflow="hidden" flexDirection="column" height="100vh">
       <Box
@@ -81,9 +109,13 @@ const AppLayout = () => {
         </Flex>
       </Box>
       <Box flex={1} overflow="auto" pt={8} pb={8}>
-        <Container>
-          <Outlet />
-        </Container>
+        {user ? (
+          <Container>
+            <Outlet />
+          </Container>
+        ) : (
+          <LoginModal />
+        )}
       </Box>
     </Box>
   );
