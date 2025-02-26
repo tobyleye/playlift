@@ -13,13 +13,14 @@ import {
   ModalBody,
   ModalOverlay,
 } from "@chakra-ui/react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import useSWR from "swr";
 import api from "../api/api";
 import { MoveRightIcon, Trash2Icon, RotateCw, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import config from "../config";
 import { useGlobalStore } from "../store/store";
+import { Rabbit } from "lucide-react";
 
 const formatPlatform = (platform: string) => {
   return platform.replace("_", " ");
@@ -138,7 +139,30 @@ export default function Home() {
         <div>error..</div>
       ) : conversions.length === 0 ? (
         <Box>
-          <Text>You don't have any conversions</Text>
+          <Box
+            paddingY={20}
+            display="flex"
+            flexDir={"column"}
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Box mb={2}>
+              <Icon
+                as={Rabbit}
+                color="gray.800"
+                width={"100px"}
+                height={"100px"}
+              />
+            </Box>
+            <Text fontSize="xl" color="gray.700" mb={2}>
+              You don't have any conversions!
+            </Text>
+            <Box>
+              <Button colorScheme="purple" as={Link} to="/convert-playlist">
+                Convert a playlist
+              </Button>
+            </Box>
+          </Box>
         </Box>
       ) : (
         <Flex

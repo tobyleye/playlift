@@ -32,6 +32,7 @@ import YoutubeMusicIcon from "../icons/youtubemusic";
 import useSWR from "swr";
 import config from "../config";
 import { Link, useNavigate } from "react-router-dom";
+import { GoogleLoginButton, SpotifyLoginButton } from "../components/buttons";
 
 function PlaylistCard({
   playlist,
@@ -87,11 +88,6 @@ function TransferModal({
   selectedPlatform: string;
   selectedPlaylist: any;
 }) {
-  console.log({
-    selectedPlatform,
-    selectedPlaylist,
-  });
-
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -100,7 +96,6 @@ function TransferModal({
 
   const startTransfer = async (e: FormEvent) => {
     e.preventDefault();
-    console.log("selected playlist: ", selectedPlaylist);
     try {
       setTransferring(true);
       await api.convert(selectedPlaylist.url, transferDestination);
@@ -122,8 +117,8 @@ function TransferModal({
 
   return (
     <Modal isOpen={open} onClose={onClose}>
-      <ModalOverlay />
-      <ModalContent>
+      <ModalOverlay></ModalOverlay>
+      <ModalContent marginX={4}>
         <ModalHeader>Complete your transfer</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
@@ -262,25 +257,19 @@ const ConvertPlaylist = () => {
                 </TabList>
 
                 <TabPanels>
-                  <TabPanel>
+                  <TabPanel paddingX={2}>
                     <Loading isLoading={spotifyPlaylistsLoading}>
                       {spotifyPlaylistFetchError ? (
                         <Box display="flex" justifyContent="center" py={4}>
-                          <Button
-                            onClick={() =>
-                              window.open(
-                                config.SERVER_BASE_URL + "/connect/spotify",
-                                "_self"
-                              )
-                            }
-                          >
-                            Connect Spotify
-                          </Button>
+                          <SpotifyLoginButton
+                            url={config.SERVER_BASE_URL + "/connect/spotify"}
+                            label="Connect Spotify"
+                          />
                         </Box>
                       ) : (
                         <Box>
                           {spotifyPlaylists && spotifyPlaylists.playlists && (
-                            <SimpleGrid columns={3} gap={2}>
+                            <SimpleGrid columns={{ base: 2, lg: 3 }} gap={2}>
                               {spotifyPlaylists.playlists.map((p: any) => (
                                 <PlaylistCard
                                   playlist={p}
@@ -299,16 +288,10 @@ const ConvertPlaylist = () => {
                     <Loading isLoading={youtubePlaylistsLoading}>
                       {youtubePlaylistsFetchError ? (
                         <Box display="flex" justifyContent="center" py={4}>
-                          <Button
-                            onClick={() =>
-                              window.open(
-                                config.SERVER_BASE_URL + "/connect/youtube",
-                                "_self"
-                              )
-                            }
-                          >
-                            Connect Youtube
-                          </Button>
+                          <GoogleLoginButton
+                            url={config.SERVER_BASE_URL + "/connect/youtube"}
+                            label={`Connect Youtube`}
+                          />
                         </Box>
                       ) : (
                         <Box>
@@ -341,26 +324,15 @@ const ConvertPlaylist = () => {
             </Heading>
 
             <HStack>
-              <Button
-                onClick={() =>
-                  window.open(
-                    config.SERVER_BASE_URL + "/connect/spotify",
-                    "_self"
-                  )
-                }
-              >
-                Connect Spotify
-              </Button>
-              <Button
-                onClick={() =>
-                  window.open(
-                    config.SERVER_BASE_URL + "/connect/youtube",
-                    "_self"
-                  )
-                }
-              >
-                Connect Youtube
-              </Button>
+              <SpotifyLoginButton
+                url={config.SERVER_BASE_URL + "/connect/spotify"}
+                label="Connect Spotify"
+              />
+
+              <GoogleLoginButton
+                url={config.SERVER_BASE_URL + "/connect/youtube"}
+                label={`Connect Youtube`}
+              />
             </HStack>
           </CardBody>
         </Card>

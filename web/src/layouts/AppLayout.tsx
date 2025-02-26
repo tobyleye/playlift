@@ -64,12 +64,18 @@ const AppLayout = () => {
         backdropBlur="md"
       >
         <ChakraLink as={Link} to="/home" display="flex" alignItems="center">
-          <Music className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-          <Text ml={2} fontSize="lg" fontWeight="bold" color="purple.800">
+          <Music className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+          <Text
+            display={{ base: "none", sm: "block" }}
+            ml={1}
+            fontSize="lg"
+            fontWeight="bold"
+            color="purple.800"
+          >
             Playlist Converter
           </Text>
         </ChakraLink>
-        <Flex ml="auto" alignItems="center" gap={{ base: 4, sm: 6 }}>
+        <Flex ml="auto" alignItems="center" gap={4}>
           <ChakraLink
             as={Link}
             to="/convert-playlist/4"
@@ -85,6 +91,7 @@ const AppLayout = () => {
             <Menu>
               <MenuButton
                 as={Button}
+                pr={0}
                 borderRadius={"full"}
                 rightIcon={<ChevronDownIcon size={18} />}
                 _hover={{
