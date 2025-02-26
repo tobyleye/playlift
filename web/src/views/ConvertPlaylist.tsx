@@ -222,9 +222,6 @@ const ConvertPlaylist = () => {
     },
   });
 
-  console.log("spotify playlists:", spotifyPlaylists);
-  console.log("youtube playlists:", youtubePlaylists);
-
   const isAnyPlatformConnected = [spotifyConnected, youtubeMusicConnected].some(
     (val) => val === true
   );
