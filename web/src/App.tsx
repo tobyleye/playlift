@@ -4,15 +4,15 @@ import {
   Outlet,
   RouterProvider,
 } from "react-router-dom";
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { Box, ChakraProvider, Flex } from "@chakra-ui/react";
 
 import "./App.css";
 
 import ConversionThroughLink from "./views/link-conversion/LinkConversion.tsx";
 import AppLayout from "./layouts/AppLayout.tsx";
-import AuthProvider from "./providers/auth.tsx";
 import Login from "./views/Login.tsx";
+import SessionLoader from "./providers/SessionLoader.tsx";
 
 const Home = lazy(() => import("./views/Home.tsx"));
 const ConvertPlaylist = lazy(() => import("./views/ConvertPlaylist.tsx"));
@@ -116,11 +116,13 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <AuthProvider>
-      <ChakraProvider>
-        <RouterProvider router={router}></RouterProvider>
-      </ChakraProvider>
-    </AuthProvider>
+    <Suspense fallback={<div />}>
+      <SessionLoader>
+        <ChakraProvider>
+          <RouterProvider router={router}></RouterProvider>
+        </ChakraProvider>
+      </SessionLoader>
+    </Suspense>
   );
 }
 

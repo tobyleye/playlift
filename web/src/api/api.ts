@@ -1,8 +1,6 @@
 import axios from "axios";
 import config from "../config";
 
-console.log("config:", config);
-
 const client = axios.create({
   baseURL: config.SERVER_BASE_URL + "/api",
   withCredentials: true,

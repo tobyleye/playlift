@@ -10,22 +10,21 @@ import {
   Button,
   Modal,
   ModalContent,
-  ModalHeader,
   ModalBody,
   ModalOverlay,
-  Image,
 } from "@chakra-ui/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import useSWR from "swr";
 import api from "../api/api";
 import { MoveRightIcon, Trash2Icon, RotateCw, AlertCircle } from "lucide-react";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import config from "../config";
-import { AuthContext } from "../providers/context";
+import { useGlobalStore } from "../store/store";
 
 const formatPlatform = (platform: string) => {
   return platform.replace("_", " ");
 };
+
 function LoginModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal isCentered isOpen={true} onClose={onClose}>
@@ -53,7 +52,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function Home() {
-  const user = useContext(AuthContext);
+  const user = useGlobalStore((store) => store.user);
 
   const fetchResult = useSWR<any>(user ? "/conversions" : null, async () => {
     return api.fetchConversions();
@@ -70,20 +69,22 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [loginError, setLoginError] = useState<null | string>(null);
-
   useEffect(() => {
     const loginError = searchParams.get("loginError");
-    searchParams.delete("loginError");
-    setLoginError(loginError);
-    setSearchParams(searchParams);
+    if (loginError) {
+      searchParams.delete("loginError");
+      toast({
+        title: "Error logging in",
+        description: loginError,
+        status: "error",
+        duration: 9000,
+        isClosable: true,
+      });
+      setSearchParams(searchParams);
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  console.log(loginError);
-
-  // const loginError =
-  // usesta
-  console.log("data:", conversions);
 
   const deleteConversion = async (conversionId: string) => {
     try {
