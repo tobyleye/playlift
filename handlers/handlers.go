@@ -196,7 +196,7 @@ func startConversion(conversion *models.Conversion, h Handlers, user session.Use
 
 	for _, track := range tracks {
 
-		var searchResultLink string
+		var searchResultLink = ""
 		var err error
 
 		searchQuery := types.SearchQuery{
@@ -205,25 +205,28 @@ func startConversion(conversion *models.Conversion, h Handlers, user session.Use
 			Type:    "audio",
 		}
 
-		fmt.Printf("searchQuery: %v\n", searchQuery)
+		log.Println("searchQuery:", searchQuery)
 
 		if destinationPlatform == YOUTUBE_MUSIC {
-
 			fmt.Println("searching on youtube...")
+			var searchedTrack ytmusicapi.SearchResultItem
+			searchedTrack, err = ytmusicapi.SearchOne(searchQuery)
 
-			var results []ytmusicapi.SearchResultItem
-			results, err = ytmusicapi.Search(searchQuery)
-			fmt.Printf("results %#v", results)
-			searchedTrack := results[0]
-			youtubeIds = append(youtubeIds, searchedTrack.VideoId)
-			searchResultLink = searchedTrack.Link
+			log.Println("search result: ", searchedTrack)
+			if err == nil && searchedTrack.VideoId != "" {
+				youtubeIds = append(youtubeIds, searchedTrack.VideoId)
+				searchResultLink = searchedTrack.Link
+			}
 
 		} else if destinationPlatform == SPOTIFY {
 			fmt.Println("searching on spotify...")
 			var searchedTrack types.SimpleTrack
 			searchedTrack, err = SpotifyService.SearchSpotify(h.SpotifyClient, h.Context, searchQuery)
-			spotifyIds = append(spotifyIds, searchedTrack.ID)
-			searchResultLink = searchedTrack.Link
+
+			if err == nil && searchedTrack.ID != "" {
+				spotifyIds = append(spotifyIds, searchedTrack.ID)
+				searchResultLink = searchedTrack.Link
+			}
 		}
 
 		if err == nil {

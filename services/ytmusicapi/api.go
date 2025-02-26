@@ -241,6 +241,19 @@ func Search(searchQuery types.SearchQuery) ([]SearchResultItem, error) {
 	return results, nil
 }
 
+func SearchOne(searchQuery types.SearchQuery) (SearchResultItem, error) {
+	results, err := Search(searchQuery)
+	if err != nil {
+		return SearchResultItem{}, err
+	}
+
+	if len(results) == 0 {
+		return SearchResultItem{}, nil
+	}
+
+	return results[0], nil
+}
+
 func FetchPlaylist(playlistId string) (interface{}, error) {
 	browseId := playlistId
 
