@@ -141,10 +141,10 @@ func main() {
 	e.GET("/login/google/callback", handlers.LoginWithGoogleCallback)
 
 	e.GET("/connect/spotify", handlers.SpotifyLogin, ensureLogin)
-	e.GET("/callback/spotify", handlers.SpotifyLoginCallback, ensureLogin)
+	e.GET("/connect/spotify/callback", handlers.SpotifyLoginCallback, ensureLogin)
 
 	e.GET("/connect/youtube", handlers.YoutubeConnect, ensureLogin)
-	e.GET("/callback/youtube", handlers.YoutubeConnectCallback, ensureLogin)
+	e.GET("/connect/youtube/callback", handlers.YoutubeConnectCallback, ensureLogin)
 
 	//api routes
 	api := e.Group("/api")
@@ -167,5 +167,6 @@ func main() {
 
 	port := os.Getenv("PORT")
 
+	fmt.Println("Starting server on port:", port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
 }

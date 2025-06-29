@@ -58,8 +58,8 @@ func init() {
 	SERVER_BASE_URL = getEnvOrThrow("SERVER_BASE_URL")
 
 	GOOGLE_LOGIN_REDIRECT_URL = SERVER_BASE_URL + "/login/google/callback"
-	GOOGLE_CONNECT_REDIRECT_URL = SERVER_BASE_URL + "/callback/google"
 
-	SPOTIFY_CONNECT_REDIRECT_URL = SERVER_BASE_URL + "/callback/spotify"
+	GOOGLE_CONNECT_REDIRECT_URL = SERVER_BASE_URL + "/connect/youtube/callback"
+	SPOTIFY_CONNECT_REDIRECT_URL = SERVER_BASE_URL + "/connect/spotify/callback"
 
 }

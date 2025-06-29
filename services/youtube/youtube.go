@@ -42,8 +42,6 @@ func getPlaylistItems(youtubeService *youtube.Service, playlistId string) (types
 		Total:  int(response.PageInfo.TotalResults),
 	}
 	// var playlistItems []types.SimpleTrack
-	fmt.Println("playlist items ...", response.PageInfo.TotalResults)
-	fmt.Println("playlist items ...", response.Items[0:10])
 
 	for _, item := range response.Items {
 

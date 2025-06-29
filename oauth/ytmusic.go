@@ -21,6 +21,7 @@ var GoogleOauthConfig = oauth2.Config{
 }
 
 func CreateHTTPClient(ctx context.Context, token *oauth2.Token) *http.Client {
+
 	return GoogleOauthConfig.Client(ctx, token)
 }
 

@@ -13,7 +13,10 @@ import (
 	"github.com/tobyleye/playlist-converter/session"
 )
 
+// http://localhost:8181/callback/google
+
 func (h Handlers) YoutubeConnect(c echo.Context) error {
+	fmt.Printf("google oauth redirect url: %s\n", oauth.GoogleOauthConfig.RedirectURL)
 	url := oauth.GoogleOauthConfig.AuthCodeURL("state")
 	return c.Redirect(302, url)
 }
@@ -52,8 +55,6 @@ func (h Handlers) YoutubeConnectCallback(c echo.Context) error {
 func (h Handlers) FetchUserYoutubePlaylists(c echo.Context) error {
 
 	user := session.GetUserFromSession(c)
-
-	fmt.Println("getting playlist for user:", user)
 
 	httpClient, err := oauth.CreateYoutubeClient(h.Db, user.UserId)
 
