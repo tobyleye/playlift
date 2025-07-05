@@ -7,26 +7,20 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/models"
-	"github.com/tobyleye/playlist-converter/oauth"
 	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
 	"github.com/tobyleye/playlist-converter/session"
 )
 
 // http://localhost:8181/callback/google
 
-func (h Handlers) YoutubeConnect(c echo.Context) error {
-	fmt.Printf("google oauth redirect url: %s\n", oauth.GoogleOauthConfig.RedirectURL)
-	url := oauth.GoogleOauthConfig.AuthCodeURL("state")
-	return c.Redirect(302, url)
-}
-
 func (h Handlers) YoutubeConnectCallback(c echo.Context) error {
 	code := c.QueryParam("code")
 
 	user := session.GetUserFromSession(c)
 
-	tokens, err := oauth.GoogleOauthConfig.Exchange(c.Request().Context(), code)
+	tokens, err := config.GoogleOauthConfig.Exchange(c.Request().Context(), code)
 	fmt.Printf("tokens: %v\n", tokens)
 	fmt.Printf("tokens refresh token: %v\n", tokens.RefreshToken)
 
@@ -55,8 +49,8 @@ func (h Handlers) YoutubeConnectCallback(c echo.Context) error {
 func (h Handlers) FetchUserYoutubePlaylists(c echo.Context) error {
 
 	user := session.GetUserFromSession(c)
-
-	httpClient, err := oauth.CreateYoutubeClient(h.Db, user.UserId)
+	fmt.Println("fetching youtube playlists for user:", user.UserId)
+	httpClient, err := config.CreateYoutubeClientForUser(h.Db, user.UserId)
 
 	if err != nil {
 		return c.JSON(401, "token not  missing")

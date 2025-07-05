@@ -2,49 +2,114 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/models"
-	"github.com/tobyleye/playlist-converter/oauth"
-	spotify_service "github.com/tobyleye/playlist-converter/services/spotify"
+	SpotifyService "github.com/tobyleye/playlist-converter/services/spotify"
 	"github.com/tobyleye/playlist-converter/session"
+	"golang.org/x/oauth2"
 )
 
-func (h Handlers) SpotifyLogin(c echo.Context) error {
+// SpotifyTokenResponse represents the response from Spotify's token endpoint
+type SpotifyTokenResponse struct {
+	AccessToken  string    `json:"access_token"`
+	TokenType    string    `json:"token_type"`
+	ExpiresIn    time.Time `json:"expires_in"`
+	RefreshToken string    `json:"refresh_token"`
+	Scope        string    `json:"scope"`
+}
 
-	url := oauth.SpotifyAuthenticator.AuthURL("state")
-	return c.Redirect(302, url)
+// SpotifyTokenExchange makes a direct HTTP request to Spotify's token endpoint
+func SpotifyTokenExchange(code string) (*oauth2.Token, error) {
+
+	redirectURI := config.SPOTIFY_CONNECT_REDIRECT_URL
+	clientID := config.SPOTIFY_CLIENT_ID
+	clientSecret := config.SPOTIFY_CLIENT_SECRET
+
+	// Prepare the form data
+	formData := url.Values{}
+	formData.Set("code", code)
+	formData.Set("redirect_uri", redirectURI)
+	formData.Set("grant_type", "authorization_code")
+
+	// Create the request
+	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(formData.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Create basic auth header
+	auth := base64.StdEncoding.EncodeToString([]byte(clientID + ":" + clientSecret))
+	req.Header.Set("Authorization", "Basic "+auth)
+
+	// Make the request
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("spotify API returned status %d", resp.StatusCode)
+	}
+
+	// Parse the response
+	var tokenResponse oauth2.Token
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &tokenResponse, nil
 }
 
 func (h Handlers) SpotifyLoginCallback(c echo.Context) error {
 	user := session.GetUserFromSession(c)
 
-	token, err := oauth.SpotifyAuthenticator.Token(c.Request().Context(), "state", c.Request())
+	body := requestBodyToMap(c)
+	code, _ := body["code"].(string)
+
+	// this didn't work for some reason so we just made a direct request to the spotify token endpoint
+	// tokens, err := oauth.SpotifyAuthenticator.Exchange(c.Request().Context(), code)
+
+	tokens, err := SpotifyTokenExchange(code)
 
 	if err != nil {
-		return c.HTML(http.StatusNotFound, "Couldn't get token")
+		fmt.Println("error --", err)
+		return c.JSON(http.StatusInternalServerError, "Couldn't get token")
 	}
 
 	spotifyToken := models.Token{
 		UserId:       user.UserId,
 		Platform:     "spotify",
-		AccessToken:  token.AccessToken,
-		RefreshToken: token.RefreshToken,
-		TokenType:    token.TokenType,
-		ExpiresIn:    token.Expiry,
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		TokenType:    tokens.TokenType,
+		ExpiresIn:    time.Now().Add(time.Second * time.Duration(tokens.ExpiresIn)),
 		CreatedAt:    time.Now(),
 	}
 
 	result := h.Db.Create(&spotifyToken)
 
 	if result.Error != nil {
+		fmt.Println(result.Error)
 		return c.String(500, "Something went wrong")
 	}
 
-	spotifyClient := oauth.CreateSpotifyClient(token)
+	spotifyClient := config.CreateSpotifyClient(tokens)
 
 	if user.SpotifyId == "" {
 
@@ -55,21 +120,25 @@ func (h Handlers) SpotifyLoginCallback(c echo.Context) error {
 		log.Printf("error setting user %s session %v\n", user.UserId, err)
 	}
 
-	redirectUrl := "/convert-playlist"
-
-	return c.Redirect(301, redirectUrl)
+	return c.JSON(200, "successfully connected to spotify")
 }
 
 func (h Handlers) FetchUserSpotifyPlaylists(c echo.Context) error {
+	fmt.Println("fetching spotify playlists..")
 	user := session.GetUserFromSession(c)
 
-	spotifyClient, err := oauth.CreateUserSpotifyClient(h.Db, c.Request().Context(), user.UserId, "spotify")
+	spotifyClient, err := config.CreateUserSpotifyClient(h.Db, user.UserId)
 	if err != nil {
 		return c.JSON(400, "token not found")
 	}
 
 	ctx := context.Background()
-	playlists, _ := spotify_service.GetUserPlaylists(spotifyClient, ctx)
+	playlists, err := SpotifyService.GetUserPlaylists(spotifyClient, ctx)
+
+	if err != nil {
+		// just log, still return playlists
+		log.Println("error fetching spotify user playlists:", err)
+	}
 
 	return c.JSON(200, playlists)
 

@@ -19,6 +19,7 @@ var (
 	GOOGLE_LOGIN_REDIRECT_URL    string
 	GOOGLE_CONNECT_REDIRECT_URL  string
 	SPOTIFY_CONNECT_REDIRECT_URL string
+	FRONTEND_BASE_URL            string
 )
 
 const (
@@ -33,12 +34,13 @@ func getEnvOrThrow(varname string) string {
 	}
 	return envValue
 }
-func init() {
+
+func LoadEnv() {
 
 	err := godotenv.Load()
 
 	if err != nil {
-		log.Println("Error loading .env file")
+		log.Fatal("Error occured loading the project .env")
 	}
 
 	GOOGLE_API_KEY = getEnvOrThrow("GOOGLE_API_KEY")
@@ -57,9 +59,15 @@ func init() {
 
 	SERVER_BASE_URL = getEnvOrThrow("SERVER_BASE_URL")
 
-	GOOGLE_LOGIN_REDIRECT_URL = SERVER_BASE_URL + "/login/google/callback"
+	FRONTEND_BASE_URL = os.Getenv("FRONTEND_BASE_URL")
 
-	GOOGLE_CONNECT_REDIRECT_URL = SERVER_BASE_URL + "/connect/youtube/callback"
-	SPOTIFY_CONNECT_REDIRECT_URL = SERVER_BASE_URL + "/connect/spotify/callback"
+	GOOGLE_LOGIN_REDIRECT_URL = FRONTEND_BASE_URL + "/convert/connect-youtube"
 
+	GOOGLE_CONNECT_REDIRECT_URL = FRONTEND_BASE_URL + "/convert/connect-youtube"
+	SPOTIFY_CONNECT_REDIRECT_URL = FRONTEND_BASE_URL + "/convert/connect-spotify"
+
+}
+
+func init() {
+	// LoadEnv()
 }

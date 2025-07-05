@@ -190,8 +190,6 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 
 	res, err := httpClient.Do(req)
 
-	// fmt.Println("\n\nstatus code:", res.StatusCode)
-
 	if err != nil {
 		fmt.Println("error sending request", err)
 		return []byte(""), nil, err

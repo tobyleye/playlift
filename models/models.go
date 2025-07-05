@@ -18,14 +18,15 @@ type Token struct {
 }
 
 type User struct {
-	UserId    string    `gorm:"primaryKey;size:200;unique" json:"user_id"`
-	Email     string    `gorm:"size:200;unique" json:"username"`
-	Name      string    `gorm:"size:200" json:"name"`
-	Picture   string    `json:"picture"`
-	CreatedAt time.Time `json:"created_at"`
-	Tokens    []Token
-	SpotifyId string `json:"spotify_id"`
-	YoutubeId string `json:"youtube_id"`
+	UserId                    string    `gorm:"primaryKey;size:200;unique" json:"user_id"`
+	Email                     string    `gorm:"size:200;unique" json:"username"`
+	Name                      string    `gorm:"size:200" json:"name"`
+	Picture                   string    `json:"picture"`
+	CreatedAt                 time.Time `json:"created_at"`
+	Tokens                    []Token
+	SpotifyId                 string `json:"spotify_id"`
+	YoutubeId                 string `json:"youtube_id"`
+	PlatformsConnectionStatus PlatformsConnectionStatus
 }
 
 type Conversion struct {
@@ -44,6 +45,20 @@ type Conversion struct {
 	User                   User
 	PlaylistCreationStatus bool   `gorm:"column:playlist_creation_status" json:"playlist_creation_status"`
 	CreatedPlaylistLink    string `gorm:"column:created_playlist_link" json:"created_playlist_link"`
+}
+
+type PlaylistConversion struct {
+	ConversionID        string    `gorm:"primaryKey;column:conversion_id" json:"conversion_id"`
+	PlaylistId          string    `gorm:"column:playlist_id" json:"playlist_id"`
+	PlaylistTitle       string    `gorm:"column:playlist_title" json:"playlist_title"`
+	Link                string    `gorm:"column:link" json:"link"`
+	SourcePlatform      string    `gorm:"column:source_platform" json:"source_platform"`
+	DestinationPlatform string    `gorm:"column:destination_platform" json:"destination_platform"`
+	Status              string    `gorm:"column:status" json:"status"`
+	TotalTracks         int       `gorm:"column:total_tracks" json:"total_tracks"`
+	CreatedAt           time.Time `gorm:"column:created_at" json:"created_at"`
+	UserId              string    `gorm:"column:user_id" json:"user_id"`
+	User                User
 }
 
 type PlatformsConnectionStatus struct {
