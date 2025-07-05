@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 
@@ -17,8 +16,6 @@ import (
 
 	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/models"
-	SpotifyService "github.com/tobyleye/playlist-converter/services/spotify"
-	YoutubeService "github.com/tobyleye/playlist-converter/services/youtube"
 	"github.com/tobyleye/playlist-converter/session"
 	"gorm.io/gorm"
 )
@@ -114,7 +111,7 @@ func (h Handlers) Convert(c echo.Context) error {
 
 	requestBodyToStruct(c, &body)
 
-	user := session.GetUserFromSession(c)
+	user, _ := session.GetUserFromSession(c)
 
 	destinationPlatform := strings.ToLower(body.Destination)
 	sourcePlatform := strings.ToLower(body.Source)
@@ -200,7 +197,7 @@ func (h Handlers) Convert(c echo.Context) error {
 }
 
 func (h Handlers) RestartConversion(c echo.Context) error {
-	// user := session.GetUserFromSession(c)
+	// user, _ := session.GetUserFromSession(c)
 	conversionId := c.Param("id")
 	var conversion models.PlaylistConversion
 
@@ -334,7 +331,7 @@ func (h Handlers) DeleteConversion(c echo.Context) error {
 
 func (h Handlers) GetAllConversions(c echo.Context) error {
 	conversions := []models.PlaylistConversion{}
-	user := session.GetUserFromSession(c)
+	user, _ := session.GetUserFromSession(c)
 	res := h.Db.Where("user_id = ?", user.UserId).Select(
 		[]string{"ConversionID", "PlaylistTitle", "Link", "PlaylistId", "DestinationPlatform", "SourcePlatform", "Status"},
 	).Find(&conversions)
@@ -344,42 +341,30 @@ func (h Handlers) GetAllConversions(c echo.Context) error {
 	return c.JSON(200, conversions)
 }
 
-func (h Handlers) PreviewLink(c echo.Context) error {
-	link := c.QueryParam("link")
-	parsedLink, err := ParseLink(link)
+func (h Handlers) GetConnectionStatus(c echo.Context) error {
+	// a handler to check if the user has connected their spotify and youtube accounts
+	// this will be used to show the connection status on the frontend
+	user, _ := session.GetUserFromSession(c)
+	userTokens := []models.Token{}
+	h.Db.Find(&userTokens, "user_id = ?", user.UserId)
 
-	fmt.Println("query: ", parsedLink.Platform, parsedLink.Type, parsedLink.ID)
+	log.Println("user tokens:", userTokens)
+	spotifyConnected := false
+	youtubeConnected := false
 
-	if err != nil {
-		return c.JSON(400, struct{}{})
+	if len(userTokens) > 0 {
+		for _, token := range userTokens {
+			if token.Platform == "spotify" {
+				spotifyConnected = true
+			} else if token.Platform == "youtube" {
+				youtubeConnected = true
+			}
+		}
 	}
 
-	if !isPlatformSupported(parsedLink.Platform) {
-		return c.JSON(http.StatusBadRequest, "invalid link")
-	}
-
-	var queryInfo interface{}
-
-	isPreview := true
-
-	if parsedLink.Platform == SPOTIFY {
-		queryInfo, err = SpotifyService.GetSpotifyMusicInfo(h.SpotifyClient, h.Context, parsedLink.ID, parsedLink.Type, isPreview)
-
-	} else if parsedLink.Platform == YOUTUBE_MUSIC {
-		queryInfo, err = YoutubeService.GetYoutubeMusicInfo(h.YoutubeClient, parsedLink.ID, parsedLink.Type)
-
-	}
-
-	if err != nil {
-		log.Println(err.Error())
-		return c.JSON(400, struct{}{})
-	}
-
-	return c.JSON(200, struct {
-		Type   string      `json:"type"`
-		Object interface{} `json:"object"`
-	}{
-		Type:   parsedLink.Type,
-		Object: queryInfo,
+	return c.JSON(200, map[string]bool{
+		"spotify_connected": spotifyConnected,
+		"youtube_connected": youtubeConnected,
 	})
+
 }

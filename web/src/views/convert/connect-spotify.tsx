@@ -3,16 +3,17 @@ import { Box, Icon, Heading, Text, chakra } from "@chakra-ui/react";
 import { CheckIcon, MusicIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import useSWR from "swr";
+
+import { useConvertWizardContext } from "./context";
 
 export default function ConnectSpotify() {
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
   const error = searchParams.get("error");
   const navigate = useNavigate();
+
+  const { spotifyConnected, setSpotifyConnected } = useConvertWizardContext();
 
   useEffect(() => {
     if (error) {
@@ -23,22 +24,23 @@ export default function ConnectSpotify() {
   useEffect(() => {
     const loginCallback = async () => {
       try {
-        const res = await client.post("/connect/spotify/callback", {
+        setLoading(true);
+        await client.post("/connect/spotify/callback", {
           code,
         });
-        console.log("res:", res);
+        setSpotifyConnected(true);
       } catch (err) {
         navigate("/convert/connect-spotify", { replace: true });
         console.error("Error connecting to Spotify:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     if (code) {
       loginCallback();
     }
-  }, [code]);
-
-  // useSWR(code ? () => {})
+  }, [code, navigate, setSpotifyConnected]);
 
   const connectSpotify = () => {
     let url = "https://accounts.spotify.com/authorize";
@@ -69,7 +71,7 @@ export default function ConnectSpotify() {
     window.location.assign(url);
   };
   return (
-    <Box display="flex" flex={1} flexDirection="column" justifyContent="center">
+    <Box minH="80vh" display="flex" justifyContent="center" alignItems="center">
       <Box color="white" textAlign="center">
         <Box
           w={24}
@@ -118,7 +120,7 @@ export default function ConnectSpotify() {
           {spotifyConnected ? (
             <Box display="flex" alignItems="center" gap={2}>
               <CheckIcon />
-              connected to spotify
+              Connected to Spotify
             </Box>
           ) : loading ? (
             `loading..`

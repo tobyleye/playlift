@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,110 +35,102 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 	}
 
 	tokens, err := googleLoginConfig.Exchange(c.Request().Context(), code)
-	// fmt.Println("tokens..", tokens)
 
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		log.Printf("error exchanging google authorization code for tokens:", err)
 		return c.JSON(500, map[string]string{"error": "server error"})
-	} else {
+	}
 
-		formattedExpiry := tokens.Expiry.Format("03:04:05PM, 02 Jan 2006")
+	formattedExpiry := tokens.Expiry.Format("03:04:05PM, 02 Jan 2006")
 
-		fmt.Println("Token will expire at exactly", formattedExpiry)
-		// fmt.Println("Token refresh tokens", tokens.RefreshToken)
+	log.Println("Token will expire at exactly", formattedExpiry)
 
-		httpClient := googleLoginConfig.Client(c.Request().Context(), tokens)
+	httpClient := googleLoginConfig.Client(c.Request().Context(), tokens)
 
-		oauth2service, err := oauth2V2.NewService(c.Request().Context(), option.WithHTTPClient(httpClient))
+	oauth2service, err := oauth2V2.NewService(c.Request().Context(), option.WithHTTPClient(httpClient))
 
-		fmt.Println("service error -", err)
-		userInfoService := oauth2V2.NewUserinfoService(oauth2service)
-		userInfo, err := userInfoService.Get().Do()
+	log.Println("create oauth2service error:", err)
 
-		if err == nil {
+	userInfoService := oauth2V2.NewUserinfoService(oauth2service)
+	userInfo, err := userInfoService.Get().Do()
 
-			var user *models.User
-			h.Db.Model(&models.User{}).Preload("Tokens").Where("email = ?", userInfo.Email).First(user)
+	log.Printf("user info %+v\n", userInfo)
 
-			fmt.Println("existing user", user)
+	if err == nil {
 
-			var userId string
+		var user models.User
 
-			fmt.Println("found user:", user)
+		h.Db.Model(&models.User{}).Preload("Tokens").Where("email = ?", userInfo.Email).First(&user)
 
-			if user.UserId == "" {
-				// create user
+		log.Println("existing user", user)
 
-				userId = uuid.New().String()
+		var userId string
 
-				user := &models.User{
-					UserId:    userId,
-					Email:     userInfo.Email,
-					Name:      userInfo.Name,
-					Picture:   userInfo.Picture,
-					YoutubeId: userInfo.Id,
-					CreatedAt: time.Now(),
-				}
+		if user.UserId == "" {
+			// create user
 
-				h.Db.Create(user)
+			userId = uuid.New().String()
 
-			} else {
-				userId = user.UserId
-
+			user := &models.User{
+				UserId:    userId,
+				Email:     userInfo.Email,
+				Name:      userInfo.Name,
+				Picture:   userInfo.Picture,
+				YoutubeId: userInfo.Id,
+				CreatedAt: time.Now(),
 			}
 
-			token := &models.Token{
-				UserId:       userId,
-				Platform:     "youtube",
-				AccessToken:  tokens.AccessToken,
-				RefreshToken: tokens.RefreshToken,
-				TokenType:    tokens.TokenType,
-				ExpiresIn:    tokens.Expiry,
-				CreatedAt:    time.Now(),
-			}
-
-			models.CreateOrUpdateTokenForUser(h.Db, userId, token)
-
-			fmt.Print("new token", token)
-
-			err := session.CreateSession(c, user)
-
-			if err != nil {
-				fmt.Println("error creating session", err)
-				return c.JSON(500, map[string]string{"error": "server error"})
-			}
-
-			// session, _ := echoSessionMiddleware.Get("user", c)
-			// session.Options = &sessions.Options{
-			// 	Path:     "/",
-			// 	MaxAge:   86400 * 2, // 2 days
-			// 	HttpOnly: true,
-			// }
-
-			// // session.
-			// session.Values["userId"] = userId
-			// session.Values["email"] = userInfo.Email
-			// session.Values["name"] = userInfo.Name
-			// session.Values["picture"] = userInfo.Picture
-
-			// get user tokens here and verify user
-
-			// err = session.Save(c.Request(), c.Response())
-
-			return c.JSON(200, map[string]interface{}{
-				"message": "Login successful",
-				"data": map[string]interface{}{
-					"user_id": userId,
-					"name":    userInfo.Name,
-					"email":   userInfo.Email,
-					"picture": userInfo.Picture,
-				},
-			})
+			h.Db.Create(user)
 
 		} else {
+			userId = user.UserId
+
+		}
+
+		token := models.Token{
+			UserId:       userId,
+			Platform:     "youtube",
+			AccessToken:  tokens.AccessToken,
+			RefreshToken: tokens.RefreshToken,
+			TokenType:    tokens.TokenType,
+			ExpiresIn:    tokens.Expiry,
+			CreatedAt:    time.Now(),
+		}
+
+		models.CreateOrUpdateTokenForUser(h.Db, userId, &token)
+
+		log.Print("creating user session", token)
+		userSession, err := session.CreateSession(c, &user)
+
+		if err != nil {
+			log.Println("error creating session", err)
 			return c.JSON(500, map[string]string{"error": "server error"})
 		}
 
+		// session, _ := echoSessionMiddleware.Get("user", c)
+		// session.Options = &sessions.Options{
+		// 	Path:     "/",
+		// 	MaxAge:   86400 * 2, // 2 days
+		// 	HttpOnly: true,
+		// }
+
+		// // session.
+		// session.Values["userId"] = userId
+		// session.Values["email"] = userInfo.Email
+		// session.Values["name"] = userInfo.Name
+		// session.Values["picture"] = userInfo.Picture
+
+		// get user tokens here and verify user
+
+		// err = session.Save(c.Request(), c.Response())
+
+		return c.JSON(200, map[string]interface{}{
+			"message": "Login successful",
+			"data":    userSession,
+		})
+
+	} else {
+		return c.JSON(500, map[string]string{"error": "server error"})
 	}
 
 }
@@ -146,7 +139,7 @@ func (h Handlers) GetUserSession(c echo.Context) error {
 
 	// session, _ := echoSessionMiddleware.Get("user", c)
 
-	user := session.GetUserFromSession(c)
+	user, _ := session.GetUserFromSession(c)
 
 	fmt.Printf("user: %v\n", user)
 
@@ -155,7 +148,13 @@ func (h Handlers) GetUserSession(c echo.Context) error {
 }
 
 func (h Handlers) Logout(c echo.Context) error {
-	// Todo:
-	// clear sessions obviously
-	return nil
+	// clear session
+
+	err := session.ClearSession(c)
+	if err != nil {
+		log.Println("error clearing session:", err)
+		return c.JSON(400, map[string]string{"error": "no session found"})
+	}
+
+	return c.JSON(200, map[string]string{"message": "logged out successfully"})
 }

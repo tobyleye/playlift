@@ -2,8 +2,6 @@ import {
   Box,
   Text,
   Heading,
-  Button,
-  Container,
   SimpleGrid,
   Link as StyledLink,
   Icon,
@@ -12,8 +10,12 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Music, Play } from "lucide-react";
 import { BigCircle } from "@/components/animated-shapes";
 import Nav from "@/components/nav";
+import { useSessionContext } from "@/contexts/session";
+import UserMenu from "@/components/user-menu";
 
 export default function Landing() {
+  const { session, loadingSession } = useSessionContext();
+
   return (
     <Box
       minH="100vh"
@@ -76,11 +78,19 @@ export default function Landing() {
 
       <Nav
         rightElement={
-          <Box color="white">
-            <StyledLink as={Link} textDecor="underline" to="/home">
-              Returning User
-            </StyledLink>
-          </Box>
+          loadingSession ? (
+            <Box />
+          ) : session ? (
+            <Box>
+              <UserMenu />
+            </Box>
+          ) : (
+            <Box color="white">
+              <StyledLink as={Link} textDecor="underline" to="/home">
+                Returning User
+              </StyledLink>
+            </Box>
+          )
         }
       />
 

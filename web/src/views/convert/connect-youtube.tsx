@@ -1,16 +1,21 @@
 import { Box, Heading, Text, chakra, Icon } from "@chakra-ui/react";
 import { CheckIcon, PlayIcon } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
-import { useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
 import { client } from "@/api/api";
+import { useConvertWizardContext } from "./context";
+import { useSessionContext } from "@/contexts/session";
 
 export default function ConnectYoutube() {
-  const [youtubeConnected, setYoutubeConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const navigate = useNavigate();
+
+  const { setSession } = useSessionContext();
+  const { youtubeConnected, setYoutubeConnected } = useConvertWizardContext();
 
   useEffect(() => {
     if (error) {
@@ -19,17 +24,17 @@ export default function ConnectYoutube() {
   }, [error]);
 
   useEffect(() => {
-    console.log({ code });
-
     const connectCallback = async () => {
       setLoading(true);
       try {
-        const user = await client.post("/login/google/callback", {
+        const resp = await client.post("/login/google/callback", {
           code,
         });
-        console.log("user..", user);
-        // localStorage.setItem("userId", user.data.user_id);
+        setYoutubeConnected(true);
+        localStorage.setItem("userId", resp.data.user_id);
+        setSession(resp.data);
       } catch (err) {
+        navigate("/convert/connect-spotify", { replace: true });
         console.error("Error connecting to YouTube Music:", err);
       }
     };
@@ -37,7 +42,7 @@ export default function ConnectYoutube() {
     if (code) {
       connectCallback();
     }
-  }, [code]);
+  }, [code, navigate, setSession, setYoutubeConnected]);
 
   const connectYoutube = useGoogleLogin({
     flow: "auth-code",
@@ -52,7 +57,7 @@ export default function ConnectYoutube() {
   });
 
   return (
-    <Box display="flex" flex={1} flexDirection="column" justifyContent="center">
+    <Box minH="80vh" display="flex" justifyContent="center" alignItems="center">
       <Box color="white" textAlign="center">
         <Box
           w={24}

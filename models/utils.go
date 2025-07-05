@@ -15,7 +15,7 @@ func CreateOrUpdateTokenForUser(db *gorm.DB, userId string, token *Token) error 
 	if updateResult.Error != nil {
 		return updateResult.Error
 	}
-
+	// If no rows were affected, create a new token
 	if updateResult.RowsAffected == 0 {
 		return db.Create(token).Error
 	} else {

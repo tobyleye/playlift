@@ -18,7 +18,7 @@ import (
 func (h Handlers) YoutubeConnectCallback(c echo.Context) error {
 	code := c.QueryParam("code")
 
-	user := session.GetUserFromSession(c)
+	user, _ := session.GetUserFromSession(c)
 
 	tokens, err := config.GoogleOauthConfig.Exchange(c.Request().Context(), code)
 	fmt.Printf("tokens: %v\n", tokens)
@@ -48,7 +48,7 @@ func (h Handlers) YoutubeConnectCallback(c echo.Context) error {
 
 func (h Handlers) FetchUserYoutubePlaylists(c echo.Context) error {
 
-	user := session.GetUserFromSession(c)
+	user, _ := session.GetUserFromSession(c)
 	fmt.Println("fetching youtube playlists for user:", user.UserId)
 	httpClient, err := config.CreateYoutubeClientForUser(h.Db, user.UserId)
 

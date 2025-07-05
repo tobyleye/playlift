@@ -15,26 +15,19 @@ import {
   Container,
   SimpleGrid,
 } from "@chakra-ui/react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import useSWR from "swr";
 import api from "../api/api";
-import {
-  MoveRightIcon,
-  Trash2Icon,
-  RotateCw,
-  AlertCircle,
-  Clock,
-  Check,
-  ArrowRight,
-} from "lucide-react";
+import { AlertCircle, Clock, Check, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import config from "../config";
-import { useGlobalStore } from "../store/store";
 import { Rabbit } from "lucide-react";
 import Nav from "@/components/nav";
 import dayjs from "dayjs";
 import { Platform, PlaylistConversion } from "@/types";
 import { streamingServicesMap } from "@/constants/constants";
+import UserMenu from "@/components/user-menu";
+import { useSessionContext } from "@/contexts/session";
 
 const formatPlatform = (platform: string) => {
   return platform.replace("_", " ");
@@ -67,11 +60,14 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function Home() {
-  const user = useGlobalStore((store) => store.user);
+  const { session } = useSessionContext();
 
-  const fetchResult = useSWR<any>(user ? "/conversions" : null, async () => {
-    return api.fetchConversions();
-  });
+  const fetchResult = useSWR<any>(
+    session?.user_id ? "/conversions" : null,
+    async () => {
+      return api.fetchConversions();
+    }
+  );
 
   const { isLoading: isLoadingConversions, mutate, error } = fetchResult;
 
@@ -145,23 +141,19 @@ export default function Home() {
       bg="linear-gradient(to right bottom, rgb(88, 28, 135), rgb(30, 58, 138), rgb(49, 46, 129))"
       pb={8}
     >
-      <Nav
-        rightElement={
-          <Box>
-            <Button as={Link} to="/convert">
-              New Migration
-            </Button>
-          </Box>
-        }
-      />
+      <Nav rightElement={<UserMenu />} />
 
       {/* {!user && <LoginModal onClose={() => {}} />} */}
 
       <Container maxWidth="container.lg" mt={8}>
-        <Heading mb={1}>Your migration</Heading>
-        <Text mb={8} color="whiteAlpha.700">
-          Manage and track your playlist migrations
-        </Text>
+        <Box display="flex" gap={4} flexWrap="wrap" alignItems="center" mb={8}>
+          <Box>
+            <Heading mb={1}>Your migration</Heading>
+            <Text color="whiteAlpha.700">
+              Manage and track your playlist migrations
+            </Text>
+          </Box>
+        </Box>
 
         <SimpleGrid
           columns={{ base: 1, md: 2 }}

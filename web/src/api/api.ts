@@ -48,6 +48,13 @@ const api = {
     return client.get("/playlists/youtube").then((res) => res.data);
   },
   getUserSession: () => client.get("/user/session").then((res) => res.data),
+
+  logout: () => {
+    return client.post("/logout");
+  },
+  getConnectionStatus: () => {
+    return client.get("/connection-status").then((res) => res.data);
+  },
 };
 
 export default api;

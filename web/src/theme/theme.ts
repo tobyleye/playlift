@@ -6,6 +6,14 @@ export const theme = extendTheme({
     "youtube-red": "rgb(239, 68, 68)",
   },
   styles: {
-    global: {},
+    global: {
+      button: {
+        cursor: "pointer",
+
+        "&:disabled": {
+          cursor: "auto",
+        },
+      },
+    },
   },
 });

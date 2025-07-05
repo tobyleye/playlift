@@ -3,20 +3,11 @@ import {
   Text,
   Heading,
   Icon,
-  SimpleGrid,
-  chakra,
   Tabs,
   TabList,
   TabPanel,
   TabPanels,
   Tab,
-  Button,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
   Spinner,
 } from "@chakra-ui/react";
 import { ArrowRight, CheckIcon, MusicIcon } from "lucide-react";
@@ -24,12 +15,8 @@ import { useState } from "react";
 import { Playlist } from "@/types";
 import useSWR from "swr";
 import api from "@/api/api";
-import { Link } from "react-router-dom";
 import { streamingServices } from "@/constants/constants";
-
-const formatPlatform = (platform: string) => {
-  return platform.replace(/_/g, " ");
-};
+import { useConvertWizardContext } from "./context";
 
 function SpotifyPlaylists({
   selectedPlaylistsIds,
@@ -67,90 +54,29 @@ function SpotifyPlaylists({
 }
 
 export default function PlaylistsSelection() {
-  // a map of selected playlist id to the playlist object
-  const [selectedPlaylistsMap, setSelectedPlaylistsMap] = useState<
-    Record<string, Playlist>
-  >({});
+  const {
+    selectedPlaylists,
+    togglePlaylist,
+    setSelectedPlaylists,
 
-  //  get the selected playlists as an array
-  const selectedPlaylists = Object.values(selectedPlaylistsMap);
-  //  ids of the selected playlists
-  const selectedPlaylistsIds = Object.keys(selectedPlaylistsMap);
+    sourcePlatform,
+    destinationPlatform,
+    setDestinationPlatform,
+    setSourcePlatform,
+  } = useConvertWizardContext();
 
   const [activeTabIndex, setActiveTabIndex] = useState<number>(0);
-  const [showSuccess, setShowSuccess] = useState(false);
 
-  const sourcePlatform = [
-    streamingServices.youtubeMusic,
-    streamingServices.spotify,
-  ][activeTabIndex];
+  //  ids of the selected playlists
+  const selectedPlaylistsIds = selectedPlaylists.map((p) => p.playlist_id);
 
-  const destinationPlatform =
-    sourcePlatform.value === streamingServices.youtubeMusic.value
-      ? streamingServices.spotify
-      : streamingServices.youtubeMusic;
-
-  // console.log("source --", sourcePlatform);
-
-  const {
-    data: youtubePlaylists,
-    isLoading: loadingYoutubePlaylists,
-    error,
-  } = useSWR("youtube-playlists", () => api.getYoutubePlaylists());
-
-  // console.log("spotify playlists:", spotifyPlaylists);
-
-  const togglePlaylist = (p: Playlist) => {
-    const newPlaylistsMap = { ...selectedPlaylistsMap };
-
-    if (selectedPlaylistsMap[p.playlist_id]) {
-      delete newPlaylistsMap[p.playlist_id];
-    } else {
-      newPlaylistsMap[p.playlist_id] = p;
-    }
-
-    setSelectedPlaylistsMap(newPlaylistsMap);
-  };
-
-  const startMigration = async () => {
-    // Todo: replace with a confirmation modal
-    const confirm = window.confirm(
-      `Are you sure you want to migrate ${
-        selectedPlaylists.length
-      } playlists from ${formatPlatform(sourcePlatform.label)} to ${
-        destinationPlatform.label
-      }`
-    );
-
-    if (!confirm) return;
-
-    const body = {
-      destination: destinationPlatform.value,
-      source: sourcePlatform.value,
-      playlists: selectedPlaylists.map((pl) => pl.playlist_id),
-    };
-
-    console.log("body..", body);
-    try {
-      await api.convert(
-        body.playlists,
-        destinationPlatform.value,
-        sourcePlatform.value
-      );
-      console.log("migration started successfully!");
-      setShowSuccess(true);
-    } catch (err) {
-      console.error("Error starting migration:", err);
-      alert(
-        "An error occurred while starting the migration. Please try again."
-      );
-      return;
-    }
-  };
+  const { data: youtubePlaylists, isLoading: loadingYoutubePlaylists } = useSWR(
+    "youtube-playlists",
+    () => api.getYoutubePlaylists()
+  );
 
   return (
     <Box color="white" pt={10}>
-      <SuccessModal show={showSuccess} />
       <Box display="flex" alignItems="center" justifyContent="center" mb={4}>
         <Box w={3} h={3} bg="whiteAlpha.600" rounded="full" mr={2} />
         <Text>From</Text>
@@ -164,7 +90,7 @@ export default function PlaylistsSelection() {
       </Box>
       <Box textAlign="center" mb={8}>
         <Heading mb={2} fontWeight={"bold"} fontSize="3xl">
-          Select Playlists to Migrate
+          Select Playlists to Transfer
         </Heading>
         <Text color="whiteAlpha.800">
           Choose which playlists you'd like to move to{" "}
@@ -177,9 +103,22 @@ export default function PlaylistsSelection() {
           isLazy
           index={activeTabIndex}
           onChange={(index) => {
-            console.log("index..", index);
             setActiveTabIndex(index);
-            setSelectedPlaylistsMap({});
+            // some crazy logic to switch platforms.
+
+            const sourcePlatform = [
+              streamingServices.youtubeMusic,
+              streamingServices.spotify,
+            ][index];
+
+            const destinationPlatform =
+              sourcePlatform.value === streamingServices.youtubeMusic.value
+                ? streamingServices.spotify
+                : streamingServices.youtubeMusic;
+
+            setSourcePlatform(sourcePlatform);
+            setDestinationPlatform(destinationPlatform);
+            setSelectedPlaylists([]);
           }}
         >
           <TabList
@@ -258,43 +197,8 @@ export default function PlaylistsSelection() {
           {selectedPlaylists.length} playlists selected from{" "}
           {sourcePlatform.label}
         </Box>
-
-        <Box
-          position="fixed"
-          bottom={0}
-          left={0}
-          width="full"
-          px={4}
-          pb={6}
-          display="flex"
-          justifyContent="center"
-          zIndex={5}
-        >
-          <Button
-            disabled={selectedPlaylists.length === 0}
-            onClick={startMigration}
-          >
-            Start migration
-          </Button>
-        </Box>
       </Box>
     </Box>
-  );
-}
-
-function SuccessModal({ show }: { show: boolean }) {
-  return (
-    <Modal isCentered isOpen={show} onClose={() => {}}>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader></ModalHeader>
-
-        <ModalBody textAlign="center">
-          <Heading mb={1}>Successful</Heading>
-          <Link to="/home">Go home</Link>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
   );
 }
 

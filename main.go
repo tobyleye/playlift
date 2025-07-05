@@ -11,12 +11,14 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/labstack/echo-contrib/session"
+
+	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/handlers"
 	"github.com/tobyleye/playlist-converter/models"
+	"github.com/tobyleye/playlist-converter/session"
 	"github.com/zmb3/spotify/v2"
 	spotifyAuth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/oauth2/clientcredentials"
@@ -37,17 +39,16 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 func ensureLogin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		user, err := session.Get("user", c)
+		user, err := session.GetUserFromSession(c)
 		if err != nil {
-			log.Println("error getting user session:", err)
+			log.Println("error getting user session in middleware", err)
 			return c.JSON(500, map[string]string{"error": "internal server error"})
 		}
-		userId := user.Values["userId"]
-		if userId == nil {
+		if user.UserId == "" {
 			return c.JSON(401, map[string]string{"error": "unauthorized"})
 		}
 
-		c.Set("user", user.Values)
+		c.Set("user", user)
 		return next(c)
 	}
 }
@@ -84,7 +85,7 @@ func main() {
 	}
 
 	e := echo.New()
-	e.Use(session.Middleware(SessionStore))
+	e.Use(echoSession.Middleware(SessionStore))
 
 	var corsConfig = middleware.DefaultCORSConfig
 	corsConfig.AllowCredentials = true
@@ -139,6 +140,7 @@ func main() {
 
 	privateRoutes.GET("/playlists/youtube", handlers.FetchUserYoutubePlaylists)
 	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)
+	privateRoutes.GET("/connection-status", handlers.GetConnectionStatus)
 
 	// serve frontend. this should always be done after routes are registered
 	port := os.Getenv("PORT")

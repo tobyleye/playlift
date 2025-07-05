@@ -77,7 +77,7 @@ func SpotifyTokenExchange(code string) (*oauth2.Token, error) {
 }
 
 func (h Handlers) SpotifyLoginCallback(c echo.Context) error {
-	user := session.GetUserFromSession(c)
+	user, _ := session.GetUserFromSession(c)
 
 	body := requestBodyToMap(c)
 	code, _ := body["code"].(string)
@@ -124,8 +124,7 @@ func (h Handlers) SpotifyLoginCallback(c echo.Context) error {
 }
 
 func (h Handlers) FetchUserSpotifyPlaylists(c echo.Context) error {
-	fmt.Println("fetching spotify playlists..")
-	user := session.GetUserFromSession(c)
+	user, _ := session.GetUserFromSession(c)
 
 	spotifyClient, err := config.CreateUserSpotifyClient(h.Db, user.UserId)
 	if err != nil {
