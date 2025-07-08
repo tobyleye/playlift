@@ -18,6 +18,7 @@ import (
 	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/handlers"
 	"github.com/tobyleye/playlist-converter/models"
+	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
 	"github.com/tobyleye/playlist-converter/session"
 	"github.com/zmb3/spotify/v2"
 	spotifyAuth "github.com/zmb3/spotify/v2/auth"
@@ -141,6 +142,13 @@ func main() {
 	privateRoutes.GET("/playlists/youtube", handlers.FetchUserYoutubePlaylists)
 	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)
 	privateRoutes.GET("/connection-status", handlers.GetConnectionStatus)
+
+	privateRoutes.GET(("/playlist-tracks/:playlistId"), func(echo echo.Context) error {
+		user, _ := session.GetUserFromSession(echo)
+		client, _ := config.CreateYoutubeClientForUser(db, user.UserId)
+		tracks, _ := ytmusicapi.FetchAllPlaylistTracks(client, echo.Param("playlistId"))
+		return echo.JSON(200, tracks)
+	})
 
 	// serve frontend. this should always be done after routes are registered
 	port := os.Getenv("PORT")

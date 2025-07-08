@@ -186,20 +186,22 @@ export default function ConversionWizard() {
       </Box>
 
       <Box position="relative" zIndex={1}>
-        <Nav
-          rightElement={
-            <Box
-              display={{
-                base: "none",
-                md: "block",
-              }}
-              maxW="sm"
-              w="full"
-            >
-              <WizardProgress currentStep={stepIndex} steps={steps} />
-            </Box>
-          }
-        />
+        <Box position="sticky" top={0}>
+          <Nav
+            rightElement={
+              <Box
+                display={{
+                  base: "none",
+                  md: "block",
+                }}
+                maxW="sm"
+                w="full"
+              >
+                <WizardProgress currentStep={stepIndex} steps={steps} />
+              </Box>
+            }
+          />
+        </Box>
 
         {showSuccess ? (
           <Success totalPlaylists={selectedPlaylists.length} />
@@ -271,6 +273,7 @@ export default function ConversionWizard() {
               <Box
                 display="flex"
                 alignItems="center"
+                gap={4}
                 w={{
                   base: "100%",
                   lg: "90%",
@@ -313,7 +316,11 @@ export default function ConversionWizard() {
                       onClick={startMigration}
                       disabled={selectedPlaylists.length === 0}
                     >
-                      Start Migration
+                      Start Migration{" "}
+                      {selectedPlaylists.length > 0
+                        ? `(${selectedPlaylists.length})`
+                        : ""}
+                      <Icon as={ArrowRight} ml={2} />
                     </GradientButton>
                   ) : (
                     <GradientButton
@@ -355,7 +362,6 @@ const GradientButton = ({
       py={2}
       px={7}
       alignItems="center"
-      gap={2}
       transition=".2s ease-in-out"
       _hover={{
         bgGradient: "linear(to-r, pink.600, purple.600)",

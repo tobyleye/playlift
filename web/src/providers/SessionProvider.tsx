@@ -22,9 +22,11 @@ export default function SessionProvider({
         .then((data) => {
           setSession(data);
         })
-        .catch(() => {
-          // remove userId from localStorage if session fetch fails
+        .catch((err) => {
+          // remove userId from localStorage if session returns 401
+          if (err.response && err.response.status === 401) {
           localStorage.removeItem("userId");
+          }
         })
         .finally(() => {
           setLoadingSession(false);

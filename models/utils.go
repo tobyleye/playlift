@@ -24,3 +24,28 @@ func CreateOrUpdateTokenForUser(db *gorm.DB, userId string, token *Token) error 
 
 	return nil
 }
+
+type UserTokens struct {
+	Youtube *Token
+	Spotify *Token
+}
+
+func GetUserTokens(db *gorm.DB, userId string) (UserTokens, error) {
+	tokens := []Token{}
+	result := db.Where("user_id = ?", userId).Find(&tokens)
+	if result.Error != nil {
+		return UserTokens{}, result.Error
+	}
+	var userTokens UserTokens
+
+	for _, token := range tokens {
+		log.Printf("token: %#v\n", tokens)
+		if token.Platform == "youtube" {
+			userTokens.Youtube = &token
+		} else if token.Platform == "spotify" {
+			userTokens.Spotify = &token
+		}
+	}
+
+	return userTokens, nil
+}

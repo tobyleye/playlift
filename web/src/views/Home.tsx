@@ -299,7 +299,7 @@ const ConversionCard = ({
     >
       <Box display="flex" alignItems="center" mb={4}>
         <Text fontWeight="bold" fontSize="medium">
-          {conversion.playlist_title || `Playlist ${index}`}
+          {conversion.playlist_title}
         </Text>
         <Box ml="auto">
           {conversion.status === "pending" ? (
@@ -345,7 +345,7 @@ const ConversionCard = ({
           <Text color="whiteAlpha.700" fontSize="sm">
             Tracks
           </Text>
-          <Text>156</Text>
+          <Text>{conversion.total_tracks}</Text>
         </Box>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Text color="whiteAlpha.700" fontSize="sm">

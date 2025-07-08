@@ -9,9 +9,11 @@ import {
   TabPanels,
   Tab,
   Spinner,
+  useToast,
+  ToastId,
 } from "@chakra-ui/react";
 import { ArrowRight, CheckIcon, MusicIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Playlist } from "@/types";
 import useSWR from "swr";
 import api from "@/api/api";
@@ -75,6 +77,9 @@ export default function PlaylistsSelection() {
     () => api.getYoutubePlaylists()
   );
 
+  const toast = useToast();
+  const toastRef = useRef<ToastId>();
+
   return (
     <Box color="white" pt={10}>
       <Box display="flex" alignItems="center" justifyContent="center" mb={4}>
@@ -116,6 +121,32 @@ export default function PlaylistsSelection() {
                 ? streamingServices.spotify
                 : streamingServices.youtubeMusic;
 
+            toast.close(toastRef.current!);
+            toastRef.current = toast({
+              duration: 2_500,
+              title: "Platforms Switched",
+              description: `Now transferring from ${sourcePlatform.label}  to ${destinationPlatform.label} `,
+              containerStyle: {
+                borderRadius: "md",
+              },
+              render(props) {
+                return (
+                  <Box bg="white" px="4" py="4" rounded="md">
+                    <Text
+                      mb={0}
+                      fontSize="md"
+                      fontWeight="bold"
+                      color="blackAlpha.900"
+                    >
+                      {props.title}
+                    </Text>
+                    <Text color="blackAlpha.800" fontSize="sm">
+                      {props.description}
+                    </Text>
+                  </Box>
+                );
+              },
+            });
             setSourcePlatform(sourcePlatform);
             setDestinationPlatform(destinationPlatform);
             setSelectedPlaylists([]);
@@ -192,11 +223,6 @@ export default function PlaylistsSelection() {
             </TabPanel>
           </TabPanels>
         </Tabs>
-
-        <Box my={4} textAlign="center" color="whiteAlpha.800">
-          {selectedPlaylists.length} playlists selected from{" "}
-          {sourcePlatform.label}
-        </Box>
       </Box>
     </Box>
   );
