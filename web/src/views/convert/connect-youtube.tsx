@@ -2,7 +2,7 @@ import { Box, Heading, Text, chakra, Icon } from "@chakra-ui/react";
 import { CheckIcon, PlayIcon } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { client } from "@/api/api";
 import { useConvertWizardContext } from "./context";
 import { useSessionContext } from "@/contexts/session";
@@ -93,14 +93,11 @@ export default function ConnectYoutube() {
           _disabled={{
             opacity: 0.6,
           }}
-          disabled={youtubeConnected}
+          disabled={youtubeConnected || loading}
           onClick={() => {
-            console.log("click mee bitch..");
-            connectYoutube();
-            // if (!youtubeConnected) {
-            //   setYoutubeConnected(true);
-            //   setStep(1);
-            // }
+            if (!youtubeConnected) {
+              connectYoutube();
+            }
           }}
         >
           {youtubeConnected ? (

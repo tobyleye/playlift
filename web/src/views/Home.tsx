@@ -4,7 +4,6 @@ import {
   Box,
   Link as ChakraLink,
   Text,
-  Flex,
   Icon,
   useToast,
   Button,
@@ -29,13 +28,9 @@ import { streamingServicesMap } from "@/constants/constants";
 import UserMenu from "@/components/user-menu";
 import { useSessionContext } from "@/contexts/session";
 
-const formatPlatform = (platform: string) => {
-  return platform.replace("_", " ");
-};
-
-function LoginModal({ onClose }: { onClose: () => void }) {
+function LoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <Modal isCentered isOpen={true} onClose={onClose}>
+    <Modal isCentered isOpen={open} onClose={onClose}>
       <ModalOverlay
         bg="blackAlpha.300"
         backdropFilter="blur(6px) hue-rotate(90deg)"
@@ -62,7 +57,7 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 export default function Home() {
   const { session } = useSessionContext();
 
-  const fetchResult = useSWR<any>(
+  const fetchResult = useSWR<PlaylistConversion[]>(
     session?.user_id ? "/conversions" : null,
     async () => {
       return api.fetchConversions();
@@ -71,9 +66,7 @@ export default function Home() {
 
   const { isLoading: isLoadingConversions, mutate, error } = fetchResult;
 
-  let { data: conversions } = fetchResult;
-
-  conversions = conversions || [];
+  const { data: conversions = [] } = fetchResult;
 
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -96,6 +89,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // @ts-ignore: leave this for now
   const deleteConversion = async (conversionId: string) => {
     try {
       setIsLoading(true);
@@ -113,6 +107,7 @@ export default function Home() {
     }
   };
 
+  // @ts-ignore: leave this for now
   const restartConversion = async (conversionId: string) => {
     try {
       setIsLoading(true);
@@ -143,7 +138,7 @@ export default function Home() {
     >
       <Nav rightElement={<UserMenu />} />
 
-      {/* {!user && <LoginModal onClose={() => {}} />} */}
+      <LoginModal open={false} onClose={() => {}} />
 
       <Container maxWidth="container.lg" mt={8}>
         <Box display="flex" gap={4} flexWrap="wrap" alignItems="center" mb={8}>
@@ -228,11 +223,10 @@ export default function Home() {
               pointerEvents={isLoading ? "none" : "auto"}
               opacity={isLoading ? 0.5 : 1}
             >
-              {conversions.map((conversion: any, index: number) => {
+              {conversions.map((conversion) => {
                 return (
                   <ConversionCard
-                    index={index + 1}
-                    key={index}
+                    key={conversion.conversion_id}
                     conversion={conversion}
                   />
                 );
@@ -271,13 +265,7 @@ const EmptyState = () => {
   );
 };
 
-const ConversionCard = ({
-  index,
-  conversion,
-}: {
-  index: number;
-  conversion: PlaylistConversion;
-}) => {
+const ConversionCard = ({ conversion }: { conversion: PlaylistConversion }) => {
   const getPlaylistColor = (platform: Platform) => {
     if (platform === "youtube_music") {
       return "youtube-red";
@@ -373,78 +361,4 @@ const ConversionCard = ({
       </Box>
     </Box>
   );
-  // return (
-  //   <Box bg="white" rounded="sm" px={4} py={3}>
-  //     <Flex align="center" w="full">
-  //       <Heading size="lg" mb={2}>
-  //         {conversion.title}
-  //       </Heading>
-  //       <Box ml="auto" display="flex" gap={2} alignItems="center">
-  //         <button
-  //           onClick={(e) => {
-  //             e.stopPropagation();
-  //             // restartConversion(conversion.id);
-  //           }}
-  //         >
-  //           <Icon color="blue.400" as={RotateCw} />
-  //         </button>
-  //         <button
-  //           style={{ padding: 5 }}
-  //           onClick={(e) => {
-  //             e.stopPropagation();
-  //             // deleteConversion(conversion.id);
-  //           }}
-  //         >
-  //           <Icon color="red.500" as={Trash2Icon} />
-  //         </button>
-  //       </Box>
-  //     </Flex>
-  //     <Text mb={2} textTransform="capitalize">
-  //       {conversion.status}
-  //     </Text>
-
-  //     <Box display="flex" alignItems="center" mb={2}>
-  //       <Box
-  //         py={1}
-  //         px={2}
-  //         fontSize="sm"
-  //         rounded="full"
-  //         bg="gray.200"
-  //         textTransform="capitalize"
-  //       >
-  //         {formatPlatform(conversion.source_platform)}
-  //       </Box>
-  //       <Icon as={MoveRightIcon} mx={1} />
-
-  //       <Box
-  //         py={1}
-  //         px={2}
-  //         fontSize="sm"
-  //         rounded="full"
-  //         bg="gray.200"
-  //         textTransform="capitalize"
-  //       >
-  //         {formatPlatform(conversion.destination_platform)}
-  //       </Box>
-  //     </Box>
-
-  //     <Box>
-  //       <Box
-  //         display="inline-flex"
-  //         alignItems="center"
-  //         gap={1}
-  //         color="red.500"
-  //         bg="red.100"
-  //         rounded="full"
-  //         px={3}
-  //         py={1}
-  //       >
-  //         <AlertCircle size={14} />
-  //         <Text fontSize="sm" as="span">
-  //           Requires action
-  //         </Text>
-  //       </Box>
-  //     </Box>
-  //   </Box>
-  // );
 };

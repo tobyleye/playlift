@@ -13,7 +13,7 @@ import {
   ToastId,
 } from "@chakra-ui/react";
 import { ArrowRight, CheckIcon, MusicIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Playlist } from "@/types";
 import useSWR from "swr";
 import api from "@/api/api";
@@ -32,7 +32,7 @@ function SpotifyPlaylists({
   const {
     data: spotifyPlaylists,
     isLoading: isLoadingSpotify,
-    error: _spotifyError,
+    // error: _spotifyError,
   } = useSWR("spotify-playlists", () => api.getSpotifyPlaylists());
 
   return (
@@ -60,8 +60,6 @@ export default function PlaylistsSelection() {
     selectedPlaylists,
     togglePlaylist,
     setSelectedPlaylists,
-
-    sourcePlatform,
     destinationPlatform,
     setDestinationPlatform,
     setSourcePlatform,

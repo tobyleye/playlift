@@ -2,7 +2,6 @@ import { Box, Icon, Spinner, chakra } from "@chakra-ui/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Nav from "@/components/nav";
-import { useTransition, animated } from "@react-spring/web";
 import WizardProgress from "./wizard-progress";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ConvertWizardContext } from "./context";
@@ -10,28 +9,25 @@ import api from "@/api/api";
 import { Playlist } from "@/types";
 import { streamingServices } from "@/constants/constants";
 import Success from "./success-screen";
+// import { useTransition, animated } from "@react-spring/web";
 
-const useStep = () => {
-  const [step, setStep] = useState(1);
-  const prevStep = useRef(-1);
+// const useStep = () => {
+//   const [step, setStep] = useState(1);
+//   const prevStep = useRef(-1);
 
-  const setter = (val: number) => {
-    if (step !== val) {
-      prevStep.current = step;
-    }
-    setStep(val);
-  };
+//   const setter = (val: number) => {
+//     if (step !== val) {
+//       prevStep.current = step;
+//     }
+//     setStep(val);
+//   };
 
-  return [step, prevStep.current, setter] as [
-    number,
-    number,
-    (val: number) => void
-  ];
-};
-
-const formatPlatform = (platform: string) => {
-  return platform.replace(/_/g, " ");
-};
+//   return [step, prevStep.current, setter] as [
+//     number,
+//     number,
+//     (val: number) => void
+//   ];
+// };
 
 export default function ConversionWizard() {
   const [youtubeConnected, setYoutubeConnected] = useState(false);
@@ -95,7 +91,7 @@ export default function ConversionWizard() {
   ];
 
   const stepIndex = steps.findIndex((step) => step.path === stepPath);
-  const curStep = steps[stepIndex];
+  // const curStep = steps[stepIndex];
   const totalSteps = steps.length;
   const nextStep = stepIndex < totalSteps - 1 ? steps[stepIndex + 1] : null;
 
@@ -116,11 +112,7 @@ export default function ConversionWizard() {
 
     // Todo: replace with a confirmation modal
     const confirm = window.confirm(
-      `Are you sure you want to migrate ${
-        selectedPlaylists.length
-      } playlists from ${formatPlatform(sourcePlatform.label)} to ${
-        destinationPlatform.label
-      }`
+      `Are you sure you want to migrate ${selectedPlaylists.length} playlists from ${sourcePlatform.label} to ${destinationPlatform.label}`
     );
 
     if (!confirm) return;
