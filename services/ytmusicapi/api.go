@@ -19,6 +19,32 @@ type SearchResultItem struct {
 	Link    string
 }
 
+type YoutubePlaylist struct {
+	Title       string   `json:"title"`
+	Thumbnails  []string `json:"thumbnails"`
+	TotalTracks string   `json:"total_tracks"`
+	PlaylistId  string   `json:"playlist_id"`
+	Url         string   `json:"url"`
+}
+
+type PlaylistDetails struct {
+	Title          string
+	Description    string
+	TotalTracks    string
+	PlaylistTracks []SearchResultItem
+	Link           string
+}
+
+type PlaylistAllTracksResponse struct {
+	Total  int                `json:"total"`
+	Tracks []SearchResultItem `json:"tracks"`
+}
+
+type PlaylistTracksResponse struct {
+	NextContinuation string             `json:"next_continuation"`
+	Tracks           []SearchResultItem `json:"tracks"`
+}
+
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
 const YTM_DOMAIN = "https://music.youtube.com"
 
@@ -190,8 +216,6 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 
 	res, err := httpClient.Do(req)
 
-	// fmt.Println("\n\nstatus code:", res.StatusCode)
-
 	if err != nil {
 		fmt.Println("error sending request", err)
 		return []byte(""), nil, err
@@ -207,7 +231,7 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 	return resBody, data, err
 }
 
-func Search(searchQuery types.SearchQuery) ([]SearchResultItem, error) {
+func Search(client *http.Client, searchQuery types.SearchQuery) ([]SearchResultItem, error) {
 	filter := "songs"
 	scope := ""
 	ignoreSpelling := true
@@ -221,7 +245,7 @@ func Search(searchQuery types.SearchQuery) ([]SearchResultItem, error) {
 
 	}
 
-	_, data, err := sendRequest(nil, "search", body)
+	_, data, err := sendRequest(client, "search", body)
 	if err != nil {
 		return nil, err
 	}
@@ -241,8 +265,8 @@ func Search(searchQuery types.SearchQuery) ([]SearchResultItem, error) {
 	return results, nil
 }
 
-func SearchOne(searchQuery types.SearchQuery) (SearchResultItem, error) {
-	results, err := Search(searchQuery)
+func SearchOne(client *http.Client, searchQuery types.SearchQuery) (SearchResultItem, error) {
+	results, err := Search(client, searchQuery)
 	if err != nil {
 		return SearchResultItem{}, err
 	}
@@ -254,7 +278,7 @@ func SearchOne(searchQuery types.SearchQuery) (SearchResultItem, error) {
 	return results[0], nil
 }
 
-func FetchPlaylist(playlistId string) (interface{}, error) {
+func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, error) {
 	browseId := playlistId
 
 	if !strings.HasPrefix(browseId, "VL") {
@@ -264,14 +288,34 @@ func FetchPlaylist(playlistId string) (interface{}, error) {
 	body := map[string]interface{}{
 		"browseId": browseId,
 	}
-	_, jsonResponse, err := sendRequest(nil, "browse", body)
+	_, jsonResponse, err := sendRequest(client, "browse", body)
 	if err != nil {
-		return nil, err
+		return PlaylistDetails{}, err
 	}
 
 	var playlistTracks []SearchResultItem
 
 	playlistItemsContents := ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "secondaryContents", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
+	playlistHeader := ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents",
+		0, "musicEditablePlaylistDetailHeaderRenderer",
+		"header", "musicResponsiveHeaderRenderer",
+	})
+
+	// saved playlists that not for the user, has a different structure
+
+	if _, ok := playlistHeader.(map[string]interface{}); !ok {
+		playlistHeader = ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents",
+			0, "musicResponsiveHeaderRenderer",
+		})
+
+	}
+
+	title := ReadValueString(playlistHeader, []interface{}{"title", "runs", 0, "text"})
+	totalTracks := ReadValueString(playlistHeader, []interface{}{"secondSubtitle", "runs", 0, "text"})
+	totalTracks = strings.Replace(totalTracks, " songs", "", 1)
+
+	description := ReadValueString(playlistHeader, []interface{}{"description", "musicDescriptionShelfRenderer", "description", "runs", 0, "text"})
+
 	if content, ok := playlistItemsContents.([]interface{}); ok {
 		for _, itemContent := range content {
 			item := parseSearchResultItem(itemContent)
@@ -279,19 +323,116 @@ func FetchPlaylist(playlistId string) (interface{}, error) {
 		}
 	}
 
-	return struct {
-		PlaylistTracks []SearchResultItem
-	}{
+	playlist := PlaylistDetails{
+		Title:          title,
+		Description:    description,
+		TotalTracks:    totalTracks,
 		PlaylistTracks: playlistTracks,
+		Link:           fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+	}
+	fmt.Printf("playlist details: %+v\n", playlist)
+
+	return playlist, nil
+}
+
+func FetchPlaylistTracks(client *http.Client, playlistId string, continuation string) (PlaylistTracksResponse, error) {
+	browseId := playlistId
+
+	if !strings.HasPrefix(browseId, "VL") {
+		browseId = "VL" + browseId
+	}
+
+	// prepare request body
+	body := map[string]interface{}{}
+
+	if continuation != "" {
+		body["continuation"] = continuation
+	} else {
+		body["browseId"] = browseId
+	}
+
+	_, jsonResponse, err := sendRequest(client, "browse", body)
+
+	if err != nil {
+		return PlaylistTracksResponse{}, err
+	}
+
+	var nextContinuation string
+	var playlistTracks []SearchResultItem
+
+	// parse response
+	// Todo: collapse the two for loop below into 1
+	if continuation != "" {
+
+		continuationItems := ReadValue(jsonResponse, []interface{}{
+			"onResponseReceivedActions",
+			0,
+			"appendContinuationItemsAction",
+			"continuationItems"})
+
+		if items, ok := continuationItems.([]interface{}); ok {
+			for index, itemContent := range items {
+				item := parseSearchResultItem(itemContent)
+
+				if index == len(items)-1 && item.VideoId == "" {
+					// it's possible that the last item is a continuation item
+					nextContinuation = ReadValueString(itemContent, []interface{}{"continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"})
+				} else {
+					playlistTracks = append(playlistTracks, item)
+				}
+			}
+		} else {
+			fmt.Println("no continuation items found")
+		}
+	} else {
+
+		playlistItemsContents := ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "secondaryContents", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
+
+		if content, ok := playlistItemsContents.([]interface{}); ok {
+			for index, itemContent := range content {
+				item := parseSearchResultItem(itemContent)
+				// it's possible that the last item is a continuation item
+
+				if index == len(content)-1 && item.VideoId == "" {
+					nextContinuation = ReadValueString(itemContent, []interface{}{"continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"})
+				} else {
+					playlistTracks = append(playlistTracks, item)
+				}
+			}
+		}
+	}
+
+	return PlaylistTracksResponse{
+		NextContinuation: nextContinuation, // You can set this to the next continuation token if available
+		Tracks:           playlistTracks,
 	}, nil
 }
 
-type YoutubePlaylist struct {
-	Title       string   `json:"title"`
-	Thumbnails  []string `json:"thumbnails"`
-	TotalTracks string   `json:"total_tracks"`
-	PlaylistId  string   `json:"playlist_id"`
-	Url         string   `json:"url"`
+func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAllTracksResponse, error) {
+
+	tracks := []SearchResultItem{}
+
+	nextContinuation := ""
+	// fetch next Page
+	for {
+		nextTracks, err := FetchPlaylistTracks(client, playlistId, nextContinuation)
+		if err != nil {
+			return PlaylistAllTracksResponse{}, err
+		}
+
+		tracks = append(tracks, nextTracks.Tracks...)
+
+		nextContinuation = nextTracks.NextContinuation
+		if nextContinuation == "" {
+			break // no more tracks to fetch
+		}
+	}
+
+	return PlaylistAllTracksResponse{
+		Total:  len(tracks),
+		Tracks: tracks,
+	}, nil
+
 }
 
 func getPlaylistTotalTracks(subtitleRuns []interface{}) string {
@@ -319,7 +460,7 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 
 	if items, ok := playlistItemsContents.([]interface{}); ok {
 		// first item is a  new playlist button
-		// second item is liked music
+		// second item is liked music plalists
 		// so we skip the first 2 items
 
 		if len(items) > 2 {
@@ -386,4 +527,84 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 	}
 
 	return "done", nil
+}
+
+// ExtractPlaylistsFromNextPage extracts playlist information from a next-page continuation response
+func ExtractPlaylistsFromNextPage(jsonResponse interface{}) []YoutubePlaylist {
+	var playlists []YoutubePlaylist
+
+	// Navigate to the contents array in the continuation response
+	contents := ReadValue(jsonResponse, []interface{}{
+		"continuationContents",
+		"sectionListContinuation",
+		"contents",
+		0,
+		"musicCarouselShelfRenderer",
+		"contents",
+	})
+
+	if contentsList, ok := contents.([]interface{}); ok {
+		for _, item := range contentsList {
+			// Extract musicTwoRowItemRenderer
+			itemRenderer := ReadValue(item, []interface{}{"musicTwoRowItemRenderer"})
+			if itemRenderer == nil {
+				continue
+			}
+
+			// Extract title
+			title := ReadValueString(itemRenderer, []interface{}{"title", "runs", 0, "text"})
+
+			// Extract playlist ID from browseId
+			browseId := ReadValueString(itemRenderer, []interface{}{
+				"navigationEndpoint",
+				"browseEndpoint",
+				"browseId",
+			})
+
+			// Remove "VL" prefix if present
+			playlistId := browseId
+			if len(playlistId) > 2 && playlistId[0:2] == "VL" {
+				playlistId = playlistId[2:]
+			}
+
+			// Extract thumbnails
+			thumbnails := ReadValue(itemRenderer, []interface{}{
+				"thumbnailRenderer",
+				"musicThumbnailRenderer",
+				"thumbnail",
+				"thumbnails",
+			})
+
+			var thumbnailUrls []string
+			if thumbsList, ok := thumbnails.([]interface{}); ok {
+				for _, thumb := range thumbsList {
+					if thumbMap, ok := thumb.(map[string]interface{}); ok {
+						if url, ok := thumbMap["url"].(string); ok && url != "" {
+							thumbnailUrls = append(thumbnailUrls, url)
+						}
+					}
+				}
+			}
+
+			// Extract subtitle runs to get total tracks
+			subtitleRuns := ReadValue(itemRenderer, []interface{}{"subtitle", "runs"})
+			totalTracks := ""
+			if runs, ok := subtitleRuns.([]interface{}); ok {
+				totalTracks = getPlaylistTotalTracks(runs)
+			}
+
+			// Create playlist object
+			playlist := YoutubePlaylist{
+				Title:       title,
+				Thumbnails:  thumbnailUrls,
+				TotalTracks: totalTracks,
+				PlaylistId:  playlistId,
+				Url:         fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+			}
+
+			playlists = append(playlists, playlist)
+		}
+	}
+
+	return playlists
 }

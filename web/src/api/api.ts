@@ -1,8 +1,8 @@
 import axios from "axios";
 import config from "../config";
 
-const client = axios.create({
-  baseURL: config.SERVER_BASE_URL + "/api",
+export const client = axios.create({
+  baseURL: config.SERVER_BASE_URL,
   withCredentials: true,
 });
 
@@ -16,11 +16,12 @@ const api = {
       })
       .then((res) => res.data);
   },
-  convert(link: string, destination: string) {
+  convert(playlists: string[], destination: string, source: string) {
     return client
       .post("/convert", {
-        link: link,
-        to_platform: destination,
+        playlists: playlists,
+        destination,
+        source,
       })
       .then((res) => res.data);
   },
@@ -47,6 +48,13 @@ const api = {
     return client.get("/playlists/youtube").then((res) => res.data);
   },
   getUserSession: () => client.get("/user/session").then((res) => res.data),
+
+  logout: () => {
+    return client.post("/logout");
+  },
+  getConnectionStatus: () => {
+    return client.get("/connection-status").then((res) => res.data);
+  },
 };
 
 export default api;

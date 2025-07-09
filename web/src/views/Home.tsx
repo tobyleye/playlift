@@ -4,7 +4,6 @@ import {
   Box,
   Link as ChakraLink,
   Text,
-  Flex,
   Icon,
   useToast,
   Button,
@@ -12,23 +11,26 @@ import {
   ModalContent,
   ModalBody,
   ModalOverlay,
+  Container,
+  SimpleGrid,
 } from "@chakra-ui/react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import useSWR from "swr";
 import api from "../api/api";
-import { MoveRightIcon, Trash2Icon, RotateCw, AlertCircle } from "lucide-react";
+import { AlertCircle, Clock, Check, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import config from "../config";
-import { useGlobalStore } from "../store/store";
 import { Rabbit } from "lucide-react";
+import Nav from "@/components/nav";
+import dayjs from "dayjs";
+import { Platform, PlaylistConversion } from "@/types";
+import { streamingServicesMap } from "@/constants/constants";
+import UserMenu from "@/components/user-menu";
+import { useSessionContext } from "@/contexts/session";
 
-const formatPlatform = (platform: string) => {
-  return platform.replace("_", " ");
-};
-
-function LoginModal({ onClose }: { onClose: () => void }) {
+function LoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <Modal isCentered isOpen={true} onClose={onClose}>
+    <Modal isCentered isOpen={open} onClose={onClose}>
       <ModalOverlay
         bg="blackAlpha.300"
         backdropFilter="blur(6px) hue-rotate(90deg)"
@@ -53,20 +55,20 @@ function LoginModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function Home() {
-  const user = useGlobalStore((store) => store.user);
+  const { session } = useSessionContext();
 
-  const fetchResult = useSWR<any>(user ? "/conversions" : null, async () => {
-    return api.fetchConversions();
-  });
+  const fetchResult = useSWR<PlaylistConversion[]>(
+    session?.user_id ? "/conversions" : null,
+    async () => {
+      return api.fetchConversions();
+    }
+  );
 
   const { isLoading: isLoadingConversions, mutate, error } = fetchResult;
 
-  let { data: conversions } = fetchResult;
-
-  conversions = conversions || [];
+  const { data: conversions = [] } = fetchResult;
 
   const toast = useToast();
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -87,6 +89,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // @ts-ignore: leave this for now
   const deleteConversion = async (conversionId: string) => {
     try {
       setIsLoading(true);
@@ -104,6 +107,7 @@ export default function Home() {
     }
   };
 
+  // @ts-ignore: leave this for now
   const restartConversion = async (conversionId: string) => {
     try {
       setIsLoading(true);
@@ -126,141 +130,235 @@ export default function Home() {
   };
 
   return (
-    <Box>
-      {!user && <LoginModal onClose={() => {}} />}
+    <Box
+      minH="100vh"
+      color="white"
+      bg="linear-gradient(to right bottom, rgb(88, 28, 135), rgb(30, 58, 138), rgb(49, 46, 129))"
+      pb={8}
+    >
+      <Nav rightElement={<UserMenu />} />
 
-      <Heading size="lg" color="gray.700" mb={8}>
-        Your conversions
-      </Heading>
+      <LoginModal open={false} onClose={() => {}} />
 
-      {isLoadingConversions ? (
-        <Box>Loading...</Box>
-      ) : error ? (
-        <div>error..</div>
-      ) : conversions.length === 0 ? (
-        <Box>
-          <Box
-            paddingY={20}
-            display="flex"
-            flexDir={"column"}
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Box mb={2}>
-              <Icon
-                as={Rabbit}
-                color="gray.800"
-                width={"100px"}
-                height={"100px"}
-              />
-            </Box>
-            <Text fontSize="xl" color="gray.700" mb={2}>
-              You don't have any conversions!
+      <Container maxWidth="container.lg" mt={8}>
+        <Box display="flex" gap={4} flexWrap="wrap" alignItems="center" mb={8}>
+          <Box>
+            <Heading mb={1}>Your migration</Heading>
+            <Text color="whiteAlpha.700">
+              Manage and track your playlist migrations
             </Text>
-            <Box>
-              <Button colorScheme="purple" as={Link} to="/convert-playlist">
-                Convert a playlist
-              </Button>
-            </Box>
           </Box>
         </Box>
-      ) : (
-        <Flex
-          direction="column"
-          gap={4}
-          pointerEvents={isLoading ? "none" : "auto"}
-          opacity={isLoading ? 0.5 : 1}
+
+        <SimpleGrid
+          columns={{ base: 1, md: 2 }}
+          gap={{ base: 4, md: 6 }}
+          mb={12}
         >
-          {conversions.map((conversion: any) => {
+          {[
+            {
+              title: "Pending",
+              count: 0,
+              icon: (
+                <Icon color="yellow.500">
+                  <Clock />
+                </Icon>
+              ),
+            },
+            {
+              title: "Completed",
+              count: 0,
+              icon: (
+                <Icon color="green.500">
+                  <Check />
+                </Icon>
+              ),
+            },
+          ].map((each, idx) => {
             return (
-              <ChakraLink
-                onClick={() => {
-                  navigate("/conversion/" + conversion.id);
-                }}
-                key={conversion.id}
-                textDecoration="none"
-                _hover={{
-                  textDecor: "none",
-                  color: "current",
-                }}
+              <Box
+                key={`stats-card-${idx}`}
+                display="flex"
+                alignItems="center"
+                py={6}
+                px={6}
+                border="1px solid"
+                borderColor="whiteAlpha.300"
+                rounded="md"
+                bg="whiteAlpha.200"
               >
-                <Box bg="white" rounded="sm" px={4} py={3}>
-                  <Flex align="center" w="full">
-                    <Heading size="lg" mb={2}>
-                      {conversion.title}
-                    </Heading>
-                    <Box ml="auto" display="flex" gap={2} alignItems="center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          restartConversion(conversion.id);
-                        }}
-                      >
-                        <Icon color="blue.400" as={RotateCw} />
-                      </button>
-                      <button
-                        style={{ padding: 5 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteConversion(conversion.id);
-                        }}
-                      >
-                        <Icon color="red.500" as={Trash2Icon} />
-                      </button>
-                    </Box>
-                  </Flex>
-                  <Text mb={2} textTransform="capitalize">
-                    {conversion.status}
+                <Box>
+                  <Text fontWeight="semibold" color="whiteAlpha.500">
+                    {each.title}
                   </Text>
-
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <Box
-                      py={1}
-                      px={2}
-                      fontSize="sm"
-                      rounded="full"
-                      bg="gray.200"
-                      textTransform="capitalize"
-                    >
-                      {formatPlatform(conversion.source_platform)}
-                    </Box>
-                    <Icon as={MoveRightIcon} mx={1} />
-
-                    <Box
-                      py={1}
-                      px={2}
-                      fontSize="sm"
-                      rounded="full"
-                      bg="gray.200"
-                      textTransform="capitalize"
-                    >
-                      {formatPlatform(conversion.destination_platform)}
-                    </Box>
-                  </Box>
-
-                  <Box>
-                    <Box
-                      display="inline-flex"
-                      alignItems="center"
-                      gap={1}
-                      color="red.500"
-                      bg="red.100"
-                      rounded="full"
-                      px={3}
-                      py={1}
-                    >
-                      <AlertCircle size={14} />
-                      <Text fontSize="sm" as="span">
-                        Requires action
-                      </Text>
-                    </Box>
-                  </Box>
+                  <Text color="white" fontSize="2xl">
+                    {each.count}
+                  </Text>
                 </Box>
-              </ChakraLink>
+
+                <Box ml="auto">
+                  <Icon w={8} h={8}>
+                    {each.icon}
+                  </Icon>
+                </Box>
+              </Box>
             );
           })}
-        </Flex>
-      )}
+        </SimpleGrid>
+
+        {isLoadingConversions ? (
+          <Box>Loading...</Box>
+        ) : error ? (
+          <div>error..</div>
+        ) : conversions.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <Box>
+            <Heading mb={4} fontSize="2xl">
+              All Migrations
+            </Heading>
+            <SimpleGrid
+              columns={{ base: 1, md: 2, lg: 3 }}
+              gap={6}
+              pointerEvents={isLoading ? "none" : "auto"}
+              opacity={isLoading ? 0.5 : 1}
+            >
+              {conversions.map((conversion) => {
+                return (
+                  <ConversionCard
+                    key={conversion.conversion_id}
+                    conversion={conversion}
+                  />
+                );
+              })}
+            </SimpleGrid>
+          </Box>
+        )}
+      </Container>
     </Box>
   );
 }
+
+const EmptyState = () => {
+  return (
+    <Box>
+      <Box
+        paddingY={20}
+        display="flex"
+        flexDir={"column"}
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Box mb={2}>
+          <Icon
+            as={Rabbit}
+            color="whiteAlpha.800"
+            width={"100px"}
+            height={"100px"}
+          />
+        </Box>
+        <Text fontSize="xl" color="whiteAlpha.400" mb={2}>
+          You don't have any conversions!
+        </Text>
+      </Box>
+    </Box>
+  );
+};
+
+const ConversionCard = ({ conversion }: { conversion: PlaylistConversion }) => {
+  const getPlaylistColor = (platform: Platform) => {
+    if (platform === "youtube_music") {
+      return "youtube-red";
+    } else if (platform === "spotify") {
+      return "spotify-green";
+    }
+    return;
+  };
+
+  return (
+    <Box
+      bg="whiteAlpha.100"
+      border="1px solid"
+      borderColor="whiteAlpha.200"
+      rounded="md"
+      px={4}
+      py={3}
+      cursor="pointer"
+    >
+      <Box display="flex" alignItems="center" mb={4}>
+        <Text fontWeight="bold" fontSize="medium">
+          {conversion.playlist_title}
+        </Text>
+        <Box ml="auto">
+          {conversion.status === "pending" ? (
+            <Icon color="yellow.500">
+              <Clock />
+            </Icon>
+          ) : conversion.status === "failed" ? (
+            <Icon color="red.500">
+              <AlertCircle />
+            </Icon>
+          ) : conversion.status === "completed" ? (
+            <Icon>
+              <Check />
+            </Icon>
+          ) : null}
+        </Box>
+      </Box>
+
+      <Box display="flex" alignItems="center" justifyContent="center" mb={5}>
+        <Box
+          w={2}
+          h={2}
+          mr={1}
+          rounded="full"
+          bg={getPlaylistColor(conversion.source_platform)}
+        />
+        <Text>{streamingServicesMap[conversion.source_platform]}</Text>
+        <Icon mx={4}>
+          <ArrowRight />
+        </Icon>
+        <Box
+          mr={1}
+          w={2}
+          h={2}
+          rounded="full"
+          bg={getPlaylistColor(conversion.destination_platform)}
+        />
+        <Text>{streamingServicesMap[conversion.destination_platform]}</Text>
+      </Box>
+
+      <Box display="grid" gap={4} fontSize="sm">
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Text color="whiteAlpha.700" fontSize="sm">
+            Tracks
+          </Text>
+          <Text>{conversion.total_tracks}</Text>
+        </Box>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Text color="whiteAlpha.700" fontSize="sm">
+            Status
+          </Text>
+          <Text
+            color={
+              conversion.status === "completed"
+                ? "green.500"
+                : conversion.status === "pending"
+                ? "yellow.500"
+                : "red.500"
+            }
+            fontWeight="semibold"
+          >
+            {conversion.status}
+          </Text>
+        </Box>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Text color="whiteAlpha.700" fontSize="sm">
+            Created
+          </Text>
+          <Text color="whiteAlpha.700">{dayjs().format("MMM DD, YYYY")}</Text>
+        </Box>
+      </Box>
+    </Box>
+  );
+};

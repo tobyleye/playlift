@@ -5,17 +5,21 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"os"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/labstack/echo-contrib/session"
+
+	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	AppConfig "github.com/tobyleye/playlist-converter/config"
+	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/handlers"
 	"github.com/tobyleye/playlist-converter/models"
+	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
+	"github.com/tobyleye/playlist-converter/session"
 	"github.com/zmb3/spotify/v2"
 	spotifyAuth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/oauth2/clientcredentials"
@@ -34,53 +38,29 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
-var (
-	GOOGLE_API_KEY        = os.Getenv("GOOGLE_API_KEY")
-	SPOTIFY_CLIENT_ID     = os.Getenv("SPOTIFY_CLIENT_ID")
-	SPOTIFY_CLIENT_SECRET = os.Getenv("SPOTIFY_CLIENT_SECRET")
-)
-
-var SessionStore = sessions.NewCookieStore([]byte(AppConfig.SESSION_KEY))
-
 func ensureLogin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		user, _ := session.Get("user", c)
-		userId := user.Values["userId"]
-		if userId == nil {
+		user, err := session.GetUserFromSession(c)
+		if err != nil {
+			log.Println("error getting user session in middleware", err)
+			return c.JSON(500, map[string]string{"error": "internal server error"})
+		}
+		if user.UserId == "" {
 			return c.JSON(401, map[string]string{"error": "unauthorized"})
 		}
 
-		c.Set("user", user.Values)
+		c.Set("user", user)
 		return next(c)
 	}
 }
 
-func serveFrontend(e *echo.Echo) {
-	// Serve frontend in production mode
-	// Check environment mode
-	// appEnv := os.Getenv("APP_ENV")
-
-	fmt.Println("registering frontend route")
-	// if appEnv == "production" {
-	// e.Static("/", "./web/dist")
-	// frontendHandler := http.FileServer(http.Dir("client/build"))
-
-	e.Static("/assets", "./web/dist/assets") // Adjust the path if necessary
-	e.Static("/js", "./web/dist/js")         // Serve JS if it's in a separate folder
-	e.Static("/css", "./web/dist/css")       // Serve CSS if in a separate folder
-
-	e.GET("/", func(c echo.Context) error {
-		return c.File("./web/dist/index.html")
-	})
-
-	e.GET("/*", func(c echo.Context) error {
-		fmt.Println("inside global route")
-		return c.File("./web/dist/index.html")
-	})
-
-}
-
 func main() {
+	// loads and initializes environment variables
+	config.LoadEnv()
+
+	var SessionStore = sessions.NewCookieStore([]byte(config.SESSION_KEY))
+
+	fmt.Println("google api key:", config.GOOGLE_API_KEY)
 
 	dbConfig := mysql.Config{
 		User:                 os.Getenv("DB_USER"),
@@ -94,14 +74,19 @@ func main() {
 	dbConnUrl := dbConfig.FormatDSN()
 	db, err := gorm.Open(gormMysql.Open(dbConnUrl))
 
-	db.AutoMigrate(&models.User{}, &models.Token{}, &models.Conversion{})
+	db.AutoMigrate(
+		&models.User{},
+		&models.PlaylistConversion{},
+		&models.Token{},
+		&models.Conversion{},
+	)
 
 	if err != nil {
 		panic(err)
 	}
 
 	e := echo.New()
-	e.Use(session.Middleware(SessionStore))
+	e.Use(echoSession.Middleware(SessionStore))
 
 	var corsConfig = middleware.DefaultCORSConfig
 	corsConfig.AllowCredentials = true
@@ -114,19 +99,19 @@ func main() {
 	}
 
 	ctx := context.Background()
-	config := clientcredentials.Config{
-		ClientID:     AppConfig.SPOTIFY_CLIENT_ID,
-		ClientSecret: AppConfig.SPOTIFY_CLIENT_SECRET,
+	oauthConfig := clientcredentials.Config{
+		ClientID:     config.SPOTIFY_CLIENT_ID,
+		ClientSecret: config.SPOTIFY_CLIENT_SECRET,
 		TokenURL:     spotifyAuth.TokenURL,
 	}
-	token, err := config.Token(ctx)
+	token, err := oauthConfig.Token(ctx)
 	if err != nil {
 		panic(err)
 	}
 
 	httpClient := spotifyAuth.New().Client(ctx, token)
 	spotifyClient := spotify.New(httpClient)
-	youtubeClient, _ := youtube.NewService(ctx, option.WithAPIKey(AppConfig.GOOGLE_API_KEY))
+	youtubeClient, _ := youtube.NewService(ctx, option.WithAPIKey(config.GOOGLE_API_KEY))
 
 	handlers := handlers.Handlers{
 		Db:            db,
@@ -137,34 +122,35 @@ func main() {
 	}
 
 	// define api routes
-	e.GET("/login/google", handlers.LoginWithGoogle)
-	e.GET("/login/google/callback", handlers.LoginWithGoogleCallback)
+	e.POST("/login/google/callback", handlers.LoginWithGoogleCallback)
 
-	e.GET("/connect/spotify", handlers.SpotifyLogin, ensureLogin)
-	e.GET("/connect/spotify/callback", handlers.SpotifyLoginCallback, ensureLogin)
+	e.POST("/connect/spotify/callback", handlers.SpotifyLoginCallback, ensureLogin)
 
-	e.GET("/connect/youtube", handlers.YoutubeConnect, ensureLogin)
-	e.GET("/connect/youtube/callback", handlers.YoutubeConnectCallback, ensureLogin)
+	// e.GET("/connect/youtube", handlers.YoutubeConnect, ensureLogin)
+	// e.GET("/connect/youtube/callback", handlers.YoutubeConnectCallback, ensureLogin)
 
-	//api routes
-	api := e.Group("/api")
-	api.GET("/preview", handlers.PreviewLink)
+	privateRoutes := e.Group("", ensureLogin)
 
-	privateRoutes := api.Group("", ensureLogin)
+	privateRoutes.GET("/user/session", handlers.GetUserSession, ensureLogin)
 
 	privateRoutes.POST("/convert", handlers.Convert)
 	privateRoutes.GET("/conversions/:id", handlers.GetSingleConversion)
 	privateRoutes.POST("/conversions/:id/restart", handlers.RestartConversion)
 	privateRoutes.DELETE("/conversions/:id", handlers.DeleteConversion)
 	privateRoutes.GET("/conversions", handlers.GetAllConversions)
-	privateRoutes.GET("/user/session", handlers.GetUserSession)
 
 	privateRoutes.GET("/playlists/youtube", handlers.FetchUserYoutubePlaylists)
 	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)
+	privateRoutes.GET("/connection-status", handlers.GetConnectionStatus)
+
+	privateRoutes.GET(("/playlist-tracks/:playlistId"), func(echo echo.Context) error {
+		user, _ := session.GetUserFromSession(echo)
+		client, _ := config.CreateYoutubeClientForUser(db, user.UserId)
+		tracks, _ := ytmusicapi.FetchAllPlaylistTracks(client, echo.Param("playlistId"))
+		return echo.JSON(200, tracks)
+	})
 
 	// serve frontend. this should always be done after routes are registered
-	serveFrontend(e)
-
 	port := os.Getenv("PORT")
 
 	fmt.Println("Starting server on port:", port)

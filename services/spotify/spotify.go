@@ -202,11 +202,13 @@ func GetUserPlaylists(client *spotify.Client, ctx context.Context) (types.Simple
 			images = append(images, i.URL)
 		}
 		playlist := types.SimplePlaylistPageItem{
+
 			Url:         p.ExternalURLs["spotify"],
 			Title:       p.Name,
 			Description: p.Description,
 			TotalTracks: int(p.Tracks.Total),
 			Thumbnails:  images,
+			PlaylistId:  string(p.ID),
 		}
 
 		playlistPage.Playlists = append(playlistPage.Playlists, playlist)

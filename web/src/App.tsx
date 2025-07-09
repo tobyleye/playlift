@@ -1,129 +1,48 @@
-import {
-  createBrowserRouter,
-  Link,
-  Outlet,
-  RouterProvider,
-} from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import { Box, ChakraProvider, Flex } from "@chakra-ui/react";
+import { ChakraProvider } from "@chakra-ui/react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { theme } from "./theme/theme.ts";
+import SessionProvider from "./providers/SessionProvider.tsx";
 
-import "./App.css";
+const Landing = lazy(() => import("./views/landing.tsx"));
+const Home = lazy(() => import("./views/home.tsx"));
+const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
-import ConversionThroughLink from "./views/link-conversion/LinkConversion.tsx";
-import AppLayout from "./layouts/AppLayout.tsx";
-import Login from "./views/Login.tsx";
-import SessionLoader from "./providers/SessionLoader.tsx";
-
-const Home = lazy(() => import("./views/Home.tsx"));
-const ConvertPlaylist = lazy(() => import("./views/ConvertPlaylist.tsx"));
-
-const ConvertPlaylist1 = lazy(
-  () => import("./views/convert-old/convert-playlist-1.tsx")
+const ConnectSpotify = lazy(
+  () => import("./views/convert/connect-spotify.tsx")
 );
-const ConvertPlaylist2 = lazy(
-  () => import("./views/convert-old/convert-playlist-2.tsx")
+const ConnectYoutube = lazy(
+  () => import("./views/convert/connect-youtube.tsx")
 );
-const ConvertPlaylist3 = lazy(
-  () => import("./views/convert-old/convert-playlist-3.tsx")
+const PlaylistsSelection = lazy(
+  () => import("./views/convert/playlist-selection.tsx")
 );
 
-const ConversionDetails = lazy(
-  () => import("./views/conversions/details-1.tsx")
-);
-
-const LandingPage = lazy(() => import("./views/landing/landing-1.tsx"));
-
-
-
-function OtherConversionLinks() {
-  return (
-    <Flex justifyContent="center" gap={2} py={2}>
-      <Box>
-        <Link to="/convert-playlist/1">01</Link>
-      </Box>
-      <Box>
-        <Link to="/convert-playlist/2">02</Link>
-      </Box>
-
-      <Box>
-        <Link to="/convert-playlist/3">03</Link>
-      </Box>
-      <Box>
-        <Link to="/convert-playlist/4">04</Link>
-      </Box>
-    </Flex>
-  );
-}
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <LandingPage />,
-  },
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/",
-    element: <AppLayout />,
-    children: [
-      {
-        path: "/home",
-        element: <Home />,
-      },
-      {
-        path: "/convert-playlist",
-        element: (
-          <Box>
-            {/* <OtherConversionLinks /> */}
-            <Outlet />
-          </Box>
-        ),
-        children: [
-          {
-            path: "",
-            element: <ConvertPlaylist />,
-          },
-          {
-            path: "/convert-playlist/2",
-            element: <ConvertPlaylist2 />,
-          },
-          {
-            path: "/convert-playlist/3",
-            element: <ConvertPlaylist3 />,
-          },
-          {
-            path: "/convert-playlist/4",
-            element: <Outlet />,
-            children: [
-              {
-                path: "/convert-playlist/4/with-link",
-                element: <ConversionThroughLink />,
-              },
-              {
-                path: "/convert-playlist/4",
-                element: <ConvertPlaylist />,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        path: "/conversion/:conversionId",
-        element: <ConversionDetails />,
-      },
-    ],
-  },
-]);
+const ConvertIndex = lazy(() => import("./views/convert/convert-index.tsx"));
 
 function App() {
   return (
     <Suspense fallback={<div />}>
-      <SessionLoader>
-        <ChakraProvider>
-          <RouterProvider router={router}></RouterProvider>
-        </ChakraProvider>
-      </SessionLoader>
+      <SessionProvider>
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+          <ChakraProvider theme={theme}>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/convert" element={<Convert />}>
+                <Route path="" element={<ConvertIndex />} />
+                <Route path="connect-spotify" element={<ConnectSpotify />} />
+                <Route path="connect-youtube" element={<ConnectYoutube />} />
+                <Route
+                  path="select-playlists"
+                  element={<PlaylistsSelection />}
+                />
+              </Route>
+            </Routes>
+          </ChakraProvider>
+        </GoogleOAuthProvider>
+      </SessionProvider>
     </Suspense>
   );
 }

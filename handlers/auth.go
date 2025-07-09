@@ -2,140 +2,144 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
-	echoSessionMiddleware "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/models"
 	"github.com/tobyleye/playlist-converter/session"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	oauth2_v2 "google.golang.org/api/oauth2/v2"
+	oauth2V2 "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
 )
 
-var googleLoginConfig = oauth2.Config{
-	ClientID:     config.GOOGLE_CLIENT_ID,
-	ClientSecret: config.GOOGLE_CLIENT_SECRET,
-	Endpoint:     google.Endpoint,
-	RedirectURL:  config.GOOGLE_LOGIN_REDIRECT_URL,
-	Scopes: []string{
-		"https://www.googleapis.com/auth/youtube",
-		"https://www.googleapis.com/auth/userinfo.email",
-		// "https://www.googleapis.com/auth/userinfo.profile",
-	},
-}
-
-func (h Handlers) LoginWithGoogle(c echo.Context) error {
-
-	url := googleLoginConfig.AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-
-	return c.Redirect(302, url)
-}
-
 func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
-	code := c.QueryParam("code")
+	body := requestBodyToMap(c)
+
+	code, _ := body["code"].(string)
+
+	var googleLoginConfig = oauth2.Config{
+		ClientID:     config.GOOGLE_CLIENT_ID,
+		ClientSecret: config.GOOGLE_CLIENT_SECRET,
+		Endpoint:     google.Endpoint,
+		RedirectURL:  config.GOOGLE_LOGIN_REDIRECT_URL,
+		Scopes: []string{
+			"https://www.googleapis.com/auth/youtube",
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/userinfo.profile",
+		},
+	}
 
 	tokens, err := googleLoginConfig.Exchange(c.Request().Context(), code)
-	// fmt.Printf("tokens: %v\n", tokens)
-
-	// fmt.Println("access token -->", tokens.RefreshToken)
 
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		redirectUrl := "/home?loginError=true"
-		return c.Redirect(301, redirectUrl)
-	} else {
+		log.Printf("error exchanging google authorization code for tokens:", err)
+		return c.JSON(500, map[string]string{"error": "server error"})
+	}
 
-		formattedExpiry := tokens.Expiry.Format("03:04:05PM, 02 Jan 2006")
+	formattedExpiry := tokens.Expiry.Format("03:04:05PM, 02 Jan 2006")
 
-		fmt.Println("Token will expire at exactly", formattedExpiry)
-		fmt.Println("Token refresh tokens", tokens.RefreshToken)
+	log.Println("Token will expire at exactly", formattedExpiry)
 
-		httpClient := googleLoginConfig.Client(c.Request().Context(), tokens)
+	httpClient := googleLoginConfig.Client(c.Request().Context(), tokens)
 
-		oauth2service, err := oauth2_v2.NewService(c.Request().Context(), option.WithHTTPClient(httpClient))
+	oauth2service, err := oauth2V2.NewService(c.Request().Context(), option.WithHTTPClient(httpClient))
 
-		fmt.Println("service error -", err)
-		userInfoService := oauth2_v2.NewUserinfoService(oauth2service)
-		userInfo, err := userInfoService.Get().Do()
+	log.Println("create oauth2service error:", err)
 
-		if err == nil {
+	userInfoService := oauth2V2.NewUserinfoService(oauth2service)
+	userInfo, err := userInfoService.Get().Do()
 
-			var existingUser models.User
-			h.Db.Where("email = ?", userInfo.Email).First(&existingUser)
+	log.Printf("user info %+v\n", userInfo)
 
-			fmt.Println("existing user", existingUser)
+	if err == nil {
 
-			var userId string
-			if existingUser.UserId == "" {
-				// create user
+		var user models.User
 
-				userId = uuid.New().String()
+		h.Db.Model(&models.User{}).Preload("Tokens").Where("email = ?", userInfo.Email).First(&user)
 
-				user := models.User{
-					UserId:    userId,
-					Email:     userInfo.Email,
-					Name:      userInfo.Name,
-					Picture:   userInfo.Picture,
-					CreatedAt: time.Now(),
-				}
+		log.Println("existing user", user)
 
-				h.Db.Create(&user)
+		var userId string
 
-			} else {
-				userId = existingUser.UserId
+		if user.UserId == "" {
+			// create user
+
+			userId = uuid.New().String()
+
+			user := &models.User{
+				UserId:    userId,
+				Email:     userInfo.Email,
+				Name:      userInfo.Name,
+				Picture:   userInfo.Picture,
+				YoutubeId: userInfo.Id,
+				CreatedAt: time.Now(),
 			}
 
-			fmt.Println("tokens::", tokens)
+			h.Db.Create(user)
 
-			token := &models.Token{
-				UserId:       userId,
-				Platform:     "youtube",
-				AccessToken:  tokens.AccessToken,
-				RefreshToken: tokens.RefreshToken,
-				TokenType:    tokens.TokenType,
-				ExpiresIn:    tokens.Expiry,
-				CreatedAt:    time.Now(),
-			}
+		} else {
+			userId = user.UserId
 
-			models.CreateOrUpdateTokenForUser(h.Db, userId, token)
-
-			fmt.Print("new token", token)
-
-			session, _ := echoSessionMiddleware.Get("user", c)
-			// session.Options = &sessions.Options{
-			// 	Path:     "/",
-			// 	MaxAge:   86400 * 7,
-			// 	HttpOnly: true,
-			// }
-
-			session.Values["userId"] = userId
-			session.Values["email"] = userInfo.Email
-			session.Values["name"] = userInfo.Name
-			session.Values["picture"] = userInfo.Picture
-
-			err = session.Save(c.Request(), c.Response())
-
-			fmt.Println("session save error", err)
-
-			redirectUrl := "/home"
-			return c.Redirect(301, redirectUrl)
 		}
 
-		return c.Redirect(301, "/home?loginError=true")
+		token := models.Token{
+			UserId:       userId,
+			Platform:     "youtube",
+			AccessToken:  tokens.AccessToken,
+			RefreshToken: tokens.RefreshToken,
+			TokenType:    tokens.TokenType,
+			ExpiresIn:    tokens.Expiry,
+			CreatedAt:    time.Now(),
+		}
 
+		models.CreateOrUpdateTokenForUser(h.Db, userId, &token)
+
+		log.Print("creating user session", token)
+		userSession, err := session.CreateSession(c, &user)
+
+		if err != nil {
+			log.Println("error creating session", err)
+			return c.JSON(500, map[string]string{"error": "server error"})
+		}
+
+		// session, _ := echoSessionMiddleware.Get("user", c)
+		// session.Options = &sessions.Options{
+		// 	Path:     "/",
+		// 	MaxAge:   86400 * 2, // 2 days
+		// 	HttpOnly: true,
+		// }
+
+		// // session.
+		// session.Values["userId"] = userId
+		// session.Values["email"] = userInfo.Email
+		// session.Values["name"] = userInfo.Name
+		// session.Values["picture"] = userInfo.Picture
+
+		// get user tokens here and verify user
+
+		// err = session.Save(c.Request(), c.Response())
+
+		return c.JSON(200, map[string]interface{}{
+			"message": "Login successful",
+			"data":    userSession,
+		})
+
+	} else {
+		return c.JSON(500, map[string]string{"error": "server error"})
 	}
+
 }
 
 func (h Handlers) GetUserSession(c echo.Context) error {
 
 	// session, _ := echoSessionMiddleware.Get("user", c)
 
-	user := session.GetUserFromSession(c)
+	user, _ := session.GetUserFromSession(c)
 
 	fmt.Printf("user: %v\n", user)
 
@@ -144,6 +148,13 @@ func (h Handlers) GetUserSession(c echo.Context) error {
 }
 
 func (h Handlers) Logout(c echo.Context) error {
-	// Todo:
-	return nil
+	// clear session
+
+	err := session.ClearSession(c)
+	if err != nil {
+		log.Println("error clearing session:", err)
+		return c.JSON(400, map[string]string{"error": "no session found"})
+	}
+
+	return c.JSON(200, map[string]string{"message": "logged out successfully"})
 }

@@ -26,6 +26,7 @@ type SimplePlaylistPageItem struct {
 	Description string   `json:"description"`
 	TotalTracks int      `json:"total_tracks"`
 	Thumbnails  []string `json:"thumbnails"`
+	PlaylistId  string   `json:"playlist_id"`
 }
 
 type SimplePlaylistsPage struct {

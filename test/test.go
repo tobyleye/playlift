@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/tobyleye/playlist-converter/config"
 	"github.com/tobyleye/playlist-converter/db"
 	"github.com/tobyleye/playlist-converter/models"
 	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
-	"github.com/tobyleye/playlist-converter/utils"
 	"golang.org/x/oauth2"
 )
 
@@ -37,7 +37,7 @@ func main() {
 	}
 
 	ctx := context.TODO()
-	httpClient := utils.CreateHTTPClient(ctx, oauthToken)
+	httpClient := config.CreateHTTPClient(ctx, oauthToken)
 
 	playlists, err := ytmusicapi.FetchUserPlaylists(httpClient)
 	fmt.Println("playlists", playlists)
