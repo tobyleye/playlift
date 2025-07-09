@@ -42,6 +42,7 @@ export default function ConversionWizard() {
   const [destinationPlatform, setDestinationPlatform] = useState(
     streamingServices.spotify
   );
+  const [transferLoading, setTransferLoading] = useState(false);
 
   const location = useLocation();
 
@@ -91,7 +92,8 @@ export default function ConversionWizard() {
   ];
 
   const stepIndex = steps.findIndex((step) => step.path === stepPath);
-  // const curStep = steps[stepIndex];
+
+  const curStep = stepIndex > -1 ? steps[stepIndex] : null;
   const totalSteps = steps.length;
   const nextStep = stepIndex < totalSteps - 1 ? steps[stepIndex + 1] : null;
 
@@ -124,6 +126,7 @@ export default function ConversionWizard() {
     };
 
     try {
+      setTransferLoading(true);
       await api.convert(
         body.playlists,
         destinationPlatform.value,
@@ -136,7 +139,8 @@ export default function ConversionWizard() {
       alert(
         "An error occurred while starting the migration. Please try again."
       );
-      return;
+    } finally {
+      setTransferLoading(false);
     }
   };
 
@@ -254,81 +258,86 @@ export default function ConversionWizard() {
               </ConvertWizardContext.Provider>
             </Box>
 
-            <Box
-              px={4}
-              pb={6}
-              position="fixed"
-              bottom={0}
-              left={0}
-              width="full"
-            >
+            {curStep && (
               <Box
-                display="flex"
-                alignItems="center"
-                gap={4}
-                w={{
-                  base: "100%",
-                  lg: "90%",
-                }}
-                mx="auto"
+                px={4}
+                pb={6}
+                position="fixed"
+                bottom={0}
+                left={0}
+                width="full"
               >
-                {stepIndex > 0 && (
-                  <chakra.button
-                    bg="whiteAlpha.200"
-                    border="1px solid"
-                    borderColor="whiteAlpha.600"
-                    onClick={() => {
-                      const prevStep = steps[stepIndex - 1];
-                      navigate("/convert/" + prevStep.path);
-                    }}
-                    transition=".2s ease-in-out"
-                    display="flex"
-                    alignItems="center"
-                    gap={2}
-                    py={2}
-                    px={8}
-                    rounded="full"
-                    color="white"
-                    _hover={{
-                      bg: "whiteAlpha.300",
-                    }}
-                  >
-                    <Icon>
-                      <ArrowLeft />
-                    </Icon>
-                    Back
-                  </chakra.button>
-                )}
-
-                <Box ml="auto">
-                  {/* {curStep.completed && nextStep && ( */}
-
-                  {stepIndex === 2 ? (
-                    <GradientButton
-                      onClick={startMigration}
-                      disabled={selectedPlaylists.length === 0}
-                    >
-                      Start Migration{" "}
-                      {selectedPlaylists.length > 0
-                        ? `(${selectedPlaylists.length})`
-                        : ""}
-                      <Icon as={ArrowRight} ml={2} />
-                    </GradientButton>
-                  ) : (
-                    <GradientButton
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  flexWrap="wrap"
+                  gap={2}
+                  w={{
+                    base: "100%",
+                    lg: "90%",
+                  }}
+                  mx="auto"
+                >
+                  {stepIndex > 0 && (
+                    <chakra.button
+                      bg="whiteAlpha.200"
+                      border="1px solid"
+                      borderColor="whiteAlpha.600"
                       onClick={() => {
-                        if (nextStep) {
-                          navigate("/convert/" + nextStep.path);
-                        }
+                        const prevStep = steps[stepIndex - 1];
+                        navigate("/convert/" + prevStep.path);
+                      }}
+                      transition=".2s ease-in-out"
+                      display="flex"
+                      alignItems="center"
+                      gap={2}
+                      py={2}
+                      px={8}
+                      rounded="full"
+                      color="white"
+                      _hover={{
+                        bg: "whiteAlpha.300",
                       }}
                     >
-                      Next
-                      <Icon as={ArrowRight} ml={2} />
-                    </GradientButton>
+                      <Icon>
+                        <ArrowLeft />
+                      </Icon>
+                      <Box display={{ base: "none", sm: "inline-block" }}>
+                        Back
+                      </Box>
+                    </chakra.button>
                   )}
+
+                  <Box ml="auto">
+                    {stepIndex === 2 ? (
+                      <GradientButton
+                        onClick={startMigration}
+                        disabled={
+                          selectedPlaylists.length === 0 || transferLoading
+                        }
+                      >
+                        Start Migration{" "}
+                        {selectedPlaylists.length > 0
+                          ? `(${selectedPlaylists.length})`
+                          : ""}
+                        <Icon as={ArrowRight} ml={2} />
+                      </GradientButton>
+                    ) : curStep.completed && nextStep ? (
+                      <GradientButton
+                        onClick={() => {
+                          if (nextStep) {
+                            navigate("/convert/" + nextStep.path);
+                          }
+                        }}
+                      >
+                        Next
+                        <Icon as={ArrowRight} ml={2} />
+                      </GradientButton>
+                    ) : null}
+                  </Box>
                 </Box>
               </Box>
-            </Box>
+            )}
           </>
         )}
       </Box>
