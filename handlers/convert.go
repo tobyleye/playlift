@@ -20,8 +20,22 @@ import (
 	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
 	"github.com/tobyleye/playlist-converter/session"
 	"github.com/tobyleye/playlist-converter/types"
+	"github.com/tobyleye/playlist-converter/utils"
 	"gorm.io/gorm"
 )
+
+type PlaylistDetails struct {
+	Title       string `json:"title"`
+	Link        string `json:"link"`
+	TotalTracks int    `json:"total_tracks"`
+}
+
+type AllPlaylistDetails map[string]PlaylistDetails
+
+var YOUTUBE_MUSIC = "youtube_music"
+var SPOTIFY = "spotify"
+
+var SUPPORTED_PLATFORMS = []string{SPOTIFY, YOUTUBE_MUSIC}
 
 func requestBodyToMap(c echo.Context) map[string]interface{} {
 	body := make(map[string]interface{})
@@ -42,11 +56,6 @@ type Handlers struct {
 	YoutubeClient *youtube.Service
 	SessionStore  *sessions.CookieStore
 }
-
-var YOUTUBE_MUSIC = "youtube_music"
-var SPOTIFY = "spotify"
-
-var SUPPORTED_PLATFORMS = []string{SPOTIFY, YOUTUBE_MUSIC}
 
 func isPlatformSupported(platform string) bool {
 	for _, each := range SUPPORTED_PLATFORMS {
@@ -92,27 +101,23 @@ func getAllPlaylistTracks(spotifyClient *spotify.Client, ctx context.Context, pl
 
 func startConversions(db *gorm.DB, conversions ...*models.PlaylistConversion) {
 	log.Println("starting conversions for", len(conversions), "playlists")
+
 	for _, conversion := range conversions {
 		go func() {
 			log.Println(">>> running goroutine")
 
-			// handle single conversion
+			user := &models.User{}
+			db.First(user, "user_id = ?", conversion.UserId)
 
+			// handle single conversion
 			userId := conversion.UserId
-			// get user keys
-			// tokens, err := models.GetUserTokens(db, userId)
-			// // tokens.Spotify
-			// if err != nil {p
-			// 	log.Println("error getting user tokens:", err)
-			// 	return
-			// }
 
 			// create context
 			ctx := context.Background()
 
 			if conversion.SourcePlatform == SPOTIFY {
 				log.Println("starting conversion from spotify to youtube music...", conversion.PlaylistId)
-				spotifyClient, err := config.CreateUserSpotifyClient(db, userId)
+				spotifyClient, _ := config.CreateUserSpotifyClient(db, userId)
 				youtubeClient, err := config.CreateYoutubeClientForUser(db, userId)
 
 				if err != nil {
@@ -133,9 +138,14 @@ func startConversions(db *gorm.DB, conversions ...*models.PlaylistConversion) {
 					trackTitle := track.Track.Track.Name
 					// map
 
+					artists := []string{}
+					for _, artist := range track.Track.Track.Artists {
+						artists = append(artists, artist.Name)
+					}
+
 					searchResult, err := ytmusicapi.SearchOne(youtubeClient, types.SearchQuery{
 						Title:   trackTitle,
-						Artists: []string{track.Track.Track.Artists[0].Name},
+						Artists: artists,
 						Type:    "audio",
 					})
 
@@ -169,97 +179,98 @@ func startConversions(db *gorm.DB, conversions ...*models.PlaylistConversion) {
 			} else if conversion.SourcePlatform == YOUTUBE_MUSIC {
 				log.Println("starting conversion from youtube music to spotify...", conversion.PlaylistId)
 
-				// Create Spotify client
-				// spotifyClient, err := config.CreateUserSpotifyClient(db, userId)
-				// if err != nil {
-				// 	log.Println("error creating spotify client:", err)
-				// 	conversion.Status = "failed"
-				// 	db.Save(conversion)
-				// 	return
-				// }
+				spotifyClient, err := config.CreateUserSpotifyClient(db, userId)
+				youtubeClient, err := config.CreateYoutubeClientForUser(db, userId)
 
-				// // Fetch YouTube Music playlist tracks
-				// playlistResponse, err := ytmusicapi.FetchPlaylist(conversion.PlaylistId)
-				// if err != nil {
-				// 	log.Println("error fetching youtube music playlist:", err)
-				// 	conversion.Status = "failed"
-				// 	db.Save(conversion)
-				// 	return
-				// }
+				if err != nil {
+					log.Println("error creating spotify client:", err)
+					conversion.Status = "failed"
+					db.Save(conversion)
+					return
+				}
 
-				// // Parse the response to get tracks
-				// playlistData := playlistResponse.(struct {
-				// 	PlaylistTracks []ytmusicapi.SearchResultItem
-				// })
-				// tracks := playlistData.PlaylistTracks
+				// fetch all the youtube music playlist tracks
+				log.Println("fetching youtube music playlist tracks...")
+				playlistTracks, err := ytmusicapi.FetchAllPlaylistTracks(youtubeClient, conversion.PlaylistId)
 
-				// log.Println("got a total of", len(tracks), "tracks from youtube music playlist")
+				if err != nil {
+					log.Println("error fetching youtube playlists:", err)
+					conversion.Status = "failed"
+					db.Save(conversion)
+					return
+				}
 
-				// spotifyTrackIds := []string{}
+				spotifyTracks := []spotify.ID{}
 
-				// // Search for each track on Spotify
-				// for _, track := range tracks {
-				// 	trackTitle := track.Title
-				// 	artists := track.Artists
+				for _, track := range playlistTracks.Tracks {
+					query := fmt.Sprintf("track:%s artist:%s", track.Title, strings.Join(track.Artists, ", "))
+					result, err := spotifyClient.Search(ctx, query, spotify.SearchTypeTrack, spotify.Limit(1))
 
-				// 	searchResult, err := spotify_service.SearchSpotify(spotifyClient, ctx, types.SearchQuery{
-				// 		Title:   trackTitle,
-				// 		Artists: artists,
-				// 		Type:    "audio",
-				// 	})
+					if err != nil {
+						log.Printf("error searching for track %s(%s) on spotify:", track.Title, track.VideoId)
+						continue
+					}
 
-				// 	if err != nil {
-				// 		log.Println("error searching for track on spotify:", err)
-				// 		continue
-				// 	}
-				// 	if searchResult.ID == "" {
-				// 		log.Println("no result found for track:", trackTitle)
-				// 		continue
-				// 	}
+					if result.Tracks.Total == 0 {
+						log.Println("no result found for track:", track.Title, track.VideoId, track.Artists)
+						continue
+					}
 
-				// 	log.Println("found track on spotify:", searchResult.Name, "link:", searchResult.Link)
-				// 	spotifyTrackIds = append(spotifyTrackIds, searchResult.ID)
-				// }
+					if result.Tracks.Total > 0 {
+						bestResult := result.Tracks.Tracks[0]
+						spotifyTracks = append(spotifyTracks, bestResult.ID)
+					}
 
-				// log.Println("creating spotify playlist with", len(spotifyTrackIds), "tracks")
+				}
 
-				// // Get user's Spotify ID
-				// var user models.User
-				// db.Where("user_id = ?", userId).First(&user)
-				// if user.SpotifyId == "" {
-				// 	log.Println("user spotify id not found")
-				// 	conversion.Status = "failed"
-				// 	db.Save(conversion)
-				// 	return
-				// }
+				log.Println("found a total of", len(spotifyTracks), "tracks to add to spotify playlist")
 
-				// // Create Spotify playlist
-				// playlistId, err := spotify_service.CreatePlaylist(spotifyClient, ctx, user.SpotifyId,
-				// 	conversion.PlaylistTitle, "", spotifyTrackIds)
+				if len(spotifyTracks) > 0 {
 
-				// if err != nil {
-				// 	log.Println("error creating spotify playlist:", err)
-				// 	conversion.Status = "failed"
-				// 	db.Save(conversion)
-				// 	return
-				// } else {
-				// 	log.Println("successfully created spotify playlist with ID:", playlistId)
-				// 	conversion.Status = "completed"
-				// 	db.Save(conversion)
-				// }
+					createdPlaylist, err := spotifyClient.CreatePlaylistForUser(ctx, user.SpotifyId, conversion.PlaylistTitle, "", false, false)
 
+					if err != nil {
+						log.Println("error creating spotify playlist:", err)
+						conversion.Status = "failed"
+						db.Save(conversion)
+						return
+					}
+
+					log.Println("creating spotify playlist...")
+
+					startIndex := 0
+
+					for {
+						batchSize := utils.Min(100, len(spotifyTracks[startIndex:]))
+						endIndex := startIndex + batchSize
+						batch := spotifyTracks[startIndex:endIndex]
+
+						_, err = spotifyClient.AddTracksToPlaylist(ctx, createdPlaylist.ID, batch...)
+
+						if err != nil {
+							log.Println("error adding tracks to spotify playlist:", err)
+							conversion.Status = "failed"
+							db.Save(conversion)
+							break
+						}
+
+						if endIndex >= len(spotifyTracks) {
+							break
+						} else {
+							startIndex = endIndex
+
+						}
+
+					}
+
+					conversion.Status = "completed"
+					db.Save(conversion)
+
+				}
 			}
 		}()
 	}
 }
-
-type PlaylistDetails struct {
-	Title       string `json:"title"`
-	Link        string `json:"link"`
-	TotalTracks int    `json:"total_tracks"`
-}
-
-type AllPlaylistDetails map[string]PlaylistDetails
 
 func fetchSpotifyPlaylistsDetails(spotifyClient *spotify.Client, ctx context.Context, playlistIds []string) AllPlaylistDetails {
 	// return spotifyClient.GetPlaylist()
@@ -421,104 +432,12 @@ func (h Handlers) RestartConversion(c echo.Context) error {
 	if conversion.Status == "pending" {
 		return c.JSON(400, errorResponse("cannot restart a pending conversion"))
 	}
-
 	conversion.Status = "pending"
-	// conversion.Result = nil
 
 	h.Db.Save(&conversion)
 
-	// go startConversion(&conversion, h, user)
-
 	return c.JSON(200, struct{}{})
-
 }
-
-// func startConversion(conversion *models.PlaylistConversion, h Handlers, user session.UserSession) {
-
-// 	var destinationPlatform string = conversion.DestinationPlatform
-
-// 	var playlistInfo interface{} = conversion.PlaylistInfo
-
-// 	// var result map[string]interface{}
-// 	result := make(map[string]interface{})
-
-// 	tracks := playlistInfo.(types.SimplePlaylist).Tracks.Tracks
-
-// 	youtubeIds := []string{}
-// 	spotifyIds := []string{}
-
-// 	for _, track := range tracks {
-
-// 		var searchResultLink = ""
-// 		var err error
-
-// 		searchQuery := types.SearchQuery{
-// 			Title:   track.Name,
-// 			Artists: track.Artists,
-// 			Type:    "audio",
-// 		}
-
-// 		log.Println("searchQuery:", searchQuery)
-
-// 		if destinationPlatform == YOUTUBE_MUSIC {
-// 			fmt.Println("searching on youtube...")
-// 			var searchedTrack ytmusicapi.SearchResultItem
-// 			searchedTrack, err = ytmusicapi.SearchOne(searchQuery)
-
-// 			log.Println("search result: ", searchedTrack)
-// 			if err == nil && searchedTrack.VideoId != "" {
-// 				youtubeIds = append(youtubeIds, searchedTrack.VideoId)
-// 				searchResultLink = searchedTrack.Link
-// 			}
-
-// 		} else if destinationPlatform == SPOTIFY {
-// 			fmt.Println("searching on spotify...")
-// 			var searchedTrack types.SimpleTrack
-// 			searchedTrack, err = SpotifyService.SearchSpotify(h.SpotifyClient, h.Context, searchQuery)
-
-// 			if err == nil && searchedTrack.ID != "" {
-// 				spotifyIds = append(spotifyIds, searchedTrack.ID)
-// 				searchResultLink = searchedTrack.Link
-// 			}
-// 		}
-
-// 		if err == nil {
-// 			result[track.ID] = searchResultLink
-// 		} else {
-// 			result[track.ID] = "error"
-// 		}
-
-// 		conversion.Result = result
-
-// 		err = nil // reset error
-// 		h.Db.Save(&conversion)
-// 	}
-
-// 	conversion.Status = "completed"
-
-// 	var transferError error
-
-// 	// transfer playlist here
-
-// 	if destinationPlatform == YOUTUBE_MUSIC {
-// 		// create youtube playlist
-// 		httpClient, err := config.CreateYoutubeClient(h.Db, conversion.UserId)
-// 		if err == nil {
-// 			_, err = ytmusicapi.CreatePlaylist(httpClient, conversion.Title, "", youtubeIds)
-// 		}
-// 		transferError = err
-
-// 	} else if destinationPlatform == SPOTIFY {
-// 		// create spotify playlist
-// 		_, transferError = SpotifyService.CreatePlaylist(h.SpotifyClient, h.Context, user.SpotifyId, conversion.Title, "", spotifyIds)
-// 	}
-
-// 	if transferError == nil {
-// 		conversion.PlaylistCreationStatus = true
-// 	}
-
-// 	h.Db.Save(conversion)
-// }
 
 func (h Handlers) GetSingleConversion(c echo.Context) error {
 	conversionId := c.Param("id")

@@ -35,6 +35,16 @@ type PlaylistDetails struct {
 	Link           string
 }
 
+type PlaylistAllTracksResponse struct {
+	Total  int                `json:"total"`
+	Tracks []SearchResultItem `json:"tracks"`
+}
+
+type PlaylistTracksResponse struct {
+	NextContinuation string             `json:"next_continuation"`
+	Tracks           []SearchResultItem `json:"tracks"`
+}
+
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
 const YTM_DOMAIN = "https://music.youtube.com"
 
@@ -300,8 +310,6 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 
 	}
 
-	SaveJson(playlistHeader, fmt.Sprintf("playlist-header-%s.json", playlistId))
-
 	title := ReadValueString(playlistHeader, []interface{}{"title", "runs", 0, "text"})
 	totalTracks := ReadValueString(playlistHeader, []interface{}{"secondSubtitle", "runs", 0, "text"})
 	totalTracks = strings.Replace(totalTracks, " songs", "", 1)
@@ -325,11 +333,6 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 	fmt.Printf("playlist details: %+v\n", playlist)
 
 	return playlist, nil
-}
-
-type PlaylistTracksResponse struct {
-	NextContinuation string             `json:"next_continuation"`
-	Tracks           []SearchResultItem `json:"tracks"`
 }
 
 func FetchPlaylistTracks(client *http.Client, playlistId string, continuation string) (PlaylistTracksResponse, error) {
@@ -405,7 +408,7 @@ func FetchPlaylistTracks(client *http.Client, playlistId string, continuation st
 	}, nil
 }
 
-func FetchAllPlaylistTracks(client *http.Client, playlistId string) (interface{}, error) {
+func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAllTracksResponse, error) {
 
 	tracks := []SearchResultItem{}
 
@@ -414,7 +417,7 @@ func FetchAllPlaylistTracks(client *http.Client, playlistId string) (interface{}
 	for {
 		nextTracks, err := FetchPlaylistTracks(client, playlistId, nextContinuation)
 		if err != nil {
-			return nil, err
+			return PlaylistAllTracksResponse{}, err
 		}
 
 		tracks = append(tracks, nextTracks.Tracks...)
@@ -425,10 +428,7 @@ func FetchAllPlaylistTracks(client *http.Client, playlistId string) (interface{}
 		}
 	}
 
-	return struct {
-		Total  int                `json:"total"`
-		Tracks []SearchResultItem `json:"tracks"`
-	}{
+	return PlaylistAllTracksResponse{
 		Total:  len(tracks),
 		Tracks: tracks,
 	}, nil
