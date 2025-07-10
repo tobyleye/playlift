@@ -3,7 +3,6 @@ package ytmusicapi
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -46,13 +45,14 @@ func ReadValueString(object interface{}, arrayOfkeys []interface{}) string {
 	return value
 }
 
-func SaveJson(data interface{}, filename string) {
+func SaveJson(data interface{}, filename string) error {
 	res, _ := json.MarshalIndent(data, "", "  ")
 	filename = fmt.Sprintf("./samples/%s.json", filename)
 	f, err := os.Create(filename)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer f.Close()
 	f.Write(res)
+	return nil
 }
