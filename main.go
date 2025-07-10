@@ -142,6 +142,7 @@ func main() {
 	privateRoutes.GET("/playlists/youtube", handlers.FetchUserYoutubePlaylists)
 	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)
 	privateRoutes.GET("/connection-status", handlers.GetConnectionStatus)
+	privateRoutes.POST("/logout", handlers.Logout)
 
 	privateRoutes.GET(("/playlist-tracks/:playlistId"), func(echo echo.Context) error {
 		user, _ := session.GetUserFromSession(echo)
