@@ -1,14 +1,13 @@
 package ytmusicapi
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/carlmjohnson/requests"
 	"github.com/tobyleye/playlist-converter/types"
 )
 
@@ -53,6 +52,16 @@ var headers = map[string]string{
 	"accept":       "*/*",
 	"content-type": "application/json",
 	"origin":       YTM_DOMAIN,
+}
+
+var defaultBody = map[string]interface{}{
+	"context": map[string]interface{}{
+		"client": map[string]interface{}{
+			"clientName":    "WEB_REMIX",
+			"clientVersion": fmt.Sprintf("1.%s.01.00", time.Now().UTC().Format("20060102")),
+		},
+		"user": map[string]interface{}{},
+	},
 }
 
 var SEPERATOR = " • "
@@ -184,51 +193,24 @@ func parseSearchResultItem(result interface{}) SearchResultItem {
 	}
 }
 
-func sendRequest(httpClient *http.Client, endpoint string, body map[string]interface{}) ([]byte, interface{}, error) {
+func sendRequest(httpClient *http.Client, endpoint string, body map[string]interface{}) (interface{}, error) {
 	url := fmt.Sprintf("https://music.youtube.com/youtubei/v1/%s?alt=json", endpoint)
-
-	defaultBody := map[string]interface{}{
-		"context": map[string]interface{}{
-			"client": map[string]interface{}{
-				"clientName":    "WEB_REMIX",
-				"clientVersion": fmt.Sprintf("1.%s.01.00", time.Now().UTC().Format("20060102")),
-			},
-			"user": map[string]interface{}{},
-		},
-	}
 
 	for key, value := range defaultBody {
 		body[key] = value
 	}
 
-	bodyStr, _ := json.Marshal(body)
-	bodyReader := bytes.NewReader(bodyStr)
+	var jsonResponse interface{}
+	ctx := context.Background()
 
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
+	err := requests.
+		URL(url).
+		Client(httpClient).
+		BodyJSON(&body).
+		ToJSON(&jsonResponse).
+		Fetch(ctx)
 
-	req, _ := http.NewRequest(http.MethodPost, url, bodyReader)
-
-	for key, value := range headers {
-		req.Header.Add(key, value)
-	}
-
-	res, err := httpClient.Do(req)
-
-	if err != nil {
-		fmt.Println("error sending request", err)
-		return []byte(""), nil, err
-
-	}
-
-	defer res.Body.Close()
-
-	resBody, err := io.ReadAll(res.Body)
-	var data interface{}
-	// ignore error
-	json.Unmarshal(resBody, &data)
-	return resBody, data, err
+	return jsonResponse, err
 }
 
 func Search(client *http.Client, searchQuery types.SearchQuery) ([]SearchResultItem, error) {
@@ -245,7 +227,7 @@ func Search(client *http.Client, searchQuery types.SearchQuery) ([]SearchResultI
 
 	}
 
-	_, data, err := sendRequest(client, "search", body)
+	data, err := sendRequest(client, "search", body)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +270,7 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 	body := map[string]interface{}{
 		"browseId": browseId,
 	}
-	_, jsonResponse, err := sendRequest(client, "browse", body)
+	jsonResponse, err := sendRequest(client, "browse", body)
 	if err != nil {
 		return PlaylistDetails{}, err
 	}
@@ -351,7 +333,7 @@ func FetchPlaylistTracks(client *http.Client, playlistId string, continuation st
 		body["browseId"] = browseId
 	}
 
-	_, jsonResponse, err := sendRequest(client, "browse", body)
+	jsonResponse, err := sendRequest(client, "browse", body)
 
 	if err != nil {
 		return PlaylistTracksResponse{}, err
@@ -447,7 +429,7 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 	body := map[string]interface{}{
 		"browseId": "FEmusic_liked_playlists",
 	}
-	_, jsonResponse, err := sendRequest(httpClient, "browse", body)
+	jsonResponse, err := sendRequest(httpClient, "browse", body)
 
 	if err != nil {
 		return nil, err
@@ -519,7 +501,7 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 		"privacyStatus": privacyStatus,
 		"videoIds":      videoIds,
 	}
-	_, data, err := sendRequest(client, endpoint, body)
+	data, err := sendRequest(client, endpoint, body)
 
 	fmt.Println("create playlist response:", data)
 	if err != nil {
