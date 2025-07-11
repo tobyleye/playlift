@@ -4,9 +4,10 @@ import { ChakraProvider } from "@chakra-ui/react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { theme } from "./theme/theme.ts";
 import SessionProvider from "./providers/SessionProvider.tsx";
+import { SWRConfig } from "swr";
 
 const Landing = lazy(() => import("./views/landing.tsx"));
-const Home = lazy(() => import("./views/home.tsx"));
+const Home = lazy(() => import("./views/Home.tsx"));
 const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
 const ConnectSpotify = lazy(
@@ -27,19 +28,31 @@ function App() {
       <SessionProvider>
         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
           <ChakraProvider theme={theme}>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/convert" element={<Convert />}>
-                <Route path="" element={<ConvertIndex />} />
-                <Route path="connect-spotify" element={<ConnectSpotify />} />
-                <Route path="connect-youtube" element={<ConnectYoutube />} />
-                <Route
-                  path="select-playlists"
-                  element={<PlaylistsSelection />}
-                />
-              </Route>
-            </Routes>
+            <SWRConfig
+              value={{
+                shouldRetryOnError: (err) => {
+                  if (err.response && err.response.status === 401) {
+                    return false;
+                  }
+                  // retry on other errors?
+                  return true;
+                },
+              }}
+            >
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/convert" element={<Convert />}>
+                  <Route path="" element={<ConvertIndex />} />
+                  <Route path="connect-spotify" element={<ConnectSpotify />} />
+                  <Route path="connect-youtube" element={<ConnectYoutube />} />
+                  <Route
+                    path="select-playlists"
+                    element={<PlaylistsSelection />}
+                  />
+                </Route>
+              </Routes>
+            </SWRConfig>
           </ChakraProvider>
         </GoogleOAuthProvider>
       </SessionProvider>

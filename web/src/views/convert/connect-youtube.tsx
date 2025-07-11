@@ -34,7 +34,7 @@ export default function ConnectYoutube() {
         localStorage.setItem("userId", resp.data.user_id);
         setSession(resp.data);
       } catch (err) {
-        navigate("/convert/connect-spotify", { replace: true });
+        navigate("/convert/connect-youtube", { replace: true });
         console.error("Error connecting to YouTube Music:", err);
       }
     };

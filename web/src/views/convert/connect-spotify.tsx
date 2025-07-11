@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useConvertWizardContext } from "./context";
+import withSession from "@/hocs/withSession";
 
-export default function ConnectSpotify() {
+// eslint-disable-next-line react-refresh/only-export-components
+export default withSession(function ConnectSpotify() {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
@@ -131,4 +133,4 @@ export default function ConnectSpotify() {
       </Box>
     </Box>
   );
-}
+});

@@ -9,6 +9,7 @@ import api from "@/api/api";
 import { Playlist } from "@/types";
 import { streamingServices } from "@/constants/constants";
 import Success from "./success-screen";
+import { useSessionContext } from "@/contexts/session";
 // import { useTransition, animated } from "@react-spring/web";
 
 // const useStep = () => {
@@ -48,19 +49,24 @@ export default function ConversionWizard() {
 
   const paths = location.pathname.split("/");
   const stepPath = paths.length > 2 ? paths[2] : "";
+  const { session } = useSessionContext();
 
   useEffect(() => {
-    api
-      .getConnectionStatus()
-      .then((data) => {
-        setYoutubeConnected(data.youtube_connected);
-        setSpotifyConnected(data.spotify_connected);
-      })
-      .catch(() => {})
-      .finally(() => {
-        setLoadingConnectionStatus(false);
-      });
-  }, []);
+    if (session) {
+      api
+        .getConnectionStatus()
+        .then((data) => {
+          setYoutubeConnected(data.youtube_connected);
+          setSpotifyConnected(data.spotify_connected);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setLoadingConnectionStatus(false);
+        });
+    } else {
+      setLoadingConnectionStatus(false);
+    }
+  }, [session]);
 
   const togglePlaylist = (p: Playlist) => {
     const selectedPlaylistIds = selectedPlaylists.map((pl) => pl.playlist_id);

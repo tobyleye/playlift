@@ -22,11 +22,28 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 	code, _ := body["code"].(string)
 
+	// from is the location from which the login was initiated. it is used to determine the redirect URI of the
+	// oauth2 config
+	// login can be initiated from the home page where the user is forced to login if not logged in
+	// or it can also be initiated from the convert page where the user is trying to connect
+	// their YouTube account for the first time
+	from, _ := body["from"].(string)
+
+	redirectUri := ""
+
+	if from == "home" {
+		redirectUri = config.FRONTEND_BASE_URL + "/home"
+	} else {
+		// else if from == "connect" {
+		// default to connect
+		redirectUri = config.FRONTEND_BASE_URL + "/convert/connect-youtube"
+	}
+
 	var googleLoginConfig = oauth2.Config{
 		ClientID:     config.GOOGLE_CLIENT_ID,
 		ClientSecret: config.GOOGLE_CLIENT_SECRET,
 		Endpoint:     google.Endpoint,
-		RedirectURL:  config.GOOGLE_LOGIN_REDIRECT_URL,
+		RedirectURL:  redirectUri,
 		Scopes: []string{
 			"https://www.googleapis.com/auth/youtube",
 			"https://www.googleapis.com/auth/userinfo.email",
@@ -37,7 +54,7 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 	tokens, err := googleLoginConfig.Exchange(c.Request().Context(), code)
 
 	if err != nil {
-		log.Printf("error exchanging google authorization code for tokens:", err)
+		log.Println("error exchanging google authorization code for tokens:", err)
 		return c.JSON(500, map[string]string{"error": "server error"})
 	}
 

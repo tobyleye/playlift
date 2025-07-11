@@ -104,7 +104,10 @@ export default function Landing() {
               color="white"
               mb={4}
             >
-              Move Your Playlists
+              {/* Move Your Playlists */}
+              Your Music, <br />
+              Wherever You Go
+              {/* Keep your music collection unified across all platforms. */}
             </Heading>
 
             <Text
@@ -115,9 +118,15 @@ export default function Landing() {
               lineHeight={1.4}
               mb={12}
             >
-              Seamlessly migrate your music playlists between Spotify and
-              YouTube Music. Keep your favorite songs organized across all
-              platforms.
+              Seamlessly migrate your music playlists between{" "}
+              <Box as="span" fontWeight="bold">
+                Spotify
+              </Box>{" "}
+              and{" "}
+              <Box as="span" fontWeight="bold">
+                YouTube Music
+              </Box>
+              .
             </Text>
 
             <StyledLink
