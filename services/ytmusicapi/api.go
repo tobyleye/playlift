@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/carlmjohnson/requests"
-	"github.com/tobyleye/playlist-converter/types"
+	"github.com/tobyleye/playlift/types"
 )
 
 type SearchResultItem struct {

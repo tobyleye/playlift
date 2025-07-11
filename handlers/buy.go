@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/stripe/stripe-go/v81"
-	"github.com/tobyleye/playlist-converter/payment"
+	"github.com/tobyleye/playlift/payment"
 )
 
 func (h Handlers) GetProducts(c echo.Context) error {

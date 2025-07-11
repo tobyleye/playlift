@@ -1,6 +1,7 @@
 import { Box, Link as StyledLink } from "@chakra-ui/react";
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import Logo from "@/components/logo";
 
 export default function Nav({ rightElement }: { rightElement?: ReactNode }) {
   return (
@@ -20,11 +21,15 @@ export default function Nav({ rightElement }: { rightElement?: ReactNode }) {
             as={Link}
             to="/"
             fontWeight={800}
-            fontSize="xl"
+            fontSize="2xl"
             textDecor={"none"}
             _hover={{ textDecor: "none" }}
+            display="flex"
+            alignItems="center"
+            gap={1}
           >
-            Playlist Migrator
+            <Logo />
+            Playlift
           </StyledLink>
         </Box>
 

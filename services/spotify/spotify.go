@@ -6,8 +6,8 @@ import (
 	"log"
 	"strings"
 
-	"github.com/tobyleye/playlist-converter/config"
-	"github.com/tobyleye/playlist-converter/types"
+	"github.com/tobyleye/playlift/config"
+	"github.com/tobyleye/playlift/types"
 	"github.com/zmb3/spotify/v2"
 	spotifyAuth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/oauth2/clientcredentials"

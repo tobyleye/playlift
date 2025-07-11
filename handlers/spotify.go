@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/tobyleye/playlist-converter/config"
-	"github.com/tobyleye/playlist-converter/models"
-	SpotifyService "github.com/tobyleye/playlist-converter/services/spotify"
-	"github.com/tobyleye/playlist-converter/session"
+	"github.com/tobyleye/playlift/config"
+	"github.com/tobyleye/playlift/models"
+	SpotifyService "github.com/tobyleye/playlift/services/spotify"
+	"github.com/tobyleye/playlift/session"
 	"golang.org/x/oauth2"
 )
 

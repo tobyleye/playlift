@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/tobyleye/playlist-converter/models"
+	"github.com/tobyleye/playlift/models"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"gorm.io/gorm"

@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/sessions"
 	echoSessionMiddleware "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
-	"github.com/tobyleye/playlist-converter/models"
+	"github.com/tobyleye/playlift/models"
 )
 
 func init() {

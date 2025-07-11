@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tobyleye/playlist-converter/types"
+	"github.com/tobyleye/playlift/types"
 	"google.golang.org/api/youtube/v3"
 )
 

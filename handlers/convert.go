@@ -15,12 +15,12 @@ import (
 	"github.com/zmb3/spotify/v2"
 	"google.golang.org/api/youtube/v3"
 
-	"github.com/tobyleye/playlist-converter/config"
-	"github.com/tobyleye/playlist-converter/models"
-	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
-	"github.com/tobyleye/playlist-converter/session"
-	"github.com/tobyleye/playlist-converter/types"
-	"github.com/tobyleye/playlist-converter/utils"
+	"github.com/tobyleye/playlift/config"
+	"github.com/tobyleye/playlift/models"
+	"github.com/tobyleye/playlift/services/ytmusicapi"
+	"github.com/tobyleye/playlift/session"
+	"github.com/tobyleye/playlift/types"
+	"github.com/tobyleye/playlift/utils"
 	"gorm.io/gorm"
 )
 

@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/tobyleye/playlist-converter/config"
-	"github.com/tobyleye/playlist-converter/models"
-	"github.com/tobyleye/playlist-converter/session"
+	"github.com/tobyleye/playlift/config"
+	"github.com/tobyleye/playlift/models"
+	"github.com/tobyleye/playlift/session"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	oauth2V2 "google.golang.org/api/oauth2/v2"

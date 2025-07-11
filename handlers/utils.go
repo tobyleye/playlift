@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/tobyleye/playlist-converter/config"
+	"github.com/tobyleye/playlift/config"
 )
 
 type Query struct {

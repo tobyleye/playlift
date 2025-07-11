@@ -2,7 +2,7 @@ package payment
 
 import (
 	"github.com/stripe/stripe-go/v81/client"
-	"github.com/tobyleye/playlist-converter/config"
+	"github.com/tobyleye/playlift/config"
 )
 
 // Setup

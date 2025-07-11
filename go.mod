@@ -1,4 +1,4 @@
-module github.com/tobyleye/playlist-converter
+module github.com/tobyleye/playlift
 
 go 1.23
 

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tobyleye/playlist-converter/config"
-	"github.com/tobyleye/playlist-converter/db"
-	"github.com/tobyleye/playlist-converter/models"
-	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
+	"github.com/tobyleye/playlift/config"
+	"github.com/tobyleye/playlift/db"
+	"github.com/tobyleye/playlift/models"
+	"github.com/tobyleye/playlift/services/ytmusicapi"
 	"golang.org/x/oauth2"
 )
 

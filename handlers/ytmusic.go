@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/tobyleye/playlist-converter/config"
-	"github.com/tobyleye/playlist-converter/models"
-	"github.com/tobyleye/playlist-converter/services/ytmusicapi"
-	"github.com/tobyleye/playlist-converter/session"
+	"github.com/tobyleye/playlift/config"
+	"github.com/tobyleye/playlift/models"
+	"github.com/tobyleye/playlift/services/ytmusicapi"
+	"github.com/tobyleye/playlift/session"
 )
 
 // http://localhost:8181/callback/google
