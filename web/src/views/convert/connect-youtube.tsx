@@ -29,12 +29,13 @@ export default function ConnectYoutube() {
     const connectCallback = async () => {
       setLoading(true);
       try {
-        const resp = await client.post("/login/google/callback", {
+        const { data } = await client.post("/login/google/callback", {
           code,
         });
         setYoutubeConnected(true);
-        localStorage.setItem("userId", resp.data.user_id);
-        setSession(resp.data);
+        const session = data.data;
+        localStorage.setItem("userId", session.user_id);
+        setSession(session);
       } catch (err) {
         navigate("/convert/connect-youtube", { replace: true });
         console.error("Error connecting to YouTube Music:", err);

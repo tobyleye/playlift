@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/gob"
 	"fmt"
 	"html/template"
 	"io"
@@ -20,11 +21,6 @@ import (
 	"github.com/tobyleye/playlift/models"
 	"github.com/tobyleye/playlift/services/ytmusicapi"
 	"github.com/tobyleye/playlift/session"
-	"github.com/zmb3/spotify/v2"
-	spotifyAuth "github.com/zmb3/spotify/v2/auth"
-	"golang.org/x/oauth2/clientcredentials"
-	"google.golang.org/api/option"
-	"google.golang.org/api/youtube/v3"
 
 	gormMysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -57,10 +53,10 @@ func ensureLogin(next echo.HandlerFunc) echo.HandlerFunc {
 func main() {
 	// loads and initializes environment variables
 	config.LoadEnv()
+	// Register the UserSession type with gob for session serialization
+	gob.Register(session.UserSession{})
 
 	var SessionStore = sessions.NewCookieStore([]byte(config.SESSION_KEY))
-
-	fmt.Println("google api key:", config.GOOGLE_API_KEY)
 
 	dbConfig := mysql.Config{
 		User:                 os.Getenv("DB_USER"),
@@ -99,37 +95,23 @@ func main() {
 	}
 
 	ctx := context.Background()
-	oauthConfig := clientcredentials.Config{
-		ClientID:     config.SPOTIFY_CLIENT_ID,
-		ClientSecret: config.SPOTIFY_CLIENT_SECRET,
-		TokenURL:     spotifyAuth.TokenURL,
-	}
-	token, err := oauthConfig.Token(ctx)
+
 	if err != nil {
 		panic(err)
 	}
 
-	httpClient := spotifyAuth.New().Client(ctx, token)
-	spotifyClient := spotify.New(httpClient)
-	youtubeClient, _ := youtube.NewService(ctx, option.WithAPIKey(config.GOOGLE_API_KEY))
-
 	handlers := handlers.Handlers{
-		Db:            db,
-		Context:       ctx,
-		SpotifyClient: spotifyClient,
-		YoutubeClient: youtubeClient,
-		SessionStore:  SessionStore,
+		Db:           db,
+		Context:      ctx,
+		SessionStore: SessionStore,
 	}
 
 	// define api routes
 	e.POST("/login/google/callback", handlers.LoginWithGoogleCallback)
 
-	e.POST("/connect/spotify/callback", handlers.SpotifyLoginCallback, ensureLogin)
-
-	// e.GET("/connect/youtube", handlers.YoutubeConnect, ensureLogin)
-	// e.GET("/connect/youtube/callback", handlers.YoutubeConnectCallback, ensureLogin)
-
 	privateRoutes := e.Group("", ensureLogin)
+
+	privateRoutes.POST("/connect/spotify/callback", handlers.SpotifyLoginCallback, ensureLogin)
 
 	privateRoutes.GET("/user/session", handlers.GetUserSession, ensureLogin)
 

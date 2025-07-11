@@ -1,18 +1,11 @@
 package session
 
 import (
-	"encoding/gob"
-
 	"github.com/gorilla/sessions"
 	echoSessionMiddleware "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/tobyleye/playlift/models"
 )
-
-func init() {
-	// Register the UserSession type with gob for session serialization
-	gob.Register(UserSession{})
-}
 
 type UserSession struct {
 	UserId           string `json:"user_id"`
