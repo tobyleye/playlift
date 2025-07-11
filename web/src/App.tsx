@@ -7,7 +7,7 @@ import SessionProvider from "./providers/SessionProvider.tsx";
 import { SWRConfig } from "swr";
 
 const Landing = lazy(() => import("./views/landing.tsx"));
-const Home = lazy(() => import("./views/Home.tsx"));
+const Home = lazy(() => import("./views/home.tsx"));
 const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
 const ConnectSpotify = lazy(
