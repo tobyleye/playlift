@@ -64,7 +64,7 @@ export default function LoginModal({
   const connectYoutube = useGoogleLogin({
     flow: "auth-code",
     ux_mode: "redirect",
-    scope: "",
+    scope: ["https://www.googleapis.com/auth/youtube"].join(" "),
 
     onSuccess: (tokenResponse) => {
       console.log("token response..", tokenResponse);

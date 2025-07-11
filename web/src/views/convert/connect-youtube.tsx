@@ -1,4 +1,4 @@
-import { Box, Heading, Text, chakra, Icon } from "@chakra-ui/react";
+import { Box, Heading, Text, chakra, Icon, useToast } from "@chakra-ui/react";
 import { CheckIcon, PlayIcon } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { client } from "@/api/api";
 import { useConvertWizardContext } from "./context";
 import { useSessionContext } from "@/contexts/session";
+import { toastHelper } from "@/components/utils/toast";
 
 export default function ConnectYoutube() {
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,7 @@ export default function ConnectYoutube() {
   const error = searchParams.get("error");
   const navigate = useNavigate();
 
+  const toast = useToast();
   const { setSession } = useSessionContext();
   const { youtubeConnected, setYoutubeConnected } = useConvertWizardContext();
 
@@ -52,8 +54,14 @@ export default function ConnectYoutube() {
     onSuccess: (tokenResponse) => {
       console.log("token response..", tokenResponse);
     },
-    onError: (error) => console.error("Login Failed:", error),
-    redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
+    onError: () => {
+      toastHelper(toast, {
+        title: "Error connecting to YouTube Music",
+        description: `Please try again`,
+        status: "error",
+      });
+    },
+    redirect_uri: window.location.href,
   });
 
   return (
