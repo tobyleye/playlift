@@ -39,7 +39,7 @@ func ensureLogin(next echo.HandlerFunc) echo.HandlerFunc {
 		user, err := session.GetUserFromSession(c)
 		if err != nil {
 			log.Println("error getting user session in middleware", err)
-			return c.JSON(500, map[string]string{"error": "internal server error"})
+			return c.JSON(401, map[string]string{"error": "unauthorized"})
 		}
 		if user.UserId == "" {
 			return c.JSON(401, map[string]string{"error": "unauthorized"})
