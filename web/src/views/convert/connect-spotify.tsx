@@ -75,10 +75,8 @@ export default withSession(function ConnectSpotify() {
 
       redirect_uri: isDev
         ? import.meta.env.VITE_SPOTIFY_REDIRECT_URI
-        : window.location.origin + "/spotify/callback",
+        : window.location.href,
     };
-
-    console.log("params..", params);
 
     const queryString = new URLSearchParams(params).toString();
     url = `${url}?${queryString}`;
