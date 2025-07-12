@@ -12,6 +12,7 @@ import {
 import { useGoogleLogin } from "@react-oauth/google";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import EllipsisLoader from "./ellipsis-loader";
 
 export default function LoginModal({
   open,
@@ -83,7 +84,7 @@ export default function LoginModal({
         <ModalBody>
           {loading ? (
             <Box textAlign="center" py={6}>
-              <Text>Loading..</Text>
+              <EllipsisLoader text="Loading" />
             </Box>
           ) : (
             <Box textAlign="center" py={4}>

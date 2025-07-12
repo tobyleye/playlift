@@ -7,6 +7,7 @@ import { client } from "@/api/api";
 import { useConvertWizardContext } from "./context";
 import { useSessionContext } from "@/contexts/session";
 import { toastHelper } from "@/components/utils/toast";
+import EllipsisLoader from "@/components/ellipsis-loader";
 
 export default function ConnectYoutube() {
   const [loading, setLoading] = useState(false);
@@ -36,13 +37,25 @@ export default function ConnectYoutube() {
         const session = data.data;
         localStorage.setItem("userId", session.user_id);
         setSession(session);
+        toastHelper(toast, {
+          title: "YouTube Music connected!",
+          description:
+            "Account created successfully! You can now manage your music across platforms.",
+        });
       } catch (err) {
-        navigate("/convert/connect-youtube", { replace: true });
         console.error("Error connecting to YouTube Music:", err);
+        toastHelper(toast, {
+          title: "Connection failed",
+          description: `Unable to connect to YouTube Music. Please try again.`,
+          status: "error",
+        });
+      } finally {
+        setLoading(false);
       }
     };
 
     if (code) {
+      navigate("/convert/connect-youtube", { replace: true });
       connectCallback();
     }
   }, [code, navigate, setSession, setYoutubeConnected]);
@@ -80,7 +93,7 @@ export default function ConnectYoutube() {
           bg="rgb(239, 68, 68)"
           justifyContent="center"
         >
-          <Icon w="12" h="12">
+          <Icon w="14" h="14">
             <PlayIcon />
           </Icon>
         </Box>
@@ -95,6 +108,7 @@ export default function ConnectYoutube() {
         <chakra.button
           py={2}
           px={6}
+          minW={200}
           fontWeight={500}
           bg="youtube-red"
           color="white"
@@ -109,7 +123,9 @@ export default function ConnectYoutube() {
             }
           }}
         >
-          {youtubeConnected ? (
+          {loading ? (
+            <EllipsisLoader text="Connecting" />
+          ) : youtubeConnected ? (
             <Box
               display="flex"
               alignItems="center"

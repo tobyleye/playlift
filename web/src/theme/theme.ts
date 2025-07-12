@@ -14,6 +14,9 @@ export const theme = extendTheme({
           cursor: "auto",
         },
       },
+      body: {
+        bg: "linear-gradient(to right bottom, rgb(88, 28, 135), rgb(30, 58, 138), rgb(49, 46, 129))",
+      },
     },
   },
 });

@@ -17,10 +17,7 @@ export default function Landing() {
   const { session, loadingSession } = useSessionContext();
 
   return (
-    <Box
-      minH="100vh"
-      bg="linear-gradient(to right bottom, rgb(88, 28, 135), rgb(30, 58, 138), rgb(49, 46, 129))"
-    >
+    <Box>
       {/* animated shapes */}
 
       <Box
@@ -232,9 +229,10 @@ export default function Landing() {
           </SimpleGrid>
         </Box>
 
-        <Box as="footer" py={4} textAlign="center">
+        <Box as="footer" pt={4} pb={6} textAlign="center">
           <Text color="white">
             <StyledLink
+              fontWeight="semibold"
               textDecor="underline"
               _hover={{
                 textDecor: "underline",

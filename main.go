@@ -91,7 +91,9 @@ func main() {
 
 	var corsConfig = middleware.DefaultCORSConfig
 	corsConfig.AllowCredentials = true
-	corsConfig.AllowOrigins = []string{"http://localhost:3500"}
+	corsConfig.AllowOrigins = []string{
+		os.Getenv("FRONTEND_BASE_URL"),
+	}
 
 	e.Use(middleware.CORSWithConfig(corsConfig))
 

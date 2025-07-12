@@ -1,11 +1,13 @@
 import { client } from "@/api/api";
-import { Box, Icon, Heading, Text, chakra } from "@chakra-ui/react";
+import { Box, Icon, Heading, Text, chakra, useToast } from "@chakra-ui/react";
 import { CheckIcon, MusicIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useConvertWizardContext } from "./context";
 import withSession from "@/hocs/withSession";
+import { toastHelper } from "@/components/utils/toast";
+import EllipsisLoader from "@/components/ellipsis-loader";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export default withSession(function ConnectSpotify() {
@@ -16,6 +18,7 @@ export default withSession(function ConnectSpotify() {
   const navigate = useNavigate();
 
   const { spotifyConnected, setSpotifyConnected } = useConvertWizardContext();
+  const toast = useToast();
 
   useEffect(() => {
     if (error) {
@@ -31,15 +34,24 @@ export default withSession(function ConnectSpotify() {
           code,
         });
         setSpotifyConnected(true);
+        toastHelper(toast, {
+          title: "Spotify connected!",
+          description: "successfully connected to your Spotify account.",
+        });
       } catch (err) {
-        navigate("/convert/connect-spotify", { replace: true });
         console.error("Error connecting to Spotify:", err);
+        toastHelper(toast, {
+          title: "Connection failed",
+          description: `Unable to connect to Spotify. Please try again.`,
+          status: "error",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     if (code) {
+      navigate("/convert/connect-spotify", { replace: true });
       loginCallback();
     }
   }, [code, navigate, setSpotifyConnected]);
@@ -87,7 +99,7 @@ export default withSession(function ConnectSpotify() {
           bg="spotify-green"
           justifyContent="center"
         >
-          <Icon w="12" h="12">
+          <Icon w="14" h="14">
             <MusicIcon />
           </Icon>
         </Box>
@@ -119,7 +131,9 @@ export default withSession(function ConnectSpotify() {
             }
           }}
         >
-          {spotifyConnected ? (
+          {loading ? (
+            <EllipsisLoader text="Connecting" />
+          ) : spotifyConnected ? (
             <Box display="flex" alignItems="center" gap={2}>
               <CheckIcon />
               Connected to Spotify

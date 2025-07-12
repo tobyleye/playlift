@@ -213,8 +213,7 @@ function PlaylistsSelection() {
 
             toast.close(toastRef.current!);
 
-            toastHelper(toast, {
-              status: "info",
+            toastRef.current = toastHelper(toast, {
               title: "Platforms Switched",
               description: `Now transferring from ${sourcePlatform.label}  to ${destinationPlatform.label} `,
             });

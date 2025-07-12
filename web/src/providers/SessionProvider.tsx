@@ -52,7 +52,7 @@ export default function SessionProvider({
         toastHelper(toast, {
           title: "Session expired",
           description: "Please log in again to continue",
-          status: "warning",
+          status: "error",
         });
         navigate("/");
       }
