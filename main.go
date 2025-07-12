@@ -22,7 +22,7 @@ import (
 	"github.com/tobyleye/playlift/services/ytmusicapi"
 	"github.com/tobyleye/playlift/session"
 
-	gormMysql "gorm.io/driver/mysql"
+	gormMysqlDriver "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -59,6 +59,7 @@ func main() {
 	var SessionStore = sessions.NewCookieStore([]byte(config.SESSION_KEY))
 
 	dbConfig := mysql.Config{
+
 		User:                 os.Getenv("DB_USER"),
 		Passwd:               os.Getenv("DB_PASSWORD"),
 		DBName:               os.Getenv("DB_NAME"),
@@ -67,8 +68,16 @@ func main() {
 		AllowNativePasswords: true,
 		ParseTime:            true,
 	}
+
 	dbConnUrl := dbConfig.FormatDSN()
-	db, err := gorm.Open(gormMysql.Open(dbConnUrl))
+
+	db, err := gorm.Open(gormMysqlDriver.Open(dbConnUrl))
+
+	if err != nil {
+		log.Fatal("Error connecting to the database:", err)
+	}
+
+	log.Println("DB connected ✅")
 
 	db.AutoMigrate(
 		&models.User{},
@@ -76,10 +85,6 @@ func main() {
 		&models.Token{},
 		&models.Conversion{},
 	)
-
-	if err != nil {
-		panic(err)
-	}
 
 	e := echo.New()
 	e.Use(echoSession.Middleware(SessionStore))
