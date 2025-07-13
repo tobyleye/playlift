@@ -24,21 +24,21 @@ const ConvertIndex = lazy(() => import("./views/convert/convert-index.tsx"));
 
 function App() {
   return (
-    <Suspense fallback={<div />}>
+    <ChakraProvider theme={theme}>
       <SessionProvider>
         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-          <ChakraProvider theme={theme}>
-            <SWRConfig
-              value={{
-                shouldRetryOnError: (err) => {
-                  if (err.response && err.response.status === 401) {
-                    return false;
-                  }
-                  // retry on other errors?
-                  return true;
-                },
-              }}
-            >
+          <SWRConfig
+            value={{
+              shouldRetryOnError: (err) => {
+                if (err.response && err.response.status === 401) {
+                  return false;
+                }
+                // retry on other errors?
+                return true;
+              },
+            }}
+          >
+            <Suspense fallback={<div />}>
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/home" element={<Home />} />
@@ -52,11 +52,11 @@ function App() {
                   />
                 </Route>
               </Routes>
-            </SWRConfig>
-          </ChakraProvider>
+            </Suspense>
+          </SWRConfig>
         </GoogleOAuthProvider>
       </SessionProvider>
-    </Suspense>
+    </ChakraProvider>
   );
 }
 
