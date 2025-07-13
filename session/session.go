@@ -1,9 +1,12 @@
 package session
 
 import (
+	"net/http"
+
 	"github.com/gorilla/sessions"
 	echoSessionMiddleware "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/models"
 )
 
@@ -27,6 +30,8 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 		Path:     "/",
 		MaxAge:   86400 * 2, // 2 days
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Domain:   config.FRONTEND_BASE_URL,
 	}
 
 	// since this function is called after login with youtube
