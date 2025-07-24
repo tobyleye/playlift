@@ -19,7 +19,6 @@ import useSWR from "swr";
 import api from "@/api/api";
 import { streamingServices } from "@/constants/constants";
 import { useConvertWizardContext } from "./context";
-import withSession from "@/hocs/withSession";
 import { toastHelper } from "@/components/utils/toast";
 
 function PlaylistList({
@@ -51,6 +50,8 @@ function PlaylistList({
     <Box display="grid" gap={4}>
       {playlists.map((pl) => {
         const isSelected = selected.includes(pl.playlist_id);
+        const isDisabled = pl.total_tracks == 0;
+
         return (
           <Box
             key={pl.playlist_id}
@@ -65,16 +66,26 @@ function PlaylistList({
             borderColor={"whiteAlpha.200"}
             w="full"
             bg="whiteAlpha.100"
-            _hover={{ bg: "whiteAlpha.300" }}
             transition="ease .25s"
             aria-selected={isSelected}
             _selected={{
               bg: "var(--btn-bg-selected)",
               borderColor: "var(--btn-border-selected)",
             }}
+            _disabled={{
+              opacity: 0.6,
+            }}
+            _hover={
+              isDisabled
+                ? {}
+                : isSelected
+                ? { opacity: 0.9 }
+                : { bg: "whiteAlpha.300" }
+            }
             onClick={() => {
               onToggle(pl);
             }}
+            disabled={isDisabled}
           >
             <Box
               w={4}
@@ -299,4 +310,4 @@ function PlaylistsSelection() {
   );
 }
 
-export default withSession(PlaylistsSelection);
+export default PlaylistsSelection;

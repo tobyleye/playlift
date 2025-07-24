@@ -1,3 +1,4 @@
+import { SecondaryButton } from "@/components/buttons";
 import { Heading, Box, Text, Icon } from "@chakra-ui/react";
 import { CheckIcon } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -22,12 +23,14 @@ export default function Success({
         >
           <Icon as={CheckIcon} w={10} h={10} />
         </Box>
-        <Heading mb={4}>Migration Started!</Heading>
-        <Text color="whiteAlpha.800" maxW={"md"} mb={4}>
+        <Heading mb={2}>Migration Started!</Heading>
+        <Text color="whiteAlpha.800" maxW={"md"} mb={6}>
           Successfully migrated {totalPlaylists} playlist to YouTube Music.
         </Text>
-        <Box>
-          <Link to="/home">Go home</Link>
+        <Box display="flex" justifyContent="center">
+          <Link to="/home">
+            <SecondaryButton>Back to Dashboard</SecondaryButton>
+          </Link>
         </Box>
       </Box>
     </Box>

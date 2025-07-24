@@ -5,12 +5,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useConvertWizardContext } from "./context";
-import withSession from "@/hocs/withSession";
 import { toastHelper } from "@/components/utils/toast";
 import EllipsisLoader from "@/components/ellipsis-loader";
 
 // eslint-disable-next-line react-refresh/only-export-components
-export default withSession(function ConnectSpotify() {
+export default function ConnectSpotify() {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
@@ -105,8 +104,8 @@ export default withSession(function ConnectSpotify() {
           Connect Your Spotify Account
         </Heading>
         <Text mb={8} fontSize="md" maxW="md" mx="auto" color="gray.200">
-          We'll access your playlists to prepare them for migration. Your login
-          details are never stored.
+          Now let's connect your Spotify account to access your playlists and
+          music library.
         </Text>
         <chakra.button
           bg="spotify-green"
@@ -145,4 +144,4 @@ export default withSession(function ConnectSpotify() {
       </Box>
     </Box>
   );
-});
+}

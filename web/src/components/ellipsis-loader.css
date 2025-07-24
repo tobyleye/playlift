@@ -2,7 +2,7 @@
   content: "\...";
   display: inline-block;
   animation: ellipsis-loader 1.5s steps(3, end) infinite;
-  color: white;
+  color: inherit;
 }
 
 @keyframes ellipsis-loader {

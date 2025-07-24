@@ -21,6 +21,7 @@ func OpenDb() (*gorm.DB, error) {
 		Addr:                 fmt.Sprintf("%s:%s", os.Getenv("DB_HOST"), os.Getenv("DB_PORT")),
 		AllowNativePasswords: true,
 		ParseTime:            true,
+		ConnectionAttributes: "charset:utf8mb4",
 	}
 	dbConnUrl := dbConfig.FormatDSN()
 	db, err := gorm.Open(gormMysql.Open(dbConnUrl))

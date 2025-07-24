@@ -11,14 +11,23 @@ import {
   MenuButton,
 } from "@chakra-ui/react";
 import { User, LogOut, ArrowLeftRight } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function UserMenu() {
-  const { session, setSession } = useSessionContext();
-  const navigate = useNavigate();
-  if (!session) return null;
+  const { session } = useSessionContext();
 
-  return (
+  return !session ? (
+    <Box
+      w={10}
+      h={10}
+      borderRadius={"full"}
+      border="2px solid"
+      borderColor="whiteAlpha.200"
+      bg="linear-gradient(to right, #9f7aea, #ec4899)"
+      color="white"
+      fontWeight="semibold"
+    />
+  ) : (
     <Menu>
       <MenuButton
         as={Box}
@@ -89,7 +98,7 @@ export default function UserMenu() {
 
         <MenuItem
           as={Link}
-          to="/convert"
+          to="/convert/select-playlists"
           bg="unset"
           _hover={{ bg: "whiteAlpha.100" }}
           _focus={{ bg: "whiteAlpha.100" }}
@@ -105,9 +114,8 @@ export default function UserMenu() {
         <MenuItem
           onClick={() => {
             api.logout().then(() => {
-              setSession(null);
               localStorage.removeItem("userId");
-              navigate("/");
+              window.location.assign("/");
             });
           }}
           bg="unset"

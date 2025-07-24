@@ -124,23 +124,6 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 			return c.JSON(500, map[string]string{"error": "server error"})
 		}
 
-		// session, _ := echoSessionMiddleware.Get("user", c)
-		// session.Options = &sessions.Options{
-		// 	Path:     "/",
-		// 	MaxAge:   86400 * 2, // 2 days
-		// 	HttpOnly: true,
-		// }
-
-		// // session.
-		// session.Values["userId"] = userId
-		// session.Values["email"] = userInfo.Email
-		// session.Values["name"] = userInfo.Name
-		// session.Values["picture"] = userInfo.Picture
-
-		// get user tokens here and verify user
-
-		// err = session.Save(c.Request(), c.Response())
-
 		return c.JSON(200, map[string]interface{}{
 			"message": "Login successful",
 			"data":    userSession,
@@ -174,4 +157,32 @@ func (h Handlers) Logout(c echo.Context) error {
 	}
 
 	return c.JSON(200, map[string]string{"message": "logged out successfully"})
+}
+
+func (h Handlers) GetConnectionStatus(c echo.Context) error {
+	// a handler to check if the user has connected their spotify and youtube accounts
+	// this will be used to show the connection status on the frontend
+	user, _ := session.GetUserFromSession(c)
+	userTokens := []models.Token{}
+	h.Db.Find(&userTokens, "user_id = ?", user.UserId)
+
+	log.Println("user tokens:", userTokens)
+	spotifyConnected := false
+	youtubeConnected := false
+
+	if len(userTokens) > 0 {
+		for _, token := range userTokens {
+			if token.Platform == "spotify" {
+				spotifyConnected = true
+			} else if token.Platform == "youtube" {
+				youtubeConnected = true
+			}
+		}
+	}
+
+	return c.JSON(200, map[string]bool{
+		"spotify_connected": spotifyConnected,
+		"youtube_connected": youtubeConnected,
+	})
+
 }

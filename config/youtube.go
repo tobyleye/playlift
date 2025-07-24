@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -24,8 +23,6 @@ var GoogleOauthConfig = oauth2.Config{
 func CreateHTTPClient(ctx context.Context, token *oauth2.Token) *http.Client {
 
 	// tokenSource := GoogleOauthConfig.TokenSource(ctx, token)
-	// refreshedtoken, err := tokenSource.Token()
-	fmt.Printf("google config %#v\n", GoogleOauthConfig)
 	// fmt.Println("current time:", time.Now())
 	// fmt.Println("refreshed token:", refreshedtoken)
 	// fmt.Println("refreshed token err:", err)
@@ -53,8 +50,6 @@ func CreateYoutubeClientForUser(db *gorm.DB, userId string) (*http.Client, error
 	if token.UserId == "" {
 		return nil, errors.New("no token found")
 	}
-
-	fmt.Printf("found token for user.. %#v\n", token)
 
 	oauthToken := &oauth2.Token{
 		AccessToken:  token.AccessToken,
