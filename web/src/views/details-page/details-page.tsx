@@ -17,6 +17,7 @@ import {
   CheckIcon,
   CircleAlert,
   ExternalLinkIcon,
+  FileX,
   Loader,
   MusicIcon,
 } from "lucide-react";
@@ -178,8 +179,26 @@ export default function DetailsPage() {
             <EllipsisLoader text="Loading details" />
           </Box>
         ) : error ? (
-          <Box textAlign="center" py="20vh">
-            <Text fontSize="xl">Oops, an error occured</Text>
+          <Box textAlign="center" py="10vh">
+            <Box
+              w={24}
+              h={24}
+              bg="whiteAlpha.100"
+              display="grid"
+              placeItems="center"
+              mb={4}
+              mx="auto"
+              rounded="full"
+            >
+              <Icon color="whiteAlpha.600" as={FileX} w={14} h={14} />
+            </Box>
+            <Heading fontSize="2xl" fontWeight="bold" mb={4}>
+              Error Loading Details
+            </Heading>
+            <Text color="whiteAlpha.700" fontSize="base" maxW="md" mx="auto">
+              We're having trouble loading your migration details. Please try
+              again.
+            </Text>
           </Box>
         ) : null}
 
