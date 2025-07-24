@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
 
 	"github.com/tobyleye/playlift/models"
 	"golang.org/x/oauth2"
@@ -12,15 +11,19 @@ import (
 	"gorm.io/gorm"
 )
 
-var GoogleOauthConfig = oauth2.Config{
-	ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-	ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-	Endpoint:     google.Endpoint,
-	RedirectURL:  os.Getenv("FRONTEND_BASE_URL") + "/convert/connect-youtube",
-	Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/youtube"},
+func GetGoogleOauthConfig() *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     GOOGLE_CLIENT_ID,
+		ClientSecret: GOOGLE_CLIENT_SECRET,
+		Endpoint:     google.Endpoint,
+		RedirectURL:  FRONTEND_BASE_URL + "/convert/connect-youtube",
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/youtube"},
+	}
 }
 
 func CreateHTTPClient(ctx context.Context, token *oauth2.Token) *http.Client {
+
+	var GoogleOauthConfig = GetGoogleOauthConfig()
 
 	// tokenSource := GoogleOauthConfig.TokenSource(ctx, token)
 	// fmt.Println("current time:", time.Now())
@@ -37,8 +40,6 @@ func CreateHTTPClient(ctx context.Context, token *oauth2.Token) *http.Client {
 }
 
 func CreateYoutubeClientForUser(db *gorm.DB, userId string) (*http.Client, error) {
-
-	// fmt.Println("google client id::", GOOGLE_CLIENT_ID)
 
 	var token models.Token
 

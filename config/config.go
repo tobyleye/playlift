@@ -8,6 +8,11 @@ import (
 )
 
 var (
+	DB_USER                      string
+	DB_PASSWORD                  string
+	DB_NAME                      string
+	DB_HOST                      string
+	DB_PORT                      string
 	SPOTIFY_CLIENT_ID            string
 	SPOTIFY_CLIENT_SECRET        string
 	GOOGLE_CLIENT_ID             string
@@ -39,6 +44,12 @@ func LoadEnv() {
 		log.Fatal("Error occured loading the project .env")
 	}
 
+	DB_USER = getEnvOrThrow("DB_USER")
+	DB_PASSWORD = getEnvOrThrow("DB_PASSWORD")
+	DB_NAME = getEnvOrThrow("DB_NAME")
+	DB_HOST = getEnvOrThrow("DB_HOST")
+	DB_PORT = getEnvOrThrow("DB_PORT")
+
 	SPOTIFY_CLIENT_ID = getEnvOrThrow("SPOTIFY_CLIENT_ID")
 
 	SPOTIFY_CLIENT_SECRET = getEnvOrThrow("SPOTIFY_CLIENT_SECRET")
@@ -58,5 +69,5 @@ func LoadEnv() {
 }
 
 func init() {
-	// LoadEnv()
+	LoadEnv()
 }

@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/tobyleye/playlift/models"
@@ -41,8 +40,6 @@ func CreateSpotifyClient(token *oauth2.Token) *spotify.Client {
 	// }
 	// httpClient := oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(token))
 	ctx := context.Background()
-
-	fmt.Printf("current token: %#v\n", token)
 
 	// refresh token if needed
 	// SpotifyAuthenticator.

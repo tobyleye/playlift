@@ -1,9 +1,7 @@
 package ytmusicapi
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -12,7 +10,6 @@ import (
 
 	"github.com/carlmjohnson/requests"
 	"github.com/tobyleye/playlift/types"
-	"golang.org/x/net/html/charset"
 )
 
 type Track struct {
@@ -48,6 +45,13 @@ type PlaylistTracksResponse struct {
 	Tracks           []Track `json:"tracks"`
 }
 
+type CreatedPlaylist struct {
+	PlaylistId  string `json:"playlist_id"`
+	Link        string `json:"link"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
 const YTM_DOMAIN = "https://music.youtube.com"
 
@@ -69,6 +73,14 @@ var defaultBody = map[string]interface{}{
 }
 
 var SEPERATOR = " • "
+
+func createPlaylistLink(playlistId string) string {
+	return fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId)
+}
+
+func createTrackLink(trackId string) string {
+	return fmt.Sprintf("https://music.youtube.com/watch?v=%s", trackId)
+}
 
 func getSearchParams(filter, scope string, ignoreSpelling bool) string {
 	filteredParam1 := "EgWKAQ"
@@ -193,7 +205,7 @@ func parseTrack(result interface{}) Track {
 		VideoId: videoId,
 		Title:   title,
 		Artists: artists,
-		Link:    fmt.Sprintf("https://music.youtube.com/watch?v=%s", videoId),
+		Link:    createTrackLink(videoId),
 	}
 }
 
@@ -208,7 +220,7 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 
 	ctx := context.Background()
 
-	var buf = new(bytes.Buffer)
+	// var buf = new(bytes.Buffer)
 
 	builder := requests.
 		URL(url).Client(httpClient)
@@ -219,22 +231,26 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 	}
 
 	err := builder.BodyJSON(&body).
-		ToBytesBuffer(buf).
+		ToJSON(&jsonResponse).
 		Fetch(ctx)
 
-	if err != nil {
-		return nil, err
-	}
+	// err := builder.BodyJSON(&body).
+	// 	ToBytesBuffer(buf).
+	// 	Fetch(ctx)
 
 	// extra step to handle character encoding issues.
 	// not sure if it's really need. will double check later
 	// Todo: double check if extra step is needed
-	encodedReader, err := charset.NewReader(buf, "application/json")
+	// encodedReader, err := charset.NewReader(buf, "application/json")
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// err = json.NewDecoder(encodedReader).Decode(&jsonResponse)
+
 	if err != nil {
 		return nil, err
 	}
-
-	err = json.NewDecoder(encodedReader).Decode(&jsonResponse)
 
 	return jsonResponse, err
 
@@ -323,12 +339,14 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 	totalTracks := ReadValueString(playlistHeader, []interface{}{"secondSubtitle", "runs", 0, "text"})
 
 	// sometimes the total tracks is suffixed with 'tracks' sometimes it's songs
-	// might need to handle both cases
-	// Todo: use regex to extract number
+	// thats why we handle both cases
+	// a better solution might be to use regex to extract the number.
+	// Todo:
 
-	totalTracks = strings.ReplaceAll(
-		strings.Replace(totalTracks, " tracks", "", 1),
-		",", "")
+	totalTracks = strings.Replace(totalTracks, " tracks", "", 1)
+	totalTracks = strings.Replace(totalTracks, " songs", "", 1)
+
+	totalTracks = strings.ReplaceAll(totalTracks, ",", "")
 
 	totalTracksInt, _ := strconv.Atoi(totalTracks)
 
@@ -346,7 +364,7 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 		Description:    description,
 		TotalTracks:    totalTracksInt,
 		PlaylistTracks: playlistTracks,
-		Link:           fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+		Link:           createPlaylistLink(playlistId),
 	}
 
 	return playlist, nil
@@ -512,7 +530,7 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 					Thumbnails:  thumbnailUrls,
 					TotalTracks: totalTracks,
 					PlaylistId:  playlistId,
-					Url:         fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+					Url:         createPlaylistLink(playlistId),
 				}
 
 				youtubePlaylists = append(youtubePlaylists, playlist)
@@ -524,7 +542,7 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 	return youtubePlaylists, nil
 }
 
-func CreatePlaylist(client *http.Client, title string, description string, videoIds []string) (interface{}, error) {
+func CreatePlaylist(client *http.Client, title string, description string, videoIds []string) (CreatedPlaylist, error) {
 	// privacy_status: Playlists can be ``PUBLIC``, ``PRIVATE``, or ``UNLISTED``. Default: ``PRIVATE``
 	privacyStatus := "PRIVATE"
 
@@ -538,10 +556,19 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 	data, err := sendRequest(client, endpoint, body)
 
 	if err != nil {
-		return nil, err
+		return CreatedPlaylist{}, err
 	}
 
-	return data, nil
+	playlistId := ReadValueString(data, []interface{}{
+		"playlistId",
+	})
+
+	return CreatedPlaylist{
+		PlaylistId:  playlistId,
+		Link:        createPlaylistLink(playlistId),
+		Title:       title,
+		Description: description,
+	}, nil
 }
 
 // ExtractPlaylistsFromNextPage extracts playlist information from a next-page continuation response
@@ -614,7 +641,7 @@ func ExtractPlaylistsFromNextPage(jsonResponse interface{}) []YoutubePlaylist {
 				Thumbnails:  thumbnailUrls,
 				TotalTracks: totalTracks,
 				PlaylistId:  playlistId,
-				Url:         fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+				Url:         createPlaylistLink(playlistId),
 			}
 
 			playlists = append(playlists, playlist)

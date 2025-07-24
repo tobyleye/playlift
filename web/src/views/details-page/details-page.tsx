@@ -20,7 +20,7 @@ import {
   Loader,
   MusicIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import useSWR from "swr";
 
@@ -34,7 +34,7 @@ type ConversionDetails = {
   destination_platform: string;
   status: string;
   playlist_link: string;
-  result: Record<
+  result: null | Record<
     string,
     {
       data: string;
@@ -94,32 +94,57 @@ export default function DetailsPage() {
 
   const [trackFilter, settrackFilter] = useState<string>("all");
 
-  let completedCount = 0;
-  let failedCount = 0;
+  const { completedCount, failedCount, successRate, overallProgress } =
+    useMemo(() => {
+      let completedCount = 0;
+      let failedCount = 0;
 
-  if (data && data.result) {
-    for (const track of data.playlist_tracks) {
-      const trackId = track.track_id;
-      const trackResult = data.result[trackId];
-      if (trackResult && trackResult.data) {
-        completedCount++;
-      } else if (trackResult && trackResult.error) {
-        failedCount++;
+      let successRate = 0;
+      let overallProgress = 0;
+      if (data && data.result) {
+        let totalProcessed = 0;
+        for (const track of data.playlist_tracks) {
+          const trackId = track.track_id;
+          const trackResult = data.result[trackId];
+          if (trackResult && trackResult.data) {
+            completedCount++;
+          } else if (trackResult && trackResult.error) {
+            failedCount++;
+          }
+
+          if (trackResult) {
+            totalProcessed++;
+          }
+        }
+
+        successRate = Math.round(
+          (completedCount / data.playlist_tracks.length) * 100
+        );
+
+        overallProgress = Math.round(
+          (totalProcessed / data.playlist_tracks.length) * 100
+        );
       }
-    }
-  }
 
-  const getTracks = () => {
+      return {
+        completedCount,
+        failedCount,
+        successRate,
+        overallProgress,
+      };
+    }, [data]);
+
+  const getFilteredTracks = () => {
     if (!data) return [];
     if (!data.result) return data.playlist_tracks;
 
     if (trackFilter === "completed") {
       return data.playlist_tracks.filter(
-        (track) => data.result[track.track_id]?.data
+        (track) => data.result![track.track_id]?.data
       );
     } else if (trackFilter === "failed") {
       return data.playlist_tracks.filter(
-        (track) => data.result[track.track_id]?.error
+        (track) => data.result![track.track_id]?.error
       );
     }
 
@@ -129,7 +154,11 @@ export default function DetailsPage() {
     <Box pb={10}>
       <Nav />
       <Container mt={6}>
-        {isLoading && <EllipsisLoader text="Loading" />}
+        {isLoading && (
+          <Box py={"20vh"} textAlign="center">
+            <EllipsisLoader text="Loading details" />
+          </Box>
+        )}
 
         {data && (
           <Box>
@@ -163,10 +192,10 @@ export default function DetailsPage() {
               border="1px solid"
               borderColor="whiteAlpha.200"
             >
-              <Box w={20} h={20} bg="orange.200" rounded="md" />
+              {/* <Box w={20} h={20} bg="orange.200" rounded="md" /> */}
 
               <Box>
-                <Heading fontSize="xl" mb={2}>
+                <Heading fontSize="2xl" mb={4}>
                   {data?.playlist_title}
                 </Heading>
                 <Box display="flex" alignItems="center" gap={2} mb={4}>
@@ -236,10 +265,12 @@ export default function DetailsPage() {
               <Box display="flex" mb={2}>
                 <Heading fontSize="xl">Overall Progress</Heading>
                 <Text ml="auto" fontWeight="bold" fontSize="xl">
-                  100%
+                  {overallProgress}%
                 </Text>
               </Box>
-              <Box h={2} bg="green.200" rounded="full" mb={6}></Box>
+              <Box h={2} bg="whiteAlpha.200" rounded="full" mb={6}>
+                <Box h="100%" w={`${40}%`} bg="green.400" rounded="full" />
+              </Box>
 
               <Box
                 display="flex"
@@ -262,7 +293,7 @@ export default function DetailsPage() {
 
                 <Box>
                   <Text fontWeight="bold" fontSize="xl" color="white">
-                    91%
+                    {successRate}%
                   </Text>
                   <Text fontSize="sm">Success Rate</Text>
                 </Box>
@@ -288,7 +319,7 @@ export default function DetailsPage() {
                     value={trackFilter}
                     onChange={(e) => settrackFilter(e.target.value)}
                   >
-                    <option value="all">All Tracks</option>
+                    <option value="all">All</option>
                     <option value="completed">Completed</option>
                     <option value="failed">Failed</option>
                   </Select>
@@ -310,8 +341,8 @@ export default function DetailsPage() {
                     },
                   }}
                 >
-                  {getTracks().map((track, index) => {
-                    const result = data.result[track.track_id];
+                  {getFilteredTracks().map((track, index) => {
+                    const result = data.result?.[track.track_id];
                     const isCompleted = result && result.data;
                     const isFailed = result && result.error;
 

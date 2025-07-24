@@ -20,7 +20,7 @@ func (h Handlers) YoutubeConnectCallback(c echo.Context) error {
 
 	user, _ := session.GetUserFromSession(c)
 
-	tokens, err := config.GoogleOauthConfig.Exchange(c.Request().Context(), code)
+	tokens, err := config.GetGoogleOauthConfig().Exchange(c.Request().Context(), code)
 	fmt.Printf("tokens: %v\n", tokens)
 	fmt.Printf("tokens refresh token: %v\n", tokens.RefreshToken)
 

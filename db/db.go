@@ -2,11 +2,10 @@ package db
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/tobyleye/playlift/config"
 
-	_ "github.com/joho/godotenv/autoload"
 	gormMysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -14,11 +13,11 @@ import (
 func OpenDb() (*gorm.DB, error) {
 
 	dbConfig := mysql.Config{
-		User:                 os.Getenv("DB_USER"),
-		Passwd:               os.Getenv("DB_PASSWORD"),
-		DBName:               os.Getenv("DB_NAME"),
+		User:                 config.DB_USER,
+		Passwd:               config.DB_PASSWORD,
+		DBName:               config.DB_NAME,
 		Net:                  "tcp",
-		Addr:                 fmt.Sprintf("%s:%s", os.Getenv("DB_HOST"), os.Getenv("DB_PORT")),
+		Addr:                 fmt.Sprintf("%s:%s", config.DB_HOST, config.DB_PORT),
 		AllowNativePasswords: true,
 		ParseTime:            true,
 		ConnectionAttributes: "charset:utf8mb4",

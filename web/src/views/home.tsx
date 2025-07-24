@@ -17,7 +17,7 @@ import { Rabbit } from "lucide-react";
 import { Link } from "react-router-dom";
 import Nav from "@/components/nav";
 import dayjs from "dayjs";
-import { Platform, PlaylistConversion } from "@/types";
+import { PlaylistConversion } from "@/types";
 import { getServiceColor, getServiceLabel } from "@/constants/constants";
 import { useSessionContext } from "@/contexts/session";
 import LoginModal from "@/components/login-modal";
@@ -198,7 +198,7 @@ export default function Home() {
 
             {pendingConversions.length > 0 && (
               <Box>
-                <Heading mb={4} fontSize="2xl">
+                <Heading mb={4} fontSize="xl" color="whiteAlpha.800">
                   Pending Migrations
                 </Heading>
                 <SimpleGrid
@@ -221,7 +221,7 @@ export default function Home() {
 
             {completedConversions.length > 0 && (
               <Box mt={12}>
-                <Heading mb={4} fontSize="2xl">
+                <Heading mb={4} fontSize="xl" color="whiteAlpha.800">
                   Completed Migrations
                 </Heading>
                 <SimpleGrid
@@ -298,17 +298,11 @@ const ConversionCard = ({ conversion }: { conversion: PlaylistConversion }) => {
         </Text>
         <Box ml="auto">
           {conversion.status === "pending" ? (
-            <Icon color="yellow.500">
-              <Clock />
-            </Icon>
+            <Icon color="yellow.500" as={Clock}></Icon>
           ) : conversion.status === "failed" ? (
-            <Icon color="red.500">
-              <AlertCircle />
-            </Icon>
+            <Icon color="red.500" as={AlertCircle}></Icon>
           ) : conversion.status === "completed" ? (
-            <Icon>
-              <Check />
-            </Icon>
+            <Icon color="green.500" as={Check}></Icon>
           ) : null}
         </Box>
       </Box>

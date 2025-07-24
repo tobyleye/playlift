@@ -76,7 +76,7 @@ func (h Handlers) GetAllConversions(c echo.Context) error {
 
 	queryResult := h.Db.Model(&models.PlaylistConversion{}).Where(&models.PlaylistConversion{
 		UserId: user.UserId,
-	}).Find(&conversions)
+	}).Find(&conversions).Order("created_at DESC")
 
 	if queryResult.Error != nil {
 		log.Println("get all conversion error:", queryResult.Error)

@@ -1,45 +1,53 @@
 package main
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/db"
-	"github.com/tobyleye/playlift/models"
 	"github.com/tobyleye/playlift/services/ytmusicapi"
-	"golang.org/x/oauth2"
 )
 
-func main() {
+func testCreatePlaylist() error {
 
 	db, err := db.OpenDb()
 
 	if err != nil {
-
-		fmt.Println("error opening db", err)
-		log.Fatal(err)
+		return err
 	}
 
-	token := models.Token{}
+	userId := "03e01533-365b-4874-976d-3d3fb03494cc"
 
-	db.Where(&models.Token{
-		UserId:   "df6f614e-da5c-488b-8475-30f6546ec785",
-		Platform: "youtube",
-	}).First(&token)
+	httpClient, err := config.CreateYoutubeClientForUser(db, userId)
 
-	oauthToken := &oauth2.Token{
-		AccessToken:  token.AccessToken,
-		RefreshToken: token.RefreshToken,
-		TokenType:    token.TokenType,
-		Expiry:       token.ExpiresIn,
+	if err != nil {
+		return err
+	}
+	fmt.Println("http client..", httpClient)
+
+	playlist, err := ytmusicapi.CreatePlaylist(httpClient,
+		"Test Playlist",
+		"Test description",
+		[]string{},
+	)
+
+	if err == nil {
+		// do something with the playlists
+		f, _ := os.Create("created-playlist.json")
+
+		defer f.Close()
+
+		return json.NewEncoder(f).Encode(playlist)
+
 	}
 
-	ctx := context.TODO()
-	httpClient := config.CreateHTTPClient(ctx, oauthToken)
+	return err
+}
 
-	playlists, err := ytmusicapi.FetchUserPlaylists(httpClient)
-	fmt.Println("playlists", playlists)
-	fmt.Println("hello world")
+func main() {
+	log.Fatal(testCreatePlaylist())
+
 }

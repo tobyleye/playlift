@@ -1,4 +1,4 @@
-import { Box, Icon, Spinner } from "@chakra-ui/react";
+import { Box, Icon, Spinner, useToast } from "@chakra-ui/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Nav from "@/components/nav";
@@ -15,6 +15,7 @@ import "./connect-spotify";
 import "./playlist-selection";
 import ConfirmationModal from "./confirmation-modal";
 import { GradientButton, SecondaryButton } from "@/components/buttons";
+import { toastHelper } from "@/components/utils/toast";
 
 // import { useTransition, animated } from "@react-spring/web";
 
@@ -76,6 +77,8 @@ export default function ConversionWizard() {
       completed: false,
     },
   ];
+
+  const toast = useToast();
 
   const stepIndex = steps.findIndex((step) => step.path === stepPath);
 
@@ -140,10 +143,11 @@ export default function ConversionWizard() {
 
       setShowSuccess(true);
     } catch (err) {
-      console.error("Error starting migration:", err);
-      alert(
-        "An error occurred while starting the migration. Please try again."
-      );
+      console.error("Error:", err);
+      toastHelper(toast, {
+        title: "Error starting migration",
+        description: "",
+      });
     } finally {
       setTransferLoading(false);
     }
