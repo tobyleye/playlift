@@ -296,7 +296,12 @@ export default function DetailsPage() {
                 </Text>
               </Box>
               <Box h={2} bg="whiteAlpha.200" rounded="full" mb={6}>
-                <Box h="100%" w={`${40}%`} bg="green.400" rounded="full" />
+                <Box
+                  h="100%"
+                  w={`${overallProgress}%`}
+                  bg="green.400"
+                  rounded="full"
+                />
               </Box>
 
               <Box

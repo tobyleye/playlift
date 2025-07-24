@@ -16,8 +16,10 @@ export const GradientButton = chakra("button", {
         opacity: 0.9,
       },
 
-      _active: {
-        opacity: 0.8,
+      _disabled: {
+        bgGradient: "linear(to-r, pink.500, purple.500)",
+        opacity: 0.6,
+        cursor: "not-allowed",
       },
     };
   },
