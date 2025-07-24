@@ -24,8 +24,6 @@ import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import useSWR from "swr";
 
-const TRACKS_SHOWN = 20;
-
 type ConversionDetails = {
   conversion_id: string;
   playlist_title: string;
@@ -89,7 +87,10 @@ export default function DetailsPage() {
 
   const { data, error, isLoading } = useSWR<ConversionDetails>(
     ["details", id],
-    () => api.fetchSingleConversion(id!)
+    () => api.fetchSingleConversion(id!),
+    {
+      shouldRetryOnError: false,
+    }
   );
 
   const [trackFilter, settrackFilter] = useState<string>("all");
@@ -154,30 +155,37 @@ export default function DetailsPage() {
     <Box pb={10}>
       <Nav />
       <Container mt={6}>
-        {isLoading && (
+        {!!(data || error) && (
+          <Box mb={6}>
+            <StyledLink
+              display="inline-flex"
+              alignItems="center"
+              gap={2}
+              as={Link}
+              to="/home"
+              _hover={{
+                textDecoration: "none",
+              }}
+            >
+              <ArrowLeft />
+              Back to dashboard
+            </StyledLink>
+          </Box>
+        )}
+
+        {isLoading ? (
           <Box py={"20vh"} textAlign="center">
             <EllipsisLoader text="Loading details" />
           </Box>
-        )}
+        ) : error ? (
+          <Box textAlign="center" py="20vh">
+            <Text fontSize="xl">Oops, an error occured</Text>
+          </Box>
+        ) : null}
 
         {data && (
           <Box>
             {/* back button */}
-            <Box mb={6}>
-              <StyledLink
-                display="inline-flex"
-                alignItems="center"
-                gap={2}
-                as={Link}
-                to="/home"
-                _hover={{
-                  textDecoration: "none",
-                }}
-              >
-                <ArrowLeft />
-                Back to dashboard
-              </StyledLink>
-            </Box>
 
             {/* header */}
             <Box

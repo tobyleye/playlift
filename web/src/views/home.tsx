@@ -7,7 +7,6 @@ import {
   useToast,
   Container,
   SimpleGrid,
-  Link as StyledLink,
 } from "@chakra-ui/react";
 import useSWR from "swr";
 import api from "../api/api";

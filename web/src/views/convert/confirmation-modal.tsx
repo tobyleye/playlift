@@ -1,4 +1,5 @@
 import { GradientButton } from "@/components/buttons";
+import { Playlist } from "@/types";
 import {
   Modal,
   ModalOverlay,
@@ -16,14 +17,12 @@ export default function ConfirmationModal({
   setOpen,
   onConfirm,
   selectedPlaylists,
-  sourcePlatform,
-  destinationPlatform,
 }: {
   open: boolean;
   setOpen: (show: boolean) => void;
   sourcePlatform: string;
   destinationPlatform: string;
-  selectedPlaylists: any[];
+  selectedPlaylists: Playlist[];
 
   onConfirm: () => void;
 }) {
