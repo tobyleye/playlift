@@ -6,7 +6,7 @@ import {
   Link as StyledLink,
   Icon,
 } from "@chakra-ui/react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, Outlet } from "react-router-dom";
 import { ArrowRight, Music, Play } from "lucide-react";
 import { BigCircle } from "@/components/animated-shapes";
 import Nav from "@/components/nav";
@@ -158,6 +158,7 @@ export default function Landing() {
               transition=".3s cubic-bezier(0.4, 0, 0.2, 1)"
               fontWeight={600}
               _hover={{
+                transform: "scale(1.05)",
                 ".btn-icon": {
                   transform: "translateX(4px)",
                 },
@@ -263,6 +264,8 @@ export default function Landing() {
           </Text>
         </Box>
       </Box>
+
+      <Outlet />
     </Box>
   );
 }
