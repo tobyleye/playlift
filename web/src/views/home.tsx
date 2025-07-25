@@ -11,7 +11,7 @@ import {
 import useSWR from "swr";
 import api from "../api/api";
 import { AlertCircle, Clock, Check, ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Rabbit } from "lucide-react";
 import { Link } from "react-router-dom";
 import Nav from "@/components/nav";
