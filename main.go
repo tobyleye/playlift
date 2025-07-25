@@ -8,8 +8,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	_ "github.com/joho/godotenv/autoload"
 
@@ -17,13 +17,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/tobyleye/playlift/config"
+	"github.com/tobyleye/playlift/db"
 	"github.com/tobyleye/playlift/handlers"
 	"github.com/tobyleye/playlift/models"
-	"github.com/tobyleye/playlift/services/ytmusicapi"
 	"github.com/tobyleye/playlift/session"
-
-	gormMysqlDriver "gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
 type Template struct {
@@ -58,20 +55,7 @@ func main() {
 
 	var SessionStore = sessions.NewCookieStore([]byte(config.SESSION_KEY))
 
-	dbConfig := mysql.Config{
-
-		User:                 os.Getenv("DB_USER"),
-		Passwd:               os.Getenv("DB_PASSWORD"),
-		DBName:               os.Getenv("DB_NAME"),
-		Net:                  "tcp",
-		Addr:                 fmt.Sprintf("%s:%s", os.Getenv("DB_HOST"), os.Getenv("DB_PORT")),
-		AllowNativePasswords: true,
-		ParseTime:            true,
-	}
-
-	dbConnUrl := dbConfig.FormatDSN()
-
-	db, err := gorm.Open(gormMysqlDriver.Open(dbConnUrl))
+	db, err := db.OpenDb()
 
 	if err != nil {
 		log.Fatal("Error connecting to the database:", err)
@@ -114,8 +98,18 @@ func main() {
 	}
 
 	// define api routes
+	// public routes
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(200,
+			map[string]string{
+				"status": "ok",
+				"time":   time.Now().Format(time.RFC3339),
+			})
+	})
+
 	e.POST("/login/google/callback", handlers.LoginWithGoogleCallback)
 
+	// private routes
 	privateRoutes := e.Group("", ensureLogin)
 
 	privateRoutes.POST("/connect/spotify/callback", handlers.SpotifyLoginCallback, ensureLogin)
@@ -132,13 +126,6 @@ func main() {
 	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)
 	privateRoutes.GET("/connection-status", handlers.GetConnectionStatus)
 	privateRoutes.POST("/logout", handlers.Logout)
-
-	privateRoutes.GET(("/playlist-tracks/:playlistId"), func(echo echo.Context) error {
-		user, _ := session.GetUserFromSession(echo)
-		client, _ := config.CreateYoutubeClientForUser(db, user.UserId)
-		tracks, _ := ytmusicapi.FetchAllPlaylistTracks(client, echo.Param("playlistId"))
-		return echo.JSON(200, tracks)
-	})
 
 	// serve frontend. this should always be done after routes are registered
 	port := os.Getenv("PORT")

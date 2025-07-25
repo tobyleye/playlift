@@ -1,5 +1,5 @@
-import { Route, Routes } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useState } from "react";
 import { ChakraProvider } from "@chakra-ui/react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { theme } from "./theme/theme.ts";
@@ -19,8 +19,16 @@ const ConnectYoutube = lazy(
 const PlaylistsSelection = lazy(
   () => import("./views/convert/playlist-selection.tsx")
 );
+const DetailsPage = lazy(() => import("./views/details-page/details-page.tsx"));
 
-const ConvertIndex = lazy(() => import("./views/convert/convert-index.tsx"));
+const PrivateRouteProtector = () => {
+  const [loggedIn] = useState(() => localStorage.getItem("userId") !== null);
+  if (!loggedIn) {
+    return <Navigate to="/" replace />;
+  } else {
+    return <Outlet />;
+  }
+};
 
 function App() {
   return (
@@ -41,15 +49,22 @@ function App() {
             <Suspense fallback={<div />}>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/home" element={<Home />} />
                 <Route path="/convert" element={<Convert />}>
-                  <Route path="" element={<ConvertIndex />} />
-                  <Route path="connect-spotify" element={<ConnectSpotify />} />
+                  <Route
+                    index
+                    path=""
+                    element={<Navigate to="/convert/connect-youtube" replace />}
+                  />
                   <Route path="connect-youtube" element={<ConnectYoutube />} />
+                  <Route path="connect-spotify" element={<ConnectSpotify />} />
                   <Route
                     path="select-playlists"
                     element={<PlaylistsSelection />}
                   />
+                </Route>
+                <Route path="/" element={<PrivateRouteProtector />}>
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/details/:id" element={<DetailsPage />} />
                 </Route>
               </Routes>
             </Suspense>

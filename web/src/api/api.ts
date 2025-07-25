@@ -16,7 +16,11 @@ const api = {
       })
       .then((res) => res.data);
   },
-  convert(playlists: string[], destination: string, source: string) {
+  convert(
+    playlists: { id: string; title: string }[],
+    destination: string,
+    source: string
+  ) {
     return client
       .post("/convert", {
         playlists: playlists,

@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"net/url"
 	"strings"
 
+	"github.com/labstack/echo/v4"
 	"github.com/tobyleye/playlift/config"
 )
 
@@ -14,7 +16,21 @@ type Query struct {
 	Type     string
 }
 
-func ParseLink(link string) (Query, error) {
+var YOUTUBE_MUSIC = "youtube_music"
+var SPOTIFY = "spotify"
+
+var SUPPORTED_PLATFORMS = []string{SPOTIFY, YOUTUBE_MUSIC}
+
+func isPlatformSupported(platform string) bool {
+	for _, each := range SUPPORTED_PLATFORMS {
+		if each == platform {
+			return true
+		}
+	}
+	return false
+}
+
+func parseLink(link string) (Query, error) {
 	urlObj, err := url.Parse(link)
 	if err != nil {
 		return Query{}, err
@@ -49,4 +65,23 @@ func ParseLink(link string) (Query, error) {
 	}
 
 	return Query{}, errors.New("link is invalid")
+}
+
+func requestBodyToMap(c echo.Context) map[string]interface{} {
+	body := make(map[string]interface{})
+	json.NewDecoder(c.Request().Body).Decode(&body)
+	return body
+}
+
+func requestBodyToStruct(c echo.Context, v interface{}) {
+	decoder := json.NewDecoder(c.Request().Body)
+	decoder.DisallowUnknownFields() // Prevent unknown fields
+	decoder.Decode(v)
+}
+
+func errorResponse(message string) interface{} {
+
+	return struct {
+		Error string `json:"error"`
+	}{Error: message}
 }

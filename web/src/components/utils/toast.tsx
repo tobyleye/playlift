@@ -13,7 +13,7 @@ export const toastHelper = (
   }
 ) => {
   return toastFn({
-    duration: 2_500,
+    duration: 4000,
     title: title,
     description: description,
     containerStyle: {

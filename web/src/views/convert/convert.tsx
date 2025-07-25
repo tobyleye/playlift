@@ -1,15 +1,22 @@
-import { Box, Icon, Spinner, chakra } from "@chakra-ui/react";
+import { Box, Icon, Spinner, useToast } from "@chakra-ui/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Nav from "@/components/nav";
 import WizardProgress from "./wizard-progress";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ConvertWizardContext } from "./context";
 import api from "@/api/api";
 import { Playlist } from "@/types";
 import { streamingServices } from "@/constants/constants";
 import Success from "./success-screen";
 import { useSessionContext } from "@/contexts/session";
+import "./connect-youtube";
+import "./connect-spotify";
+import "./playlist-selection";
+import ConfirmationModal from "./confirmation-modal";
+import { GradientButton, SecondaryButton } from "@/components/buttons";
+import { toastHelper } from "@/components/utils/toast";
+
 // import { useTransition, animated } from "@react-spring/web";
 
 // const useStep = () => {
@@ -43,41 +50,15 @@ export default function ConversionWizard() {
   const [destinationPlatform, setDestinationPlatform] = useState(
     streamingServices.spotify
   );
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [transferLoading, setTransferLoading] = useState(false);
 
   const location = useLocation();
 
   const paths = location.pathname.split("/");
+
   const stepPath = paths.length > 2 ? paths[2] : "";
   const { session } = useSessionContext();
-
-  useEffect(() => {
-    if (session) {
-      api
-        .getConnectionStatus()
-        .then((data) => {
-          setYoutubeConnected(data.youtube_connected);
-          setSpotifyConnected(data.spotify_connected);
-        })
-        .catch(() => {})
-        .finally(() => {
-          setLoadingConnectionStatus(false);
-        });
-    } else {
-      setLoadingConnectionStatus(false);
-    }
-  }, [session]);
-
-  const togglePlaylist = (p: Playlist) => {
-    const selectedPlaylistIds = selectedPlaylists.map((pl) => pl.playlist_id);
-    if (selectedPlaylistIds.includes(p.playlist_id)) {
-      setSelectedPlaylists(
-        selectedPlaylists.filter((pl) => pl.playlist_id !== p.playlist_id)
-      );
-    } else {
-      setSelectedPlaylists([...selectedPlaylists, p]);
-    }
-  };
 
   const steps = [
     {
@@ -97,13 +78,33 @@ export default function ConversionWizard() {
     },
   ];
 
+  const toast = useToast();
+
   const stepIndex = steps.findIndex((step) => step.path === stepPath);
 
   const curStep = stepIndex > -1 ? steps[stepIndex] : null;
   const totalSteps = steps.length;
   const nextStep = stepIndex < totalSteps - 1 ? steps[stepIndex + 1] : null;
+  const firstUncompleted = steps.findIndex((step) => !step.completed);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (session) {
+      api
+        .getConnectionStatus()
+        .then((data) => {
+          setYoutubeConnected(data.youtube_connected);
+          setSpotifyConnected(data.spotify_connected);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setLoadingConnectionStatus(false);
+        });
+    } else {
+      setLoadingConnectionStatus(false);
+    }
+  }, [session]);
 
   // const transitions = useTransition(step, {
   //   from: { opacity: 0, x: step > prevStep ? 20 : -20 },
@@ -112,25 +113,26 @@ export default function ConversionWizard() {
   //   exitBeforeEnter: true,
   // });
 
-  const startMigration = async () => {
-    if (!sourcePlatform || !destinationPlatform) {
-      alert("Please select both source and destination platforms");
-      return;
+  const togglePlaylist = (p: Playlist) => {
+    const selectedPlaylistIds = selectedPlaylists.map((pl) => pl.playlist_id);
+    if (selectedPlaylistIds.includes(p.playlist_id)) {
+      setSelectedPlaylists(
+        selectedPlaylists.filter((pl) => pl.playlist_id !== p.playlist_id)
+      );
+    } else {
+      setSelectedPlaylists([...selectedPlaylists, p]);
     }
+  };
 
-    // Todo: replace with a confirmation modal
-    const confirm = window.confirm(
-      `Are you sure you want to migrate ${selectedPlaylists.length} playlists from ${sourcePlatform.label} to ${destinationPlatform.label}`
-    );
-
-    if (!confirm) return;
-
+  const startMigration = async () => {
     const body = {
       destination: destinationPlatform.value,
       source: sourcePlatform.value,
-      playlists: selectedPlaylists.map((pl) => pl.playlist_id),
+      playlists: selectedPlaylists.map((pl) => ({
+        id: pl.playlist_id,
+        title: pl.title,
+      })),
     };
-
     try {
       setTransferLoading(true);
       await api.convert(
@@ -138,24 +140,32 @@ export default function ConversionWizard() {
         destinationPlatform.value,
         sourcePlatform.value
       );
-      console.log("migration started successfully!");
+
       setShowSuccess(true);
     } catch (err) {
-      console.error("Error starting migration:", err);
-      alert(
-        "An error occurred while starting the migration. Please try again."
-      );
+      console.error("Error:", err);
+      toastHelper(toast, {
+        title: "Error starting migration",
+        description: "",
+      });
     } finally {
       setTransferLoading(false);
     }
   };
 
+  // some simple route validation logic
+
+  if (
+    !loadingConnectionStatus &&
+    firstUncompleted > -1 &&
+    firstUncompleted < stepIndex
+  ) {
+    // navigate if there's an uncompleted step before the current step
+    return <Navigate to={`/convert/${steps[firstUncompleted].path}`} replace />;
+  }
+
   return (
-    <Box
-      minHeight="100vh"
-      bg="linear-gradient(to right bottom, rgb(88, 28, 135), rgb(30, 58, 138), rgb(49, 46, 129))"
-      pb={20}
-    >
+    <Box minHeight="100vh" pb={20}>
       {/* animated shapes */}
       <Box
         pos={"absolute"}
@@ -186,7 +196,14 @@ export default function ConversionWizard() {
           className="animate-bounce"
         ></Box>
       </Box>
-
+      <ConfirmationModal
+        open={showConfirmation}
+        setOpen={setShowConfirmation}
+        onConfirm={startMigration}
+        selectedPlaylists={selectedPlaylists}
+        sourcePlatform={sourcePlatform.label}
+        destinationPlatform={destinationPlatform.label}
+      />
       <Box position="relative" zIndex={1}>
         <Box position="sticky" top={0}>
           <Nav
@@ -285,24 +302,10 @@ export default function ConversionWizard() {
                   mx="auto"
                 >
                   {stepIndex > 0 && (
-                    <chakra.button
-                      bg="whiteAlpha.200"
-                      border="1px solid"
-                      borderColor="whiteAlpha.600"
+                    <SecondaryButton
                       onClick={() => {
                         const prevStep = steps[stepIndex - 1];
                         navigate("/convert/" + prevStep.path);
-                      }}
-                      transition=".2s ease-in-out"
-                      display="flex"
-                      alignItems="center"
-                      gap={2}
-                      py={2}
-                      px={8}
-                      rounded="full"
-                      color="white"
-                      _hover={{
-                        bg: "whiteAlpha.300",
                       }}
                     >
                       <Icon>
@@ -311,13 +314,13 @@ export default function ConversionWizard() {
                       <Box display={{ base: "none", sm: "inline-block" }}>
                         Back
                       </Box>
-                    </chakra.button>
+                    </SecondaryButton>
                   )}
 
                   <Box ml="auto">
                     {stepIndex === 2 ? (
                       <GradientButton
-                        onClick={startMigration}
+                        onClick={() => setShowConfirmation(true)}
                         disabled={
                           selectedPlaylists.length === 0 || transferLoading
                         }
@@ -350,33 +353,3 @@ export default function ConversionWizard() {
     </Box>
   );
 }
-
-const GradientButton = ({
-  onClick,
-  children,
-  disabled = false,
-}: {
-  onClick?: () => void;
-  children: React.ReactNode;
-  disabled?: boolean;
-}) => {
-  return (
-    <chakra.button
-      color="white"
-      bgGradient="linear(to-r, pink.500, purple.500)"
-      rounded="full"
-      display="flex"
-      py={2}
-      px={7}
-      alignItems="center"
-      transition=".2s ease-in-out"
-      _hover={{
-        bgGradient: "linear(to-r, pink.600, purple.600)",
-      }}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {children}
-    </chakra.button>
-  );
-};

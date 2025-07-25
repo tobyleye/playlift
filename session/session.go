@@ -2,11 +2,11 @@ package session
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gorilla/sessions"
 	echoSessionMiddleware "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
-	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/models"
 )
 
@@ -26,12 +26,17 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 
 	session, _ := echoSessionMiddleware.Get("sess", c)
 
+	// 7 days
+	expiration := (time.Hour * 24) * 7
+
+	// x.Seconds()
 	session.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 2, // 2 days
+		MaxAge:   int(expiration.Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Domain:   config.FRONTEND_BASE_URL,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
+		// Domain:   config.FRONTEND_BASE_URL,
 	}
 
 	// since this function is called after login with youtube

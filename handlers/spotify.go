@@ -88,8 +88,8 @@ func (h Handlers) SpotifyLoginCallback(c echo.Context) error {
 	tokens, err := SpotifyTokenExchange(code)
 
 	if err != nil {
-		fmt.Println("error --", err)
-		return c.JSON(http.StatusInternalServerError, "Couldn't get token")
+		log.Println("error fetching spotify token:", err)
+		return c.JSON(500, errorResponse("Couldn't get token"))
 	}
 
 	spotifyToken := models.Token{
@@ -105,18 +105,24 @@ func (h Handlers) SpotifyLoginCallback(c echo.Context) error {
 	result := h.Db.Create(&spotifyToken)
 
 	if result.Error != nil {
-		fmt.Println(result.Error)
-		return c.String(500, "Something went wrong")
+		log.Println("error adding spotify token in db", result.Error)
+		return c.JSON(500, errorResponse("internal server error"))
 	}
 
 	spotifyClient := config.CreateSpotifyClient(tokens)
 
-	if user.SpotifyId == "" {
+	spotifyUser, err := spotifyClient.CurrentUser(c.Request().Context())
 
-		spotifyUser, _ := spotifyClient.CurrentUser(c.Request().Context())
-		// set spotifyId if not provided
-		h.Db.Model(&models.User{}).Where("user_id = ?", user.UserId).Update("spotify_id", spotifyUser.ID)
-		err := session.SetUserSession(c, "spotifyId", spotifyUser.ID)
+	if err != nil {
+		log.Println("error fetching spotify user:", err)
+		return c.JSON(http.StatusInternalServerError, errorResponse("Couldn't get user"))
+	}
+
+	h.Db.Model(&models.User{}).Where("user_id = ?", user.UserId).Update("spotify_id", spotifyUser.ID)
+
+	err = session.SetUserSession(c, "spotifyId", spotifyUser.ID)
+
+	if err != nil {
 		log.Printf("error setting user %s session %v\n", user.UserId, err)
 	}
 
@@ -128,7 +134,7 @@ func (h Handlers) FetchUserSpotifyPlaylists(c echo.Context) error {
 
 	spotifyClient, err := config.CreateUserSpotifyClient(h.Db, user.UserId)
 	if err != nil {
-		return c.JSON(400, "token not found")
+		return c.JSON(400, errorResponse("token not found"))
 	}
 
 	ctx := context.Background()

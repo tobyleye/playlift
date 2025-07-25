@@ -31,6 +31,7 @@ export default function LoginModal({
   const [loading, setLoading] = useState(code ? true : false);
   const navigate = useNavigate();
 
+  console.log("login modal..", code);
   useEffect(() => {
     if (error) {
       console.error("Error connecting to YouTube Music:", error);

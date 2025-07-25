@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/tobyleye/playlift/types"
 )
 
-type SearchResultItem struct {
+type Track struct {
 	VideoId string
 	Title   string
 	Artists []string
@@ -29,19 +30,26 @@ type YoutubePlaylist struct {
 type PlaylistDetails struct {
 	Title          string
 	Description    string
-	TotalTracks    string
-	PlaylistTracks []SearchResultItem
+	TotalTracks    int
+	PlaylistTracks []Track
 	Link           string
 }
 
 type PlaylistAllTracksResponse struct {
-	Total  int                `json:"total"`
-	Tracks []SearchResultItem `json:"tracks"`
+	Total  int     `json:"total"`
+	Tracks []Track `json:"tracks"`
 }
 
 type PlaylistTracksResponse struct {
-	NextContinuation string             `json:"next_continuation"`
-	Tracks           []SearchResultItem `json:"tracks"`
+	NextContinuation string  `json:"next_continuation"`
+	Tracks           []Track `json:"tracks"`
+}
+
+type CreatedPlaylist struct {
+	PlaylistId  string `json:"playlist_id"`
+	Link        string `json:"link"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
 }
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
@@ -65,6 +73,14 @@ var defaultBody = map[string]interface{}{
 }
 
 var SEPERATOR = " • "
+
+func createPlaylistLink(playlistId string) string {
+	return fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId)
+}
+
+func createTrackLink(trackId string) string {
+	return fmt.Sprintf("https://music.youtube.com/watch?v=%s", trackId)
+}
 
 func getSearchParams(filter, scope string, ignoreSpelling bool) string {
 	filteredParam1 := "EgWKAQ"
@@ -161,7 +177,7 @@ func getArtists(artistsFlexRendererRuns []interface{}) []string {
 	return artists
 }
 
-func parseSearchResultItem(result interface{}) SearchResultItem {
+func parseTrack(result interface{}) Track {
 	result = ReadValue(result, []interface{}{"musicResponsiveListItemRenderer"})
 	flexColumns := ReadValue(result, []interface{}{"flexColumns"})
 
@@ -185,11 +201,11 @@ func parseSearchResultItem(result interface{}) SearchResultItem {
 		"watchEndpoint",
 		"videoId"})
 
-	return SearchResultItem{
+	return Track{
 		VideoId: videoId,
 		Title:   title,
 		Artists: artists,
-		Link:    fmt.Sprintf("https://music.youtube.com/watch?v=%s", videoId),
+		Link:    createTrackLink(videoId),
 	}
 }
 
@@ -201,19 +217,32 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 	}
 
 	var jsonResponse interface{}
+
 	ctx := context.Background()
 
-	err := requests.
-		URL(url).
-		Client(httpClient).
-		BodyJSON(&body).
+	// var buf = new(bytes.Buffer)
+
+	builder := requests.
+		URL(url).Client(httpClient)
+
+	// set headers
+	for key, val := range headers {
+		builder.Header(key, val)
+	}
+
+	err := builder.BodyJSON(&body).
 		ToJSON(&jsonResponse).
 		Fetch(ctx)
 
+	if err != nil {
+		return nil, err
+	}
+
 	return jsonResponse, err
+
 }
 
-func Search(client *http.Client, searchQuery types.SearchQuery) ([]SearchResultItem, error) {
+func Search(client *http.Client, searchQuery types.SearchQuery) ([]Track, error) {
 	filter := "songs"
 	scope := ""
 	ignoreSpelling := true
@@ -234,11 +263,11 @@ func Search(client *http.Client, searchQuery types.SearchQuery) ([]SearchResultI
 
 	content := ReadValue(data, []interface{}{"contents", "tabbedSearchResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicShelfRenderer", "contents"})
 
-	var results []SearchResultItem
+	var results []Track
 
 	if content, ok := content.([]interface{}); ok {
 		for _, item := range content {
-			parsedResult := parseSearchResultItem(item)
+			parsedResult := parseTrack(item)
 			results = append(results, parsedResult)
 
 		}
@@ -247,14 +276,14 @@ func Search(client *http.Client, searchQuery types.SearchQuery) ([]SearchResultI
 	return results, nil
 }
 
-func SearchOne(client *http.Client, searchQuery types.SearchQuery) (SearchResultItem, error) {
+func SearchOne(client *http.Client, searchQuery types.SearchQuery) (Track, error) {
 	results, err := Search(client, searchQuery)
 	if err != nil {
-		return SearchResultItem{}, err
+		return Track{}, err
 	}
 
 	if len(results) == 0 {
-		return SearchResultItem{}, nil
+		return Track{}, nil
 	}
 
 	return results[0], nil
@@ -275,7 +304,7 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 		return PlaylistDetails{}, err
 	}
 
-	var playlistTracks []SearchResultItem
+	var playlistTracks []Track
 
 	playlistItemsContents := ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "secondaryContents", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
 	playlistHeader := ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents",
@@ -294,13 +323,24 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 
 	title := ReadValueString(playlistHeader, []interface{}{"title", "runs", 0, "text"})
 	totalTracks := ReadValueString(playlistHeader, []interface{}{"secondSubtitle", "runs", 0, "text"})
+
+	// sometimes the total tracks is suffixed with 'tracks' sometimes it's songs
+	// thats why we handle both cases
+	// a better solution might be to use regex to extract the number.
+	// Todo:
+
+	totalTracks = strings.Replace(totalTracks, " tracks", "", 1)
 	totalTracks = strings.Replace(totalTracks, " songs", "", 1)
+
+	totalTracks = strings.ReplaceAll(totalTracks, ",", "")
+
+	totalTracksInt, _ := strconv.Atoi(totalTracks)
 
 	description := ReadValueString(playlistHeader, []interface{}{"description", "musicDescriptionShelfRenderer", "description", "runs", 0, "text"})
 
 	if content, ok := playlistItemsContents.([]interface{}); ok {
 		for _, itemContent := range content {
-			item := parseSearchResultItem(itemContent)
+			item := parseTrack(itemContent)
 			playlistTracks = append(playlistTracks, item)
 		}
 	}
@@ -308,11 +348,10 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 	playlist := PlaylistDetails{
 		Title:          title,
 		Description:    description,
-		TotalTracks:    totalTracks,
+		TotalTracks:    totalTracksInt,
 		PlaylistTracks: playlistTracks,
-		Link:           fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+		Link:           createPlaylistLink(playlistId),
 	}
-	fmt.Printf("playlist details: %+v\n", playlist)
 
 	return playlist, nil
 }
@@ -340,7 +379,7 @@ func FetchPlaylistTracks(client *http.Client, playlistId string, continuation st
 	}
 
 	var nextContinuation string
-	var playlistTracks []SearchResultItem
+	var playlistTracks []Track
 
 	// parse response
 	// Todo: collapse the two for loop below into 1
@@ -354,7 +393,7 @@ func FetchPlaylistTracks(client *http.Client, playlistId string, continuation st
 
 		if items, ok := continuationItems.([]interface{}); ok {
 			for index, itemContent := range items {
-				item := parseSearchResultItem(itemContent)
+				item := parseTrack(itemContent)
 
 				if index == len(items)-1 && item.VideoId == "" {
 					// it's possible that the last item is a continuation item
@@ -372,7 +411,7 @@ func FetchPlaylistTracks(client *http.Client, playlistId string, continuation st
 
 		if content, ok := playlistItemsContents.([]interface{}); ok {
 			for index, itemContent := range content {
-				item := parseSearchResultItem(itemContent)
+				item := parseTrack(itemContent)
 				// it's possible that the last item is a continuation item
 
 				if index == len(content)-1 && item.VideoId == "" {
@@ -392,7 +431,7 @@ func FetchPlaylistTracks(client *http.Client, playlistId string, continuation st
 
 func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAllTracksResponse, error) {
 
-	tracks := []SearchResultItem{}
+	tracks := []Track{}
 
 	nextContinuation := ""
 	// fetch next Page
@@ -409,7 +448,7 @@ func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAll
 			break // no more tracks to fetch
 		}
 	}
-
+	SaveJson(tracks, playlistId+"_all_tracks.json")
 	return PlaylistAllTracksResponse{
 		Total:  len(tracks),
 		Tracks: tracks,
@@ -425,7 +464,6 @@ func getPlaylistTotalTracks(subtitleRuns []interface{}) string {
 }
 
 func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
-	fmt.Println("fetching user playlists...")
 	body := map[string]interface{}{
 		"browseId": "FEmusic_liked_playlists",
 	}
@@ -478,7 +516,7 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 					Thumbnails:  thumbnailUrls,
 					TotalTracks: totalTracks,
 					PlaylistId:  playlistId,
-					Url:         fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+					Url:         createPlaylistLink(playlistId),
 				}
 
 				youtubePlaylists = append(youtubePlaylists, playlist)
@@ -490,7 +528,7 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 	return youtubePlaylists, nil
 }
 
-func CreatePlaylist(client *http.Client, title string, description string, videoIds []string) (string, error) {
+func CreatePlaylist(client *http.Client, title string, description string, videoIds []string) (CreatedPlaylist, error) {
 	// privacy_status: Playlists can be ``PUBLIC``, ``PRIVATE``, or ``UNLISTED``. Default: ``PRIVATE``
 	privacyStatus := "PRIVATE"
 
@@ -503,12 +541,20 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 	}
 	data, err := sendRequest(client, endpoint, body)
 
-	fmt.Println("create playlist response:", data)
 	if err != nil {
-		return "", err
+		return CreatedPlaylist{}, err
 	}
 
-	return "done", nil
+	playlistId := ReadValueString(data, []interface{}{
+		"playlistId",
+	})
+
+	return CreatedPlaylist{
+		PlaylistId:  playlistId,
+		Link:        createPlaylistLink(playlistId),
+		Title:       title,
+		Description: description,
+	}, nil
 }
 
 // ExtractPlaylistsFromNextPage extracts playlist information from a next-page continuation response
@@ -581,7 +627,7 @@ func ExtractPlaylistsFromNextPage(jsonResponse interface{}) []YoutubePlaylist {
 				Thumbnails:  thumbnailUrls,
 				TotalTracks: totalTracks,
 				PlaylistId:  playlistId,
-				Url:         fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
+				Url:         createPlaylistLink(playlistId),
 			}
 
 			playlists = append(playlists, playlist)

@@ -101,8 +101,8 @@ export default function ConnectYoutube() {
           Connect YouTube Music
         </Heading>
         <Text mb={8} fontSize="md" maxW="md" mx="auto" color="gray.200">
-          Connect your YouTube Music account where your playlists will be
-          migrated.
+          First, let's connect your YouTube Music account to access your
+          playlists and create your profile.
         </Text>
 
         <chakra.button

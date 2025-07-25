@@ -6,15 +6,42 @@ import {
   Link as StyledLink,
   Icon,
 } from "@chakra-ui/react";
-import { Link } from "react-router-dom";
+import { Link, Navigate, Outlet } from "react-router-dom";
 import { ArrowRight, Music, Play } from "lucide-react";
 import { BigCircle } from "@/components/animated-shapes";
 import Nav from "@/components/nav";
 import { useSessionContext } from "@/contexts/session";
-import UserMenu from "@/components/user-menu";
+import { useGoogleLogin } from "@react-oauth/google";
+import useLoggedIn from "@/hooks/useLoggedIn";
 
+const ReturningUserLink = () => {
+  const connectYoutube = useGoogleLogin({
+    flow: "auth-code",
+    ux_mode: "redirect",
+    scope: ["https://www.googleapis.com/auth/youtube"].join(" "),
+
+    onSuccess: (tokenResponse) => {
+      console.log("token response..", tokenResponse);
+    },
+    onError: (error) => console.error("Login Failed:", error),
+    redirect_uri: window.location.origin + "/home",
+  });
+
+  return (
+    <Box color="white">
+      <Box as="button" textDecor="underline" onClick={connectYoutube}>
+        Returning User
+      </Box>
+    </Box>
+  );
+};
 export default function Landing() {
   const { session, loadingSession } = useSessionContext();
+  const loggedIn = useLoggedIn();
+
+  if (loggedIn) {
+    return <Navigate to="/home" replace />;
+  }
 
   return (
     <Box>
@@ -75,19 +102,7 @@ export default function Landing() {
 
       <Nav
         rightElement={
-          loadingSession ? (
-            <Box />
-          ) : session ? (
-            <Box>
-              <UserMenu />
-            </Box>
-          ) : (
-            <Box color="white">
-              <StyledLink as={Link} textDecor="underline" to="/home">
-                Returning User
-              </StyledLink>
-            </Box>
-          )
+          loadingSession ? <Box /> : !session ? <ReturningUserLink /> : null
         }
       />
 
@@ -126,10 +141,12 @@ export default function Landing() {
               .
             </Text>
 
+            {/* start migration button */}
+
             <StyledLink
               as={Link}
               to="/convert"
-              bgImage="linear-gradient(to right, rgb(219, 39, 119), rgb(124, 58, 237))"
+              bgGradient=" linear(to-r, rgb(219, 39, 119), rgb(124, 58, 237))"
               bgColor={"rgba(15, 23, 42, 0.9)"}
               display="inline-flex"
               alignItems="center"
@@ -141,8 +158,7 @@ export default function Landing() {
               transition=".3s cubic-bezier(0.4, 0, 0.2, 1)"
               fontWeight={600}
               _hover={{
-                bg: "linear-gradient(to right, rgb(219, 39, 119), rgb(124, 58, 237))",
-
+                transform: "scale(1.05)",
                 ".btn-icon": {
                   transform: "translateX(4px)",
                 },
@@ -248,6 +264,8 @@ export default function Landing() {
           </Text>
         </Box>
       </Box>
+
+      <Outlet />
     </Box>
   );
 }
