@@ -7,8 +7,6 @@ import SessionProvider from "./providers/SessionProvider.tsx";
 import { SWRConfig } from "swr";
 
 const Landing = lazy(() => import("./views/landing/landing.tsx"));
-const LoginCallback = lazy(() => import("./views/landing/login-callback.tsx"));
-
 const Home = lazy(() => import("./views/home.tsx"));
 const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
@@ -50,9 +48,7 @@ function App() {
           >
             <Suspense fallback={<div />}>
               <Routes>
-                <Route path="/" element={<Landing />}>
-                  <Route path="login/callback" element={<LoginCallback />} />
-                </Route>
+                <Route path="/" element={<Landing />} />
 
                 <Route path="/convert" element={<Convert />}>
                   <Route

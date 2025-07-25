@@ -47,19 +47,22 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 	// login can be initiated from the "login" page where the user is forced to login if not logged in
 	// or it can also be initiated from the youtube "connect" page where the user is trying to connect
 	// their YouTube account
-	origin, _ := body["origin"].(string)
+	// origin, _ := body["origin"].(string)
 
-	redirectUri := ""
+	// Changed the ux_mode from redirect to popup and
+	// i think this way we can just use the base url of the frontend as
+	// the redirect uri
+	redirectUri := config.FRONTEND_BASE_URL
 
-	if origin == "login" {
-		// redirectUri = config.FRONTEND_BASE_URL + "/login/callback"
-		redirectUri = config.FRONTEND_BASE_URL
+	// if origin == "login" {
+	// 	redirectUri = config.FRONTEND_BASE_URL
 
-	} else {
-		// else if from == "connect" {
-		// default to connect
-		redirectUri = config.FRONTEND_BASE_URL + "/convert/connect-youtube"
-	}
+	// } else {
+	// 	// else if from == "connect" {
+	// 	// default to connect
+
+	// 	redirectUri = config.FRONTEND_BASE_URL + "/convert/connect-youtube"
+	// }
 
 	var googleLoginConfig = oauth2.Config{
 		ClientID:     config.GOOGLE_CLIENT_ID,

@@ -6,6 +6,9 @@ import {
   Link as StyledLink,
   Icon,
   useToast,
+  ModalOverlay,
+  Modal,
+  ModalContent,
 } from "@chakra-ui/react";
 import { Link, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { ArrowRight, Music, Play } from "lucide-react";
@@ -14,22 +17,48 @@ import { useSessionContext } from "@/contexts/session";
 import { useGoogleLogin } from "@react-oauth/google";
 import useLoggedIn from "@/hooks/useLoggedIn";
 import { FcGoogle } from "react-icons/fc";
-import "./login-callback";
-
 import { SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
+import EllipsisLoader from "@/components/ellipsis-loader";
+import { client } from "@/api/api";
+import { useState } from "react";
 
-const ReturningUserLink = () => {
+export default function Landing() {
+  const { session, loadingSession, setSession } = useSessionContext();
+  const loggedIn = useLoggedIn();
+
   const navigate = useNavigate();
   const toast = useToast();
+
+  const [loading, setLoading] = useState(false);
 
   const login = useGoogleLogin({
     flow: "auth-code",
     ux_mode: "popup",
     scope: ["https://www.googleapis.com/auth/youtube"].join(" "),
 
-    onSuccess: (data) => {
-      navigate(`/login/callback?code=${data.code}`, { replace: true });
+    onSuccess: async (codeResponse) => {
+      try {
+        setLoading(true);
+        const { data } = await client.post("/login/google/callback", {
+          code: codeResponse.code,
+          origin: "login",
+        });
+
+        const { user } = data.data;
+
+        localStorage.setItem("userId", user.user_id);
+        setSession(user);
+        navigate("/home", { replace: true });
+      } catch (err) {
+        setLoading(false);
+        toastHelper(toast, {
+          title: "Login failed",
+          description: `Unable to login. Please try again.`,
+          status: "error",
+        });
+        console.error("Error connecting to YouTube Music:", err);
+      }
     },
     onError: (error) => {
       console.error("Login Failed:", error);
@@ -42,30 +71,38 @@ const ReturningUserLink = () => {
     // redirect_uri: window.location.origin + "/login/callback",
   });
 
-  return (
-    <Box color="white">
-      <SecondaryButton onClick={login} fontSize="md" py={2}>
-        <Icon as={FcGoogle} />
-        Login
-      </SecondaryButton>
-    </Box>
-  );
-};
-export default function Landing() {
-  const { session, loadingSession } = useSessionContext();
-  const loggedIn = useLoggedIn();
-
   if (loggedIn) {
     return <Navigate to="/home" replace />;
   }
 
   return (
     <Box>
+      <Modal isOpen={loading} onClose={() => {}} isCentered>
+        <ModalOverlay
+          bg="blackAlpha.300"
+          backdropFilter="blur(6px) hue-rotate(40deg)"
+        />
+        <ModalContent bg="unset" textAlign="center" shadow="none">
+          <EllipsisLoader
+            text="Signing you in"
+            fontWeight="bold"
+            fontSize="xl"
+          />
+        </ModalContent>
+      </Modal>
+
       <BGShapes />
       <Box position="relative">
         <Nav
           rightElement={
-            loadingSession ? <Box /> : !session ? <ReturningUserLink /> : null
+            loadingSession ? (
+              <Box />
+            ) : !session ? (
+              <SecondaryButton onClick={login} fontSize="md" py={2}>
+                <Icon as={FcGoogle} />
+                Login
+              </SecondaryButton>
+            ) : null
           }
         />
 

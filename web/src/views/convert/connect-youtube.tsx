@@ -1,8 +1,7 @@
 import { Box, Heading, Text, chakra, Icon, useToast } from "@chakra-ui/react";
 import { CheckIcon, PlayIcon } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { client } from "@/api/api";
 import { useConvertWizardContext } from "./context";
 import { useSessionContext } from "@/contexts/session";
@@ -11,21 +10,70 @@ import EllipsisLoader from "@/components/ellipsis-loader";
 
 export default function ConnectYoutube() {
   const [loading, setLoading] = useState(false);
-  const [searchParams] = useSearchParams();
-  const code = searchParams.get("code");
-  const error = searchParams.get("error");
-  const navigate = useNavigate();
+  // const [searchParams] = useSearchParams();
+  // const code = searchParams.get("code");
+  // const error = searchParams.get("error");
+  // const navigate = useNavigate();
 
   const toast = useToast();
   const { setSession } = useSessionContext();
   const { youtubeConnected, setYoutubeConnected } = useConvertWizardContext();
 
-  useEffect(() => {
-    const connectCallback = async () => {
+  // useEffect(() => {
+  //   const connectCallback = async () => {
+  //     setLoading(true);
+  //     try {
+  //       const { data } = await client.post("/login/google/callback", {
+  //         code,
+  //         origin: "connect",
+  //       });
+  //       setYoutubeConnected(true);
+  //       const { user, is_new_user } = data.data;
+  //       localStorage.setItem("userId", user.user_id);
+  //       setSession(user);
+  //       toastHelper(toast, {
+  //         title: "YouTube Music connected!",
+  //         description: is_new_user
+  //           ? "Account created successfully! You can now manage your music across platforms."
+  //           : `Welcome back!`,
+  //       });
+  //     } catch (err) {
+  //       console.error("Error connecting to YouTube Music:", err);
+  //       toastHelper(toast, {
+  //         title: "Connection failed",
+  //         description: `Unable to connect to YouTube Music. Please try again.`,
+  //         status: "error",
+  //       });
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   navigate(".", { replace: true });
+
+  //   if (error) {
+  //     toastHelper(toast, {
+  //       title: "Login failed",
+  //       description: `Unable to login. Please try again.`,
+  //       status: "error",
+  //     });
+  //   } else if (code) {
+  //     connectCallback();
+  //   }
+
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [code, error]);
+
+  const connectYoutube = useGoogleLogin({
+    flow: "auth-code",
+    ux_mode: "popup",
+    scope: ["https://www.googleapis.com/auth/youtube"].join(" "),
+
+    onSuccess: async (codeResponse) => {
       setLoading(true);
       try {
         const { data } = await client.post("/login/google/callback", {
-          code,
+          code: codeResponse.code,
           origin: "connect",
         });
         setYoutubeConnected(true);
@@ -48,39 +96,15 @@ export default function ConnectYoutube() {
       } finally {
         setLoading(false);
       }
-    };
-
-    navigate(".", { replace: true });
-
-    if (error) {
-      toastHelper(toast, {
-        title: "Login failed",
-        description: `Unable to login. Please try again.`,
-        status: "error",
-      });
-    } else if (code) {
-      connectCallback();
-    }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, error]);
-
-  const connectYoutube = useGoogleLogin({
-    flow: "auth-code",
-    ux_mode: "redirect",
-    scope: ["https://www.googleapis.com/auth/youtube"].join(" "),
-
-    onSuccess: (tokenResponse) => {
-      console.log("token response..", tokenResponse);
     },
     onError: () => {
       toastHelper(toast, {
-        title: "Error connecting to YouTube Music",
-        description: `Please try again`,
+        title: "Error!",
+        description: `Error initiating connection. Please try again`,
         status: "error",
       });
     },
-    redirect_uri: window.location.href,
+    // redirect_uri: window.location.href,
   });
 
   return (
