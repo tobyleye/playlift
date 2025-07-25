@@ -11,7 +11,7 @@ import {
 import useSWR from "swr";
 import api from "../api/api";
 import { AlertCircle, Clock, Check, ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Rabbit } from "lucide-react";
 import { Link } from "react-router-dom";
 import Nav from "@/components/nav";
@@ -19,16 +19,14 @@ import dayjs from "dayjs";
 import { PlaylistConversion } from "@/types";
 import { getServiceColor, getServiceLabel } from "@/constants/constants";
 import { useSessionContext } from "@/contexts/session";
-import LoginModal from "@/components/login-modal";
 import EllipsisLoader from "@/components/ellipsis-loader";
 import { useNavigate } from "react-router-dom";
 import { PrimaryButton } from "@/components/buttons";
 import DefaultErrorState from "@/components/errors/default-error-state";
 
 export default function Home() {
-  const { session, loadingSession } = useSessionContext();
+  const { session } = useSessionContext();
 
-  const [showLogin, setShowLogin] = useState(false);
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -52,13 +50,6 @@ export default function Home() {
   const completedConversions = conversions.filter(
     (conversion) => conversion.status === "completed"
   );
-
-  useEffect(() => {
-    if (!loadingSession && !session) {
-      setShowLogin(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingSession]);
 
   // @ts-ignore: leave this for now
   const deleteConversion = async (conversionId: string) => {
@@ -103,16 +94,6 @@ export default function Home() {
   return (
     <Box pb={8}>
       <Nav />
-
-      {showLogin && (
-        <LoginModal
-          open={showLogin}
-          onLogin={() => {
-            setShowLogin(false);
-          }}
-          onClose={() => {}}
-        />
-      )}
 
       <Container maxWidth="container.lg" mt={8}>
         <Box display="flex" gap={4} flexWrap="wrap" alignItems="center" mb={8}>
