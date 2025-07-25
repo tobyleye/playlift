@@ -16,6 +16,7 @@ import "./playlist-selection";
 import ConfirmationModal from "./confirmation-modal";
 import { GradientButton, SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
+import EllipsisLoader from "@/components/ellipsis-loader";
 
 // import { useTransition, animated } from "@react-spring/web";
 
@@ -74,7 +75,7 @@ export default function ConversionWizard() {
     {
       label: 3,
       path: "select-playlists",
-      completed: false,
+      completed: showSuccess,
     },
   ];
 
@@ -166,36 +167,7 @@ export default function ConversionWizard() {
 
   return (
     <Box minHeight="100vh" pb={20}>
-      {/* animated shapes */}
-      <Box
-        pos={"absolute"}
-        inset={0}
-        pointerEvents="none"
-        className="absolute inset-0 pointer-events-none"
-      >
-        <Box
-          pos="absolute"
-          top={20}
-          left={10}
-          w={32}
-          h={32}
-          rounded="full"
-          bg="linear-gradient(to right, rgb(236, 72, 153), rgb(139, 92, 246))"
-          opacity={0.2}
-          className="animate-pulse"
-        ></Box>
-        <Box
-          pos="absolute"
-          bottom={20}
-          right={20}
-          w={24}
-          h={24}
-          rounded="full"
-          bg="linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))"
-          opacity={0.3}
-          className="animate-bounce"
-        ></Box>
-      </Box>
+      <BGShapes />
       <ConfirmationModal
         open={showConfirmation}
         setOpen={setShowConfirmation}
@@ -204,7 +176,7 @@ export default function ConversionWizard() {
         sourcePlatform={sourcePlatform.label}
         destinationPlatform={destinationPlatform.label}
       />
-      <Box position="relative" zIndex={1}>
+      <Box position="relative">
         <Box position="sticky" top={0}>
           <Nav
             rightElement={
@@ -320,16 +292,22 @@ export default function ConversionWizard() {
                   <Box ml="auto">
                     {stepIndex === 2 ? (
                       <GradientButton
+                        minWidth={150}
                         onClick={() => setShowConfirmation(true)}
                         disabled={
                           selectedPlaylists.length === 0 || transferLoading
                         }
                       >
-                        Start Migration{" "}
-                        {selectedPlaylists.length > 0
-                          ? `(${selectedPlaylists.length})`
-                          : ""}
-                        <Icon as={ArrowRight} ml={2} />
+                        {transferLoading ? (
+                          <EllipsisLoader text="Loading" />
+                        ) : (
+                          <>
+                            Start Migration{" "}
+                            {selectedPlaylists.length > 0 &&
+                              `(${selectedPlaylists.length})`}
+                            <Icon as={ArrowRight} ml={2} />
+                          </>
+                        )}
                       </GradientButton>
                     ) : curStep.completed && nextStep ? (
                       <GradientButton
@@ -353,3 +331,37 @@ export default function ConversionWizard() {
     </Box>
   );
 }
+
+const BGShapes = () => {
+  return (
+    <Box
+      pos={"absolute"}
+      inset={0}
+      pointerEvents="none"
+      className="absolute inset-0 pointer-events-none"
+    >
+      <Box
+        pos="absolute"
+        top={20}
+        left={10}
+        w={32}
+        h={32}
+        rounded="full"
+        bg="linear-gradient(to right, rgb(236, 72, 153), rgb(139, 92, 246))"
+        opacity={0.2}
+        className="animate-pulse"
+      ></Box>
+      <Box
+        pos="absolute"
+        bottom={20}
+        right={20}
+        w={24}
+        h={24}
+        rounded="full"
+        bg="linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))"
+        opacity={0.3}
+        className="animate-bounce"
+      ></Box>
+    </Box>
+  );
+};

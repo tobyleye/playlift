@@ -10,6 +10,7 @@ export const GradientButton = chakra("button", {
       py: 2,
       px: 7,
       alignItems: "center",
+      justifyContent: "center",
       transition: ".2s ease-in-out",
       _hover: {
         bgGradient: "linear(to-r, pink.600, purple.600)",

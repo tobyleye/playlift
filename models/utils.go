@@ -6,9 +6,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateOrUpdateTokenForUser(db *gorm.DB, userId string, token *Token) error {
+func UpsertTokenForUser(db *gorm.DB, token *Token) error {
 	updateResult := db.Where(&Token{
-		UserId:   userId,
+		UserId:   token.UserId,
 		Platform: token.Platform,
 	}).Updates(token)
 

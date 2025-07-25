@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,23 +18,43 @@ import (
 	"google.golang.org/api/option"
 )
 
+func getUserGoogleInfo(context context.Context, client *http.Client) (*oauth2V2.Userinfo, error) {
+
+	oauth2service, err := oauth2V2.NewService(context, option.WithHTTPClient(client))
+
+	if err != nil {
+		return nil, err
+	}
+
+	userInfo, err := oauth2service.Userinfo.Get().Do()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return userInfo, nil
+
+}
+
 func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 	body := requestBodyToMap(c)
 
 	code, _ := body["code"].(string)
 
-	// from is the location from which the login was initiated. it is used to determine the redirect URI of the
+	// origin is the location from which the login was initiated. it is used to determine the redirect URI of the
 	// oauth2 config
-	// login can be initiated from the home page where the user is forced to login if not logged in
-	// or it can also be initiated from the convert page where the user is trying to connect
-	// their YouTube account for the first time
-	from, _ := body["from"].(string)
+	// login can be initiated from the "login" page where the user is forced to login if not logged in
+	// or it can also be initiated from the youtube "connect" page where the user is trying to connect
+	// their YouTube account
+	origin, _ := body["origin"].(string)
 
 	redirectUri := ""
 
-	if from == "home" {
-		redirectUri = config.FRONTEND_BASE_URL + "/home"
+	if origin == "login" {
+		// redirectUri = config.FRONTEND_BASE_URL + "/login/callback"
+		redirectUri = config.FRONTEND_BASE_URL
+
 	} else {
 		// else if from == "connect" {
 		// default to connect
@@ -64,74 +86,66 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 	httpClient := googleLoginConfig.Client(c.Request().Context(), tokens)
 
-	oauth2service, err := oauth2V2.NewService(c.Request().Context(), option.WithHTTPClient(httpClient))
+	userInfo, err := getUserGoogleInfo(c.Request().Context(), httpClient)
 
-	log.Println("create oauth2service error:", err)
+	if err != nil {
+		log.Println("error getting user info from google:", err)
+		return c.JSON(500, errorResponse("server error"))
+	}
 
-	userInfoService := oauth2V2.NewUserinfoService(oauth2service)
-	userInfo, err := userInfoService.Get().Do()
+	var user models.User
 
-	log.Printf("user info %+v\n", userInfo)
+	h.Db.Model(&models.User{}).Preload("Tokens").Where("email = ?", userInfo.Email).First(&user)
 
-	if err == nil {
+	userId := user.UserId
 
-		var user models.User
+	isNewUser := userId == ""
 
-		h.Db.Model(&models.User{}).Preload("Tokens").Where("email = ?", userInfo.Email).First(&user)
+	if isNewUser {
+		// create user
 
-		log.Println("existing user", user)
+		userId = uuid.New().String()
 
-		var userId string
-
-		if user.UserId == "" {
-			// create user
-
-			userId = uuid.New().String()
-
-			user := &models.User{
-				UserId:    userId,
-				Email:     userInfo.Email,
-				Name:      userInfo.Name,
-				Picture:   userInfo.Picture,
-				YoutubeId: userInfo.Id,
-				CreatedAt: time.Now(),
-			}
-
-			h.Db.Create(user)
-
-		} else {
-			userId = user.UserId
-
+		user := &models.User{
+			UserId:    userId,
+			Email:     userInfo.Email,
+			Name:      userInfo.Name,
+			Picture:   userInfo.Picture,
+			YoutubeId: userInfo.Id,
+			CreatedAt: time.Now(),
 		}
 
-		token := models.Token{
-			UserId:       userId,
-			Platform:     "youtube",
-			AccessToken:  tokens.AccessToken,
-			RefreshToken: tokens.RefreshToken,
-			TokenType:    tokens.TokenType,
-			ExpiresIn:    tokens.Expiry,
-			CreatedAt:    time.Now(),
-		}
+		h.Db.Create(user)
+	}
 
-		models.CreateOrUpdateTokenForUser(h.Db, userId, &token)
+	// upsert token
 
-		log.Print("creating user session", token)
-		userSession, err := session.CreateSession(c, &user)
+	token := models.Token{
+		UserId:       userId,
+		Platform:     "youtube",
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		TokenType:    tokens.TokenType,
+		ExpiresIn:    tokens.Expiry,
+		CreatedAt:    time.Now(),
+	}
 
-		if err != nil {
-			log.Println("error creating session", err)
-			return c.JSON(500, map[string]string{"error": "server error"})
-		}
+	models.UpsertTokenForUser(h.Db, &token)
 
-		return c.JSON(200, map[string]interface{}{
-			"message": "Login successful",
-			"data":    userSession,
-		})
+	userSession, err := session.CreateSession(c, &user)
 
-	} else {
+	if err != nil {
+		log.Println("error creating session", err)
 		return c.JSON(500, map[string]string{"error": "server error"})
 	}
+
+	return c.JSON(200, map[string]interface{}{
+		"message": "Login successful",
+		"data": map[string]interface{}{
+			"user":        userSession,
+			"is_new_user": isNewUser,
+		},
+	})
 
 }
 

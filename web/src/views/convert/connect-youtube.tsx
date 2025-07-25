@@ -21,26 +21,22 @@ export default function ConnectYoutube() {
   const { youtubeConnected, setYoutubeConnected } = useConvertWizardContext();
 
   useEffect(() => {
-    if (error) {
-      console.error("Error connecting to YouTube Music:", error);
-    }
-  }, [error]);
-
-  useEffect(() => {
     const connectCallback = async () => {
       setLoading(true);
       try {
         const { data } = await client.post("/login/google/callback", {
           code,
+          origin: "connect",
         });
         setYoutubeConnected(true);
-        const session = data.data;
-        localStorage.setItem("userId", session.user_id);
-        setSession(session);
+        const { user, is_new_user } = data.data;
+        localStorage.setItem("userId", user.user_id);
+        setSession(user);
         toastHelper(toast, {
           title: "YouTube Music connected!",
-          description:
-            "Account created successfully! You can now manage your music across platforms.",
+          description: is_new_user
+            ? "Account created successfully! You can now manage your music across platforms."
+            : `Welcome back!`,
         });
       } catch (err) {
         console.error("Error connecting to YouTube Music:", err);
@@ -54,11 +50,20 @@ export default function ConnectYoutube() {
       }
     };
 
-    if (code) {
-      navigate("/convert/connect-youtube", { replace: true });
+    navigate(".", { replace: true });
+
+    if (error) {
+      toastHelper(toast, {
+        title: "Login failed",
+        description: `Unable to login. Please try again.`,
+        status: "error",
+      });
+    } else if (code) {
       connectCallback();
     }
-  }, [code, navigate, setSession, setYoutubeConnected]);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, error]);
 
   const connectYoutube = useGoogleLogin({
     flow: "auth-code",
