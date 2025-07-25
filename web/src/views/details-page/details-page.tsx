@@ -1,5 +1,6 @@
 import api from "@/api/api";
 import EllipsisLoader from "@/components/ellipsis-loader";
+import DefaultErrorState from "@/components/errors/default-error-state";
 import Nav from "@/components/nav";
 import { getServiceColor, getServiceLabel } from "@/constants/constants";
 import {
@@ -17,7 +18,6 @@ import {
   CheckIcon,
   CircleAlert,
   ExternalLinkIcon,
-  FileX,
   Loader,
   MusicIcon,
 } from "lucide-react";
@@ -179,27 +179,10 @@ export default function DetailsPage() {
             <EllipsisLoader text="Loading details" />
           </Box>
         ) : error ? (
-          <Box textAlign="center" py="10vh">
-            <Box
-              w={24}
-              h={24}
-              bg="whiteAlpha.100"
-              display="grid"
-              placeItems="center"
-              mb={4}
-              mx="auto"
-              rounded="full"
-            >
-              <Icon color="whiteAlpha.600" as={FileX} w={14} h={14} />
-            </Box>
-            <Heading fontSize="2xl" fontWeight="bold" mb={4}>
-              Error Loading Details
-            </Heading>
-            <Text color="whiteAlpha.700" fontSize="base" maxW="md" mx="auto">
-              We're having trouble loading your migration details. Please try
-              again.
-            </Text>
-          </Box>
+          <DefaultErrorState
+            title="Error Loading Details"
+            description="We're having trouble loading your migration details. Please try again."
+          />
         ) : null}
 
         {data && (

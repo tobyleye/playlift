@@ -23,6 +23,7 @@ import LoginModal from "@/components/login-modal";
 import EllipsisLoader from "@/components/ellipsis-loader";
 import { useNavigate } from "react-router-dom";
 import { PrimaryButton } from "@/components/buttons";
+import DefaultErrorState from "@/components/errors/default-error-state";
 
 export default function Home() {
   const { session, loadingSession } = useSessionContext();
@@ -31,16 +32,19 @@ export default function Home() {
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchResult = useSWR<PlaylistConversion[]>(
+  const {
+    isLoading: isLoadingConversions,
+    data,
+    error,
+    mutate,
+  } = useSWR<PlaylistConversion[]>(
     session?.user_id ? "/conversions" : null,
     async () => {
       return api.fetchConversions();
     }
   );
 
-  const { isLoading: isLoadingConversions, mutate, error } = fetchResult;
-
-  const { data: conversions = [] } = fetchResult;
+  const conversions = data || [];
 
   const pendingConversions = conversions.filter(
     (conversion) => conversion.status === "pending"
@@ -61,7 +65,7 @@ export default function Home() {
     try {
       setIsLoading(true);
       await api.deleteConversion(conversionId);
-      mutate(conversions.filter((conv: any) => conv.id !== conversionId));
+      mutate(data!.filter((conv: any) => conv.id !== conversionId));
     } catch {
       toast({
         title: "Error restarting conversion",
@@ -80,7 +84,7 @@ export default function Home() {
       setIsLoading(true);
       await api.restartConversion(conversionId);
       mutate(
-        conversions.filter((conv: any) =>
+        data!.filter((conv: any) =>
           conv.id == conversionId ? { ...conv, status: "pending" } : conv
         )
       );
@@ -113,7 +117,7 @@ export default function Home() {
       <Container maxWidth="container.lg" mt={8}>
         <Box display="flex" gap={4} flexWrap="wrap" alignItems="center" mb={8}>
           <Box>
-            <Heading mb={1}>Your migration</Heading>
+            <Heading mb={1}>Your migrations</Heading>
             <Text color="whiteAlpha.700">
               Manage and track your playlist migrations
             </Text>
@@ -121,127 +125,131 @@ export default function Home() {
         </Box>
 
         {isLoadingConversions ? (
-          <Box
-            py={"20vh"}
-            display={"flex"}
-            justifyContent="center"
-            textAlign="center"
-          >
+          <Box py={"20vh"} textAlign="center">
             <EllipsisLoader
               fontSize="xl"
-              color="whiteAlpha.900"
-              text="Loading migrations"
+              color="whiteAlpha.800"
+              text="Loading"
             />
           </Box>
         ) : error ? (
-          <Box>Ooops!</Box>
-        ) : conversions.length === 0 ? (
-          <EmptyState />
-        ) : (
           <Box>
-            <SimpleGrid
-              columns={{ base: 1, md: 2 }}
-              gap={{ base: 4, md: 6 }}
-              mb={12}
-            >
-              {[
-                {
-                  title: "Pending",
-                  count: pendingConversions.length,
-                  icon: (
-                    <Icon color="yellow.500">
-                      <Clock />
-                    </Icon>
-                  ),
-                },
-                {
-                  title: "Completed",
-                  count: completedConversions.length,
-                  icon: (
-                    <Icon color="green.500">
-                      <Check />
-                    </Icon>
-                  ),
-                },
-              ].map((each, idx) => {
-                return (
-                  <Box
-                    key={`stats-card-${idx}`}
-                    display="flex"
-                    alignItems="center"
-                    py={6}
-                    px={6}
-                    border="1px solid"
-                    borderColor="whiteAlpha.300"
-                    rounded="md"
-                    bg="whiteAlpha.200"
-                  >
-                    <Box>
-                      <Text fontWeight="semibold" color="whiteAlpha.500">
-                        {each.title}
-                      </Text>
-                      <Text color="white" fontSize="2xl">
-                        {each.count}
-                      </Text>
-                    </Box>
-
-                    <Box ml="auto">
-                      <Icon w={8} h={8}>
-                        {each.icon}
-                      </Icon>
-                    </Box>
-                  </Box>
-                );
-              })}
-            </SimpleGrid>
-
-            {pendingConversions.length > 0 && (
+            <DefaultErrorState
+              title="Error Loading migrations"
+              description="We're having trouble loading your migrations. Please try again."
+            />
+          </Box>
+        ) : data ? (
+          <Box>
+            {conversions.length === 0 ? (
+              <EmptyState />
+            ) : (
               <Box>
-                <Heading mb={4} fontSize="xl" color="whiteAlpha.800">
-                  Pending Migrations
-                </Heading>
                 <SimpleGrid
-                  columns={{ base: 1, md: 2, lg: 3 }}
-                  gap={6}
-                  pointerEvents={isLoading ? "none" : "auto"}
-                  opacity={isLoading ? 0.5 : 1}
+                  columns={{ base: 1, md: 2 }}
+                  gap={{ base: 4, md: 6 }}
+                  mb={12}
                 >
-                  {pendingConversions.map((conversion) => {
+                  {[
+                    {
+                      title: "Pending",
+                      count: pendingConversions.length,
+                      icon: (
+                        <Icon color="yellow.500">
+                          <Clock />
+                        </Icon>
+                      ),
+                    },
+                    {
+                      title: "Completed",
+                      count: completedConversions.length,
+                      icon: (
+                        <Icon color="green.500">
+                          <Check />
+                        </Icon>
+                      ),
+                    },
+                  ].map((each, idx) => {
                     return (
-                      <ConversionCard
-                        key={conversion.conversion_id}
-                        conversion={conversion}
-                      />
-                    );
-                  })}
-                </SimpleGrid>
-              </Box>
-            )}
+                      <Box
+                        key={`stats-card-${idx}`}
+                        display="flex"
+                        alignItems="center"
+                        py={6}
+                        px={6}
+                        border="1px solid"
+                        borderColor="whiteAlpha.300"
+                        rounded="md"
+                        bg="whiteAlpha.200"
+                      >
+                        <Box>
+                          <Text fontWeight="semibold" color="whiteAlpha.500">
+                            {each.title}
+                          </Text>
+                          <Text color="white" fontSize="2xl">
+                            {each.count}
+                          </Text>
+                        </Box>
 
-            {completedConversions.length > 0 && (
-              <Box mt={12}>
-                <Heading mb={4} fontSize="xl" color="whiteAlpha.800">
-                  Completed Migrations
-                </Heading>
-                <SimpleGrid
-                  columns={{ base: 1, md: 2, lg: 3 }}
-                  gap={6}
-                  pointerEvents={isLoading ? "none" : "auto"}
-                  opacity={isLoading ? 0.5 : 1}
-                >
-                  {completedConversions.map((conversion) => {
-                    return (
-                      <ConversionCard
-                        key={conversion.conversion_id}
-                        conversion={conversion}
-                      />
+                        <Box ml="auto">
+                          <Icon w={8} h={8}>
+                            {each.icon}
+                          </Icon>
+                        </Box>
+                      </Box>
                     );
                   })}
                 </SimpleGrid>
+
+                {pendingConversions.length > 0 && (
+                  <Box>
+                    <Heading mb={4} fontSize="xl" color="whiteAlpha.800">
+                      Pending Migrations
+                    </Heading>
+                    <SimpleGrid
+                      columns={{ base: 1, md: 2, lg: 3 }}
+                      gap={6}
+                      pointerEvents={isLoading ? "none" : "auto"}
+                      opacity={isLoading ? 0.5 : 1}
+                    >
+                      {pendingConversions.map((conversion) => {
+                        return (
+                          <ConversionCard
+                            key={conversion.conversion_id}
+                            conversion={conversion}
+                          />
+                        );
+                      })}
+                    </SimpleGrid>
+                  </Box>
+                )}
+
+                {completedConversions.length > 0 && (
+                  <Box mt={12}>
+                    <Heading mb={4} fontSize="xl" color="whiteAlpha.800">
+                      Completed Migrations
+                    </Heading>
+                    <SimpleGrid
+                      columns={{ base: 1, md: 2, lg: 3 }}
+                      gap={6}
+                      pointerEvents={isLoading ? "none" : "auto"}
+                      opacity={isLoading ? 0.5 : 1}
+                    >
+                      {completedConversions.map((conversion) => {
+                        return (
+                          <ConversionCard
+                            key={conversion.conversion_id}
+                            conversion={conversion}
+                          />
+                        );
+                      })}
+                    </SimpleGrid>
+                  </Box>
+                )}
               </Box>
             )}
           </Box>
-        )}
+        ) : null}
       </Container>
     </Box>
   );
