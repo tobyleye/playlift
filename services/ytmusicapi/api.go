@@ -234,20 +234,6 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 		ToJSON(&jsonResponse).
 		Fetch(ctx)
 
-	// err := builder.BodyJSON(&body).
-	// 	ToBytesBuffer(buf).
-	// 	Fetch(ctx)
-
-	// extra step to handle character encoding issues.
-	// not sure if it's really need. will double check later
-	// Todo: double check if extra step is needed
-	// encodedReader, err := charset.NewReader(buf, "application/json")
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// err = json.NewDecoder(encodedReader).Decode(&jsonResponse)
-
 	if err != nil {
 		return nil, err
 	}
