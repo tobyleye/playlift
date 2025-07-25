@@ -316,20 +316,19 @@ const ConversionCard = ({ conversion }: { conversion: PlaylistConversion }) => {
 
       <Box display="flex" alignItems="center" justifyContent="center" mb={5}>
         <Box
-          w={2}
-          h={2}
-          mr={1}
+          w={3}
+          h={3}
+          mr={2}
           rounded="full"
           bg={getServiceColor(conversion.source_platform)}
         />
         <Text>{getServiceLabel(conversion.source_platform)}</Text>
-        <Icon mx={4}>
-          <ArrowRight />
-        </Icon>
+        <Icon color="whiteAlpha.700" mx={4} as={ArrowRight} />
+
         <Box
-          mr={1}
-          w={2}
-          h={2}
+          mr={2}
+          w={3}
+          h={3}
           rounded="full"
           bg={getServiceColor(conversion.destination_platform)}
         />

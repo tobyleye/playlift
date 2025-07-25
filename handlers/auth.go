@@ -166,7 +166,6 @@ func (h Handlers) GetConnectionStatus(c echo.Context) error {
 	userTokens := []models.Token{}
 	h.Db.Find(&userTokens, "user_id = ?", user.UserId)
 
-	log.Println("user tokens:", userTokens)
 	spotifyConnected := false
 	youtubeConnected := false
 

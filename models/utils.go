@@ -39,7 +39,6 @@ func GetUserTokens(db *gorm.DB, userId string) (UserTokens, error) {
 	var userTokens UserTokens
 
 	for _, token := range tokens {
-		log.Printf("token: %#v\n", tokens)
 		if token.Platform == "youtube" {
 			userTokens.Youtube = &token
 		} else if token.Platform == "spotify" {
