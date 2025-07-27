@@ -450,7 +450,6 @@ func (h Handlers) Convert(c echo.Context) error {
 	// 	// spotify makes this easy though because the playlists cant be passed in batches.
 	// 	// youtube music on the other hand, the playlists have to be fetched one by one.
 
-	// 	// musicLinkInfo, err = SpotifyService.GetSpotifyMusicInfo(h.SpotifyClient, h.Context, parsedLink.ID, parsedLink.Type, isPreview)
 	// 	client, err := config.CreateUserSpotifyClient(h.Db, user.UserId)
 	// 	// we don't expect an error but we check anyways
 	// 	if err != nil {

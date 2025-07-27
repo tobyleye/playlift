@@ -35,6 +35,7 @@ export const SecondaryButton = chakra("button", {
     transition: ".2s ease-in-out",
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: 2,
     py: 2,
     px: 8,
@@ -42,6 +43,11 @@ export const SecondaryButton = chakra("button", {
     color: "white",
     _hover: {
       bg: "whiteAlpha.300",
+    },
+
+    _disabled: {
+      bg: "whiteAlpha.200",
+      opacity: 0.6,
     },
   }),
 });

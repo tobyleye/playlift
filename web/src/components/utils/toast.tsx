@@ -1,4 +1,4 @@
-import { Box, Text, CreateToastFnReturn } from "@chakra-ui/react";
+import { Box, Text, CreateToastFnReturn, ToastId } from "@chakra-ui/react";
 
 export const toastHelper = (
   toastFn: CreateToastFnReturn,
@@ -6,10 +6,12 @@ export const toastHelper = (
     title,
     description,
     status = "info",
+    id,
   }: {
     title: string;
     description: string;
     status?: "info" | "error";
+    id?: ToastId;
   }
 ) => {
   return toastFn({
@@ -19,6 +21,7 @@ export const toastHelper = (
     containerStyle: {
       borderRadius: "md",
     },
+    id: id,
     status: status,
     render(prop) {
       return (
@@ -53,5 +56,21 @@ export const toastHelper = (
         </Box>
       );
     },
+  });
+};
+
+export const serverErrorToast = (
+  toast: CreateToastFnReturn,
+  {
+    id,
+  }: {
+    id?: string;
+  }
+) => {
+  toastHelper(toast, {
+    title: "Server Error",
+    description: "Something went wrong on our end. Please try again later.",
+    status: "error",
+    id,
   });
 };

@@ -8,120 +8,30 @@ import {
   TabPanel,
   TabPanels,
   Tab,
-  Spinner,
   useToast,
   ToastId,
 } from "@chakra-ui/react";
-import { ArrowRight, CheckIcon, MusicIcon } from "lucide-react";
+import { ArrowRight, MusicIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { Playlist } from "@/types";
-import useSWR from "swr";
+import useSWRInfinite from "swr/infinite";
 import api from "@/api/api";
 import { streamingServices } from "@/constants/constants";
 import { useConvertWizardContext } from "./context";
-import { toastHelper } from "@/components/utils/toast";
+import { serverErrorToast, toastHelper } from "@/components/utils/toast";
+import { SecondaryButton } from "@/components/buttons";
+import { PlaylistSelect } from "@/components/playlist-select";
+import EllipsisLoader from "@/components/ellipsis-loader";
 
-function PlaylistList({
-  isLoading,
-  playlists,
-  onToggle,
-  selected,
-}: {
+type YoutubePlaylistsResponse = {
   playlists: Playlist[];
-  onToggle: (playlist: Playlist) => void;
-  selected: string[];
-  isLoading?: boolean;
-}) {
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" py={8}>
-        <Spinner
-          thickness="4px"
-          speed="0.65s"
-          emptyColor="gray.200"
-          color="blue.500"
-          size="lg"
-        />
-      </Box>
-    );
-  }
+  continuation?: string;
+};
 
-  return (
-    <Box display="grid" gap={4}>
-      {playlists.map((pl) => {
-        const isSelected = selected.includes(pl.playlist_id);
-        const isDisabled = pl.total_tracks == 0;
-
-        return (
-          <Box
-            key={pl.playlist_id}
-            as="button"
-            display="flex"
-            alignItems="center"
-            gap={4}
-            py={4}
-            px={4}
-            rounded="lg"
-            border="1px solid"
-            borderColor={"whiteAlpha.200"}
-            w="full"
-            bg="whiteAlpha.100"
-            transition="ease .25s"
-            aria-selected={isSelected}
-            _selected={{
-              bg: "var(--btn-bg-selected)",
-              borderColor: "var(--btn-border-selected)",
-            }}
-            _disabled={{
-              opacity: 0.6,
-            }}
-            _hover={
-              isDisabled
-                ? {}
-                : isSelected
-                ? { opacity: 0.9 }
-                : { bg: "whiteAlpha.300" }
-            }
-            onClick={() => {
-              onToggle(pl);
-            }}
-            disabled={isDisabled}
-          >
-            <Box
-              w={4}
-              h={4}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              rounded={"4px"}
-              border="2px solid"
-              borderColor={
-                isSelected ? "var(--checkbox-bg-selected)" : "whiteAlpha.700"
-              }
-              bg={isSelected ? "var(--checkbox-bg-selected)" : "transparent"}
-            >
-              {isSelected && <CheckIcon />}
-            </Box>
-
-            <Box textAlign="left">
-              <Text
-                fontWeight="medium"
-                style={{
-                  color: "var(--color)",
-                }}
-              >
-                {pl.title}
-              </Text>
-              <Text fontSize="sm" color="whiteAlpha.700">
-                {pl.total_tracks} tracks
-              </Text>
-            </Box>
-          </Box>
-        );
-      })}
-    </Box>
-  );
-}
+type SpotifyPlaylistsResponse = {
+  playlists: Playlist[];
+  next_page: number;
+};
 
 function SpotifyPlaylists({
   selectedPlaylistsIds,
@@ -130,13 +40,34 @@ function SpotifyPlaylists({
   selectedPlaylistsIds: string[];
   onToggle: (playlist: Playlist) => void;
 }) {
-  // this is seperated from the component so it's not fetched immedialtely
-  // and only fetched when the user selects the spotify tab
-  const {
-    data: spotifyPlaylists,
-    isLoading: isLoadingSpotify,
-    // error: _spotifyError,
-  } = useSWR("spotify-playlists", () => api.getSpotifyPlaylists());
+  const toast = useToast();
+
+  const { data, size, setSize, isLoading } =
+    useSWRInfinite<SpotifyPlaylistsResponse>(
+      (_, previousData) => {
+        if (!previousData) return ["spotify-playlists", 1];
+
+        return ["spotify-playlists", previousData.next_page];
+      },
+      (key: [string, number]) => {
+        const [, page] = key;
+        return api.getSpotifyPlaylists(page);
+      },
+      {
+        onError() {
+          serverErrorToast(toast, {
+            id: "youtube-error",
+          });
+        },
+        shouldRetryOnError: false,
+      }
+    );
+
+  const lastPageData = data ? data[data.length - 1] : null;
+
+  const playlists = data ? data.map((d) => d.playlists).flat() : [];
+  const isLoadingMore =
+    isLoading || (size > 0 && data && typeof data[size - 1] === "undefined");
 
   return (
     <Box
@@ -148,15 +79,110 @@ function SpotifyPlaylists({
         },
       }}
     >
-      <PlaylistList
-        playlists={spotifyPlaylists?.playlists ?? []}
+      <PlaylistSelect
+        playlists={playlists}
         selected={selectedPlaylistsIds}
         onToggle={onToggle}
-        isLoading={isLoadingSpotify}
+        isLoading={isLoading}
       />
+
+      {lastPageData && lastPageData.next_page > 0 && (
+        <Box display="flex" justifyContent="center" pt={6}>
+          <SecondaryButton
+            minW={120}
+            onClick={() => setSize(size + 1)}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? <EllipsisLoader text="Loading" /> : `Next`}
+          </SecondaryButton>
+        </Box>
+      )}
+
+      {lastPageData && lastPageData.next_page < 0 && (
+        <Box textAlign="center" mt={4}>
+          <Text color="whiteAlpha.600" fontSize={"sm"}>
+            You've come to the end of your playlists
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }
+
+const YoutubePlaylists = ({
+  selectedPlaylistsIds,
+  onToggle,
+}: {
+  selectedPlaylistsIds: string[];
+  onToggle: (playlist: Playlist) => void;
+}) => {
+  const toast = useToast();
+
+  const { data, size, setSize, isLoading } =
+    useSWRInfinite<YoutubePlaylistsResponse>(
+      (pageIndex, previousData) => {
+        return { pageIndex, continuation: previousData?.continuation };
+      },
+      (args) => {
+        const { continuation } = args;
+        return api.getYoutubePlaylists(continuation);
+      },
+      {
+        onError() {
+          serverErrorToast(toast, {
+            id: "spotify-error",
+          });
+        },
+        shouldRetryOnError: false,
+      }
+    );
+
+  const lastPageData = data ? data[data.length - 1] : null;
+
+  const playlists = data ? data.map((d) => d.playlists).flat() : [];
+
+  const isLoadingMore =
+    isLoading || (size > 0 && data && typeof data[size - 1] === "undefined");
+
+  return (
+    <Box
+      css={{
+        "&": {
+          "--btn-border-selected": "rgb(248, 113, 113)",
+          "--btn-bg-selected": "rgba(239, 68, 68, 0.3)",
+          "--checkbox-bg-selected": "rgb(239, 68, 68)",
+        },
+      }}
+    >
+      <PlaylistSelect
+        playlists={playlists}
+        selected={selectedPlaylistsIds}
+        onToggle={onToggle}
+        isLoading={isLoading}
+      />
+
+      {lastPageData && lastPageData.continuation && (
+        <Box display="flex" justifyContent="center" pt={6}>
+          <SecondaryButton
+            minW={120}
+            onClick={() => setSize(size + 1)}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? <EllipsisLoader text="Loading" /> : `Next`}
+          </SecondaryButton>
+        </Box>
+      )}
+
+      {lastPageData && !lastPageData.continuation && (
+        <Box textAlign="center" mt={4}>
+          <Text color="whiteAlpha.600" fontSize={"sm"}>
+            You've come to the end of your playlists
+          </Text>
+        </Box>
+      )}
+    </Box>
+  );
+};
 
 function PlaylistsSelection() {
   const {
@@ -172,11 +198,6 @@ function PlaylistsSelection() {
 
   //  ids of the selected playlists
   const selectedPlaylistsIds = selectedPlaylists.map((p) => p.playlist_id);
-
-  const { data: youtubePlaylists, isLoading: loadingYoutubePlaylists } = useSWR(
-    "youtube-playlists",
-    () => api.getYoutubePlaylists()
-  );
 
   const toast = useToast();
   const toastRef = useRef<ToastId>();
@@ -279,22 +300,10 @@ function PlaylistsSelection() {
           </TabList>
           <TabPanels>
             <TabPanel p={0}>
-              <Box
-                css={{
-                  "&": {
-                    "--btn-border-selected": "rgb(248, 113, 113)",
-                    "--btn-bg-selected": "rgba(239, 68, 68, 0.3)",
-                    "--checkbox-bg-selected": "rgb(239, 68, 68)",
-                  },
-                }}
-              >
-                <PlaylistList
-                  playlists={youtubePlaylists ?? []}
-                  selected={selectedPlaylistsIds}
-                  isLoading={loadingYoutubePlaylists}
-                  onToggle={togglePlaylist}
-                />
-              </Box>
+              <YoutubePlaylists
+                selectedPlaylistsIds={selectedPlaylistsIds}
+                onToggle={togglePlaylist}
+              />
             </TabPanel>
             {/* initially not mounted */}
             <TabPanel p={0}>
