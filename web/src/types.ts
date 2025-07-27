@@ -1,4 +1,5 @@
 export type Playlist = {
+  id: string;
   title: string;
   total_tracks: number;
   playlist_id: string;

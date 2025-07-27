@@ -52,6 +52,11 @@ type CreatedPlaylist struct {
 	Description string `json:"description"`
 }
 
+type PlaylistPageResponse struct {
+	Continuation string            `json:"continuation"`
+	Playlists    []YoutubePlaylist `json:"playlists"`
+}
+
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
 const YTM_DOMAIN = "https://music.youtube.com"
 
@@ -448,7 +453,6 @@ func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAll
 			break // no more tracks to fetch
 		}
 	}
-	SaveJson(tracks, playlistId+"_all_tracks.json")
 	return PlaylistAllTracksResponse{
 		Total:  len(tracks),
 		Tracks: tracks,
@@ -463,18 +467,40 @@ func getPlaylistTotalTracks(subtitleRuns []interface{}) string {
 	return totalTracks
 }
 
-func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
-	body := map[string]interface{}{
-		"browseId": "FEmusic_liked_playlists",
+func FetchUserPlaylists(httpClient *http.Client, continuation string) (PlaylistPageResponse, error) {
+	var body map[string]interface{}
+
+	if continuation == "" {
+		body = map[string]interface{}{"browseId": "FEmusic_liked_playlists"}
+	} else {
+		body = map[string]interface{}{"continuation": continuation}
 	}
+
 	jsonResponse, err := sendRequest(httpClient, "browse", body)
 
 	if err != nil {
-		return nil, err
+		return PlaylistPageResponse{}, err
 	}
 
-	itemsKey := []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "gridRenderer", "items"}
-	playlistItemsContents := ReadValue(jsonResponse, itemsKey)
+	var playlistItemsContents interface{}
+	var nextContinuation string
+
+	if continuation == "" {
+		itemsKey := []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "gridRenderer", "items"}
+		playlistItemsContents = ReadValue(jsonResponse, itemsKey)
+		nextContinuation = ReadValueString(jsonResponse, []interface{}{
+			"contents", "singleColumnBrowseResultsRenderer", "tabs",
+			0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "gridRenderer",
+			"continuations", 0, "nextContinuationData", "continuation",
+		})
+
+	} else {
+		itemsKey := []interface{}{"continuationContents", "gridContinuation", "items"}
+		playlistItemsContents = ReadValue(jsonResponse, itemsKey)
+		nextContinuation = ReadValueString(jsonResponse, []interface{}{
+			"continuationContents", "gridContinuation", "continuations", 0, "nextContinuationData", "continuation",
+		})
+	}
 
 	youtubePlaylists := []YoutubePlaylist{}
 
@@ -525,7 +551,12 @@ func FetchUserPlaylists(httpClient *http.Client) ([]YoutubePlaylist, error) {
 		}
 	}
 
-	return youtubePlaylists, nil
+	response := PlaylistPageResponse{
+		Continuation: nextContinuation,
+		Playlists:    youtubePlaylists,
+	}
+
+	return response, nil
 }
 
 func CreatePlaylist(client *http.Client, title string, description string, videoIds []string) (CreatedPlaylist, error) {

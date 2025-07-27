@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/db"
@@ -28,21 +26,19 @@ func testCreatePlaylist() error {
 	}
 	fmt.Println("http client..", httpClient)
 
-	playlist, err := ytmusicapi.CreatePlaylist(httpClient,
-		"Test Playlist",
-		"Test description",
-		[]string{},
-	)
+	next := ""
 
-	if err == nil {
-		// do something with the playlists
-		f, _ := os.Create("created-playlist.json")
+	_, err = ytmusicapi.FetchUserPlaylists(httpClient, next)
 
-		defer f.Close()
+	// if err == nil {
+	// 	// do something with the playlists
+	// 	f, _ := os.Create("created-playlist.json")
 
-		return json.NewEncoder(f).Encode(playlist)
+	// 	defer f.Close()
 
-	}
+	// 	return json.NewEncoder(f).Encode(playlist)
+
+	// }
 
 	return err
 }

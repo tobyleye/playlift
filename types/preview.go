@@ -29,7 +29,8 @@ type SimplePlaylistPageItem struct {
 	PlaylistId  string   `json:"playlist_id"`
 }
 
-type SimplePlaylistsPage struct {
+type SpotifyPlaylistPage struct {
 	TotalCount int                      `json:"total_count"`
 	Playlists  []SimplePlaylistPageItem `json:"playlists"`
+	NextPage   int                      `json:"next_page"`
 }

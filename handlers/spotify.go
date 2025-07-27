@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -137,8 +138,16 @@ func (h Handlers) FetchUserSpotifyPlaylists(c echo.Context) error {
 		return c.JSON(400, errorResponse("token not found"))
 	}
 
+	page, err := strconv.Atoi(c.QueryParam("page"))
+
+	if err != nil {
+		page = 1
+	}
+
+	fmt.Println("page...", page)
+
 	ctx := context.Background()
-	playlists, err := SpotifyService.GetUserPlaylists(spotifyClient, ctx)
+	playlists, err := SpotifyService.GetUserPlaylists(ctx, spotifyClient, page)
 
 	if err != nil {
 		// just log, still return playlists

@@ -44,12 +44,24 @@ const api = {
   restartConversion(id: string) {
     return client.post(`/conversions/${id}/restart`).then((res) => res.data);
   },
-  getSpotifyPlaylists() {
-    return client.get("/playlists/spotify").then((res) => res.data);
+  getSpotifyPlaylists(page?: number) {
+    return client
+      .get("/playlists/spotify", {
+        params: {
+          page: page,
+        },
+      })
+      .then((res) => res.data);
   },
 
-  getYoutubePlaylists() {
-    return client.get("/playlists/youtube").then((res) => res.data);
+  getYoutubePlaylists(continuation?: string) {
+    return client
+      .get("/playlists/youtube", {
+        params: {
+          continuation,
+        },
+      })
+      .then((res) => res.data);
   },
   getUserSession: () => client.get("/user/session").then((res) => res.data),
 

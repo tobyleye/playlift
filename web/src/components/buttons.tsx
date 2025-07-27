@@ -35,6 +35,7 @@ export const SecondaryButton = chakra("button", {
     transition: ".2s ease-in-out",
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: 2,
     py: 2,
     px: 8,
