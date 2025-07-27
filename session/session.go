@@ -34,7 +34,7 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 		Path:     "/",
 		MaxAge:   int(expiration.Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteLaxMode,
 		Secure:   true,
 		// Domain:   config.FRONTEND_BASE_URL,
 	}
