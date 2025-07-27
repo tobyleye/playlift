@@ -63,8 +63,6 @@ function SpotifyPlaylists({
       }
     );
 
-  console.log("playlistsResponse..", data);
-
   const lastPageData = data ? data[data.length - 1] : null;
 
   const playlists = data ? data.map((d) => d.playlists).flat() : [];
