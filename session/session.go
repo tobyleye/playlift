@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/sessions"
 	echoSessionMiddleware "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/models"
 )
 
@@ -36,7 +37,7 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		Secure:   true,
-		// Domain:   config.FRONTEND_BASE_URL,
+		Domain:   config.FRONTEND_BASE_URL,
 	}
 
 	// since this function is called after login with youtube
