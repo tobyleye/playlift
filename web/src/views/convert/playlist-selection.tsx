@@ -18,7 +18,7 @@ import useSWRInfinite from "swr/infinite";
 import api from "@/api/api";
 import { streamingServices } from "@/constants/constants";
 import { useConvertWizardContext } from "./context";
-import { toastHelper } from "@/components/utils/toast";
+import { serverErrorToast, toastHelper } from "@/components/utils/toast";
 import { SecondaryButton } from "@/components/buttons";
 import { PlaylistSelect } from "@/components/playlist-select";
 import EllipsisLoader from "@/components/ellipsis-loader";
@@ -40,10 +40,11 @@ function SpotifyPlaylists({
   selectedPlaylistsIds: string[];
   onToggle: (playlist: Playlist) => void;
 }) {
+  const toast = useToast();
+
   const { data, size, setSize, isLoading } =
     useSWRInfinite<SpotifyPlaylistsResponse>(
       (_, previousData) => {
-        console.log("previous data..", previousData);
         if (!previousData) return ["spotify-playlists", 1];
 
         return ["spotify-playlists", previousData.next_page];
@@ -51,6 +52,14 @@ function SpotifyPlaylists({
       (key: [string, number]) => {
         const [, page] = key;
         return api.getSpotifyPlaylists(page);
+      },
+      {
+        onError() {
+          serverErrorToast(toast, {
+            id: "youtube-error",
+          });
+        },
+        shouldRetryOnError: false,
       }
     );
 
@@ -109,6 +118,8 @@ const YoutubePlaylists = ({
   selectedPlaylistsIds: string[];
   onToggle: (playlist: Playlist) => void;
 }) => {
+  const toast = useToast();
+
   const { data, size, setSize, isLoading } =
     useSWRInfinite<YoutubePlaylistsResponse>(
       (pageIndex, previousData) => {
@@ -117,6 +128,14 @@ const YoutubePlaylists = ({
       (args) => {
         const { continuation } = args;
         return api.getYoutubePlaylists(continuation);
+      },
+      {
+        onError() {
+          serverErrorToast(toast, {
+            id: "spotify-error",
+          });
+        },
+        shouldRetryOnError: false,
       }
     );
 

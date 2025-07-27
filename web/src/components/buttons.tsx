@@ -44,6 +44,11 @@ export const SecondaryButton = chakra("button", {
     _hover: {
       bg: "whiteAlpha.300",
     },
+
+    _disabled: {
+      bg: "whiteAlpha.200",
+      opacity: 0.6,
+    },
   }),
 });
 

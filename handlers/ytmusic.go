@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/labstack/echo/v4"
@@ -15,7 +14,6 @@ func (h Handlers) FetchUserYoutubePlaylists(c echo.Context) error {
 	user, _ := session.GetUserFromSession(c)
 
 	continuation := c.QueryParam("continuation")
-	fmt.Println("continuation...", continuation)
 	httpClient, err := config.CreateYoutubeClientForUser(h.Db, user.UserId)
 
 	if err != nil {
@@ -26,7 +24,7 @@ func (h Handlers) FetchUserYoutubePlaylists(c echo.Context) error {
 
 	if err != nil {
 		log.Println("error fetching youtube playlists:", err)
-		return c.JSON(400, errorResponse("Couldn't fetch playlists"))
+		return c.JSON(500, errorResponse("server error"))
 	}
 
 	return c.JSON(200, playlists)

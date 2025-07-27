@@ -135,7 +135,7 @@ func (h Handlers) FetchUserSpotifyPlaylists(c echo.Context) error {
 
 	spotifyClient, err := config.CreateUserSpotifyClient(h.Db, user.UserId)
 	if err != nil {
-		return c.JSON(400, errorResponse("token not found"))
+		return c.JSON(403, errorResponse("error creating spotify client"))
 	}
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
@@ -144,14 +144,13 @@ func (h Handlers) FetchUserSpotifyPlaylists(c echo.Context) error {
 		page = 1
 	}
 
-	fmt.Println("page...", page)
-
 	ctx := context.Background()
 	playlists, err := SpotifyService.GetUserPlaylists(ctx, spotifyClient, page)
 
 	if err != nil {
 		// just log, still return playlists
 		log.Println("error fetching spotify user playlists:", err)
+		return c.JSON(500, errorResponse("server error"))
 	}
 
 	return c.JSON(200, playlists)
