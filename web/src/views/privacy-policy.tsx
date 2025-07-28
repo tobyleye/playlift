@@ -122,11 +122,11 @@ export default function PrivacyPolicy() {
                   If you have any questions about this Privacy Policy or our
                   data practices, please contact us at:{" "}
                   <StyledLink
-                    href="mailto:support@playlist.lol"
+                    href="mailto:hey@playlist.lol"
                     color="gray.300"
                     textDecor="underline"
                   >
-                    support@playlist.lol
+                    hey@playlist.lol
                   </StyledLink>
                 </Text>
               </Box>
