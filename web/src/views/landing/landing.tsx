@@ -106,7 +106,7 @@ export default function Landing() {
           }
         />
 
-        <Box px={6} mt={6}>
+        <Box as="main" px={6} mt={6}>
           <Box mb={20} maxWidth={896} mx="auto">
             {/*   heading */}
             <Box mb={16} textAlign="center">
@@ -245,27 +245,50 @@ export default function Landing() {
               ))}
             </SimpleGrid>
           </Box>
-
-          <Box as="footer" pt={4} pb={6} textAlign="center">
-            <Text color="white">
-              <StyledLink
-                fontWeight="semibold"
-                textDecor="underline"
-                _hover={{
-                  textDecor: "underline",
-                }}
-                href="http://oluwatobi.vercel.app"
-                rel="noreferrer"
-                target="_blank"
-              >
-                Oluwatobi
-              </StyledLink>
-              {"・"}
-              ❤️
-            </Text>
-          </Box>
         </Box>
 
+        <Box
+          as="footer"
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          pt={4}
+          pb={6}
+          px={4}
+          mx="auto"
+          w={{
+            base: "full",
+            lg: "90%",
+          }}
+          textAlign="center"
+        >
+          <StyledLink
+            as={Link}
+            to="/privacy-policy"
+            fontWeight="semibold"
+            textDecor="underline"
+            _hover={{ textDecor: "underline" }}
+            color="whiteAlpha.800"
+          >
+            Privacy Policy
+          </StyledLink>
+          <Text color="white">
+            <StyledLink
+              fontWeight="semibold"
+              textDecor="underline"
+              _hover={{
+                textDecor: "underline",
+              }}
+              href="http://oluwatobi.vercel.app"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Oluwatobi
+            </StyledLink>
+            {"・"}
+            ❤️
+          </Text>
+        </Box>
         <Outlet />
       </Box>
     </Box>
