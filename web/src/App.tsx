@@ -20,6 +20,7 @@ const PlaylistsSelection = lazy(
   () => import("./views/convert/playlist-selection.tsx")
 );
 const DetailsPage = lazy(() => import("./views/details-page/details-page.tsx"));
+const PrivacyPolicy = lazy(() => import("./views/privacy-policy.tsx"));
 
 const PrivateRouteProtector = () => {
   const [loggedIn] = useState(() => localStorage.getItem("userId") !== null);
@@ -67,6 +68,7 @@ function App() {
                   <Route path="/home" element={<Home />} />
                   <Route path="/details/:id" element={<DetailsPage />} />
                 </Route>
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
