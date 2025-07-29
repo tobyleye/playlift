@@ -17,6 +17,8 @@ import (
 	"github.com/tobyleye/playlift/models"
 	SpotifyService "github.com/tobyleye/playlift/services/spotify"
 	"github.com/tobyleye/playlift/session"
+	"github.com/tobyleye/playlift/types"
+	"github.com/zmb3/spotify/v2"
 	"golang.org/x/oauth2"
 )
 
@@ -146,6 +148,23 @@ func (h Handlers) FetchUserSpotifyPlaylists(c echo.Context) error {
 
 	ctx := context.Background()
 	playlists, err := SpotifyService.GetUserPlaylists(ctx, spotifyClient, page)
+	if page == 1 {
+		// Fetch liked songs playlist and add it to the top of the list
+		likedPlaylist, err := spotifyClient.CurrentUsersTracks(ctx, spotify.Limit(1))
+		if err == nil {
+			formattedLikedPlaylist := types.SimplePlaylistPageItem{
+				Url:         "https://open.spotify.com/collection/tracks", // kinda like fixed for everyone
+				Title:       "Liked Music",
+				Description: "Your liked songs on Spotify",
+				TotalTracks: int(likedPlaylist.Total),
+				Thumbnails:  []string{},
+				PlaylistId:  "LM",
+			}
+			playlists.Playlists = append([]types.SimplePlaylistPageItem{formattedLikedPlaylist}, playlists.Playlists...)
+
+		}
+
+	}
 
 	if err != nil {
 		// just log, still return playlists

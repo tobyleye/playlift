@@ -22,6 +22,15 @@ func (h Handlers) FetchUserYoutubePlaylists(c echo.Context) error {
 
 	playlists, err := ytmusicapi.FetchUserPlaylists(httpClient, continuation)
 
+	if continuation == "" {
+		playlistDetails, err := ytmusicapi.FetchLikedPlaylist(httpClient)
+		if err == nil {
+			playlists.Playlists = append([]ytmusicapi.YoutubePlaylist{playlistDetails}, playlists.Playlists...)
+		} else {
+			log.Println("error fetching liked playlist:", err)
+		}
+	}
+
 	if err != nil {
 		log.Println("error fetching youtube playlists:", err)
 		return c.JSON(500, errorResponse("server error"))
