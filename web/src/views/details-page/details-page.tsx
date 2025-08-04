@@ -155,7 +155,7 @@ export default function DetailsPage() {
   return (
     <Box pb={10}>
       <Nav />
-      <Container mt={6}>
+      <Container maxW="container.md" mt={6}>
         {!!(data || error) && (
           <Box mb={6}>
             <StyledLink
@@ -187,8 +187,6 @@ export default function DetailsPage() {
 
         {data && (
           <Box>
-            {/* back button */}
-
             {/* header */}
             <Box
               blur={16}

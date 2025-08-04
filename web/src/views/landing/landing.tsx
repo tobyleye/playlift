@@ -15,18 +15,18 @@ import { ArrowRight, Music, Play } from "lucide-react";
 import Nav from "@/components/nav";
 import { useSessionContext } from "@/contexts/session";
 import { useGoogleLogin } from "@react-oauth/google";
-import useLoggedIn from "@/hooks/useLoggedIn";
 import { FcGoogle } from "react-icons/fc";
 import { SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
 import EllipsisLoader from "@/components/ellipsis-loader";
 import { client } from "@/api/api";
 import { useState } from "react";
+import useLoggedIn from "@/hooks/useLoggedIn";
 
 export default function Landing() {
   const { session, loadingSession, setSession } = useSessionContext();
-  const loggedIn = useLoggedIn();
 
+  const isLoggedIn = useLoggedIn();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -71,7 +71,7 @@ export default function Landing() {
     // redirect_uri: window.location.origin + "/login/callback",
   });
 
-  if (loggedIn) {
+  if (isLoggedIn) {
     return <Navigate to="/home" replace />;
   }
 

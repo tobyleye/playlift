@@ -10,7 +10,7 @@ import {
   Avatar,
   MenuButton,
 } from "@chakra-ui/react";
-import { User, LogOut, ArrowLeftRight } from "lucide-react";
+import { User, LogOut, ArrowLeftRight, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function UserMenu() {
@@ -107,6 +107,21 @@ export default function UserMenu() {
         >
           <Icon as={ArrowLeftRight} w={4} h={4} mr={2} />
           New migration
+        </MenuItem>
+
+        <Box h="1px" bg="whiteAlpha.200" />
+
+        <MenuItem
+          as={Link}
+          to="/settings"
+          bg="unset"
+          _hover={{ bg: "whiteAlpha.100" }}
+          _focus={{ bg: "whiteAlpha.100" }}
+          display="flex"
+          alignItems="center"
+        >
+          <Icon as={Settings} w={4} h={4} mr={2} />
+          Settings
         </MenuItem>
 
         <Box h="1px" bg="whiteAlpha.200" />

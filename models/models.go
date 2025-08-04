@@ -27,6 +27,7 @@ type User struct {
 	SpotifyId                 string `json:"spotify_id"`
 	YoutubeId                 string `json:"youtube_id"`
 	PlatformsConnectionStatus PlatformsConnectionStatus
+	Active                    bool `gorm:"default:true" json:"active"`
 }
 
 type Conversion struct {

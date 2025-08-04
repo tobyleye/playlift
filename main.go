@@ -126,6 +126,7 @@ func main() {
 	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)
 	privateRoutes.GET("/connection-status", handlers.GetConnectionStatus)
 	privateRoutes.POST("/logout", handlers.Logout)
+	privateRoutes.POST("/deactivate-account", handlers.DeactivateAccount)
 
 	// serve frontend. this should always be done after routes are registered
 	port := os.Getenv("PORT")

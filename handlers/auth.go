@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -96,9 +95,9 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 		return c.JSON(500, errorResponse("server error"))
 	}
 
-	var user models.User
+	user := new(models.User)
 
-	h.Db.Model(&models.User{}).Preload("Tokens").Where("email = ?", userInfo.Email).First(&user)
+	h.Db.Model(&models.User{}).Preload("Tokens").Where("email = ?", userInfo.Email).First(user)
 
 	userId := user.UserId
 
@@ -109,7 +108,7 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 		userId = uuid.New().String()
 
-		user := &models.User{
+		user = &models.User{
 			UserId:    userId,
 			Email:     userInfo.Email,
 			Name:      userInfo.Name,
@@ -135,7 +134,7 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 
 	models.UpsertTokenForUser(h.Db, &token)
 
-	userSession, err := session.CreateSession(c, &user)
+	userSession, err := session.CreateSession(c, user)
 
 	if err != nil {
 		log.Println("error creating session", err)
@@ -157,8 +156,6 @@ func (h Handlers) GetUserSession(c echo.Context) error {
 	// session, _ := echoSessionMiddleware.Get("user", c)
 
 	user, _ := session.GetUserFromSession(c)
-
-	fmt.Printf("user: %v\n", user)
 
 	return c.JSON(200, user)
 
