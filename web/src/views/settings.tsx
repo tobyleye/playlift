@@ -124,7 +124,7 @@ export default function Settings() {
           </Box>
 
           <Box>
-            <VStack spacing={6} align="stretch">
+            <VStack spacing={8} align="stretch">
               {/* User Information */}
               <Card
                 bg="whiteAlpha.100"
@@ -140,7 +140,7 @@ export default function Settings() {
                       </Heading>
                     </HStack>
                     <Text color="whiteAlpha.700" fontSize="sm">
-                      Your basic account details
+                      Your account details
                     </Text>
                   </Box>
                   <HStack spacing={4}>
