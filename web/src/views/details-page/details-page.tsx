@@ -164,11 +164,13 @@ export default function DetailsPage() {
               gap={2}
               as={Link}
               to="/home"
+              color="whiteAlpha.700"
               _hover={{
                 textDecoration: "none",
+                color: "white",
               }}
             >
-              <ArrowLeft />
+              <Icon as={ArrowLeft} />
               Back to dashboard
             </StyledLink>
           </Box>

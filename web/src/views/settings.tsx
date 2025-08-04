@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowLeft, User, AlertTriangle, Trash2 } from "lucide-react";
 import {
   Box,
@@ -31,6 +31,7 @@ import {
   ModalBody,
   ModalOverlay,
   useToast,
+  Link as StyledLink,
 } from "@chakra-ui/react";
 import Nav from "@/components/nav";
 import { useSessionContext } from "@/contexts/session";
@@ -95,21 +96,25 @@ export default function Settings() {
       <Nav />
       <Container maxW="container.lg" py={8}>
         {/* Header */}
-        <VStack align="stretch" spacing={8}>
+        <VStack align="stretch" maxW="2xl" spacing={8}>
           <Box>
-            <Button
-              px={0}
+            <StyledLink
+              display="inline-flex"
+              alignItems="center"
+              gap={2}
               as={Link}
-              to="/dashboard"
-              variant="ghost"
+              to="/home"
               color="whiteAlpha.700"
-              _hover={{ color: "white" }}
-              leftIcon={<Icon as={ArrowLeft} />}
+              _hover={{
+                textDecoration: "none",
+                color: "white",
+              }}
               mb={4}
-              size="sm"
             >
-              Back to Dashboard
-            </Button>
+              <Icon as={ArrowLeft} />
+              Back to dashboard
+            </StyledLink>
+
             <Heading size="xl" color="white" mb={2}>
               Settings
             </Heading>
@@ -118,7 +123,7 @@ export default function Settings() {
             </Text>
           </Box>
 
-          <Box maxW="2xl">
+          <Box>
             <VStack spacing={6} align="stretch">
               {/* User Information */}
               <Card
