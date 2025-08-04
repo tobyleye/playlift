@@ -71,6 +71,10 @@ const api = {
   getConnectionStatus: () => {
     return client.get("/connection-status").then((res) => res.data);
   },
+
+  deactivateAccount: () => {
+    return client.post("/deactivate-account");
+  },
 };
 
 export default api;

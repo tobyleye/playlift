@@ -93,7 +93,7 @@ function SpotifyPlaylists({
             onClick={() => setSize(size + 1)}
             disabled={isLoadingMore}
           >
-            {isLoadingMore ? <EllipsisLoader text="Loading" /> : `Next`}
+            {isLoadingMore ? <EllipsisLoader text="Loading" /> : `Load more`}
           </SecondaryButton>
         </Box>
       )}
@@ -168,7 +168,7 @@ const YoutubePlaylists = ({
             onClick={() => setSize(size + 1)}
             disabled={isLoadingMore}
           >
-            {isLoadingMore ? <EllipsisLoader text="Loading" /> : `Next`}
+            {isLoadingMore ? <EllipsisLoader text="Loading" /> : `Load more`}
           </SecondaryButton>
         </Box>
       )}

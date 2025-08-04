@@ -155,7 +155,7 @@ export default function DetailsPage() {
   return (
     <Box pb={10}>
       <Nav />
-      <Container mt={6}>
+      <Container maxW="container.md" mt={6}>
         {!!(data || error) && (
           <Box mb={6}>
             <StyledLink
@@ -164,11 +164,13 @@ export default function DetailsPage() {
               gap={2}
               as={Link}
               to="/home"
+              color="whiteAlpha.700"
               _hover={{
                 textDecoration: "none",
+                color: "white",
               }}
             >
-              <ArrowLeft />
+              <Icon as={ArrowLeft} />
               Back to dashboard
             </StyledLink>
           </Box>
@@ -187,8 +189,6 @@ export default function DetailsPage() {
 
         {data && (
           <Box>
-            {/* back button */}
-
             {/* header */}
             <Box
               blur={16}

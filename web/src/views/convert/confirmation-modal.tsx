@@ -33,7 +33,7 @@ export default function ConfirmationModal({
 
   return (
     <Modal isOpen={open} onClose={() => setOpen(false)}>
-      <ModalOverlay bg="blackAlpha.500" opacity={0.5} />
+      <ModalOverlay bg="blackAlpha.800" />
 
       <ModalContent
         bg="gray.900"

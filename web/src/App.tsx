@@ -21,9 +21,10 @@ const PlaylistsSelection = lazy(
 );
 const DetailsPage = lazy(() => import("./views/details-page/details-page.tsx"));
 const PrivacyPolicy = lazy(() => import("./views/privacy-policy.tsx"));
+const Settings = lazy(() => import("./views/settings.tsx"));
 
 const PrivateRouteProtector = () => {
-  const [loggedIn] = useState(() => localStorage.getItem("userId") !== null);
+  const [loggedIn] = useState(() => !!localStorage.getItem("userId"));
   if (!loggedIn) {
     return <Navigate to="/" replace />;
   } else {
@@ -67,6 +68,7 @@ function App() {
                 <Route path="/" element={<PrivateRouteProtector />}>
                   <Route path="/home" element={<Home />} />
                   <Route path="/details/:id" element={<DetailsPage />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Route>
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 

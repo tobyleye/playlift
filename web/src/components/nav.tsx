@@ -2,11 +2,11 @@ import { Box, Link as StyledLink } from "@chakra-ui/react";
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import Logo from "@/components/logo";
-import useLoggedIn from "@/hooks/useLoggedIn";
 import UserMenu from "./user-menu";
+import useLoggedIn from "@/hooks/useLoggedIn";
 
 export default function Nav({ rightElement }: { rightElement?: ReactNode }) {
-  const loggedIn = useLoggedIn();
+  const isLoggedIn = useLoggedIn();
 
   return (
     <Box as="nav" py={4}>
@@ -23,7 +23,7 @@ export default function Nav({ rightElement }: { rightElement?: ReactNode }) {
         <Box color="white" flexShrink={0} mr={6}>
           <StyledLink
             as={Link}
-            to={loggedIn ? "/home" : "/"}
+            to={isLoggedIn ? "/home" : "/"}
             fontWeight={800}
             fontSize="2xl"
             textDecor={"none"}
