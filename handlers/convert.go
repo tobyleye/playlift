@@ -29,25 +29,25 @@ type PlaylistDetails struct {
 
 type AllPlaylistDetails map[string]PlaylistDetails
 
-func formatSpotifyPlaylistTrack(track spotify.PlaylistItem) models.PlaylistTrack {
+var LIKED_PLAYLIST_ID = "LM" // Liked music playlist ID is always "LM"
 
-	trackInner := track.Track.Track
+func formatSpotifyPlaylistTrack(track *spotify.FullTrack) models.PlaylistTrack {
 
 	artists := []string{}
-	for _, artist := range trackInner.Artists {
+	for _, artist := range track.Artists {
 		artists = append(artists, artist.Name)
 	}
 	formattedTrack := models.PlaylistTrack{
-		TrackId: string(trackInner.ID),
-		Title:   trackInner.Name,
+		TrackId: string(track.ID),
+		Title:   track.Name,
 		Artists: artists,
-		Album:   trackInner.Album.Name,
+		Album:   track.Album.Name,
 	}
 	return formattedTrack
 
 }
 
-func formatSpotifyPlaylistTracks(tracks []spotify.PlaylistItem) []models.PlaylistTrack {
+func formatSpotifyPlaylistTracks(tracks []*spotify.FullTrack) []models.PlaylistTrack {
 	formattedTracks := []models.PlaylistTrack{}
 
 	for _, track := range tracks {
@@ -73,27 +73,48 @@ func formatYoutubePlaylistTracks(tracks []ytmusicapi.Track) []models.PlaylistTra
 	return formattedTracks
 }
 
-func getAllPlaylistTracks(spotifyClient *spotify.Client, ctx context.Context, playlistId string) ([]spotify.PlaylistItem, error) {
-	var playlistTracks []spotify.PlaylistItem
+func getAllPlaylistTracks(spotifyClient *spotify.Client, ctx context.Context, playlistId string) ([]*spotify.FullTrack, error) {
+	var playlistTracks []*spotify.FullTrack
 	// options := spotify.RequestOption() // Spotify API allows a maximum of 100 items per request, but we use 50 for better performance
 
 	offset := 0
 	limit := 50
 
 	for {
-		tracks, err := spotifyClient.GetPlaylistItems(ctx, spotify.ID(playlistId),
-			spotify.Limit(limit), spotify.Offset(offset),
-		)
-		if err != nil {
-			return nil, err
+		hasNext := false
+		if playlistId == LIKED_PLAYLIST_ID {
+			savedTracks, err := spotifyClient.CurrentUsersTracks(ctx, spotify.Limit(limit), spotify.Offset(offset))
+			if err != nil {
+				return nil, err
+			}
+
+			for _, track := range savedTracks.Tracks {
+				playlistTracks = append(playlistTracks, &track.FullTrack)
+			}
+
+			hasNext = savedTracks.Next != ""
+		} else {
+			tracks, err := spotifyClient.GetPlaylistItems(ctx, spotify.ID(playlistId),
+				spotify.Limit(limit), spotify.Offset(offset),
+			)
+
+			if err != nil {
+				return nil, err
+			}
+
+			for _, track := range tracks.Items {
+				playlistTracks = append(playlistTracks, track.Track.Track)
+
+			}
+			hasNext = tracks.Next != ""
+
 		}
 
-		playlistTracks = append(playlistTracks, tracks.Items...)
-		if tracks.Next == "" {
+		if hasNext == false {
 			break
 		}
 
-		offset += len(tracks.Items)
+		offset += limit
 
 	}
 
@@ -219,21 +240,32 @@ func startConversions(db *gorm.DB, conversions ...*models.PlaylistConversion) {
 
 			}
 
-			playlist, err := spotifyClient.GetPlaylist(ctx, spotify.ID(conversion.PlaylistId))
-			if err != nil {
-				log.Println("error getting playlist details:", err)
-				return err
-			}
+			if conversion.PlaylistId == LIKED_PLAYLIST_ID {
+				// update playlist details
+				conversion.PlaylistTitle = "Liked Music"
+				conversion.PlaylistLink = "https://open.spotify.com/collection/tracks"
+			} else {
+				playlist, err := spotifyClient.GetPlaylist(ctx, spotify.ID(conversion.PlaylistId))
+				if err != nil {
+					log.Println("error getting playlist details:", err)
+					return err
+				}
 
-			// update playlist details
-			conversion.PlaylistTitle = playlist.Name
-			conversion.PlaylistLink = playlist.ExternalURLs["spotify"]
-			conversion.TotalTracks = int(playlist.Tracks.Total)
+				// update playlist details
+				conversion.PlaylistTitle = playlist.Name
+				conversion.PlaylistLink = playlist.ExternalURLs["spotify"]
+				conversion.TotalTracks = int(playlist.Tracks.Total)
+
+			}
 
 			db.Save(conversion)
 
 			playlistTracks, err := getAllPlaylistTracks(spotifyClient, ctx, conversion.PlaylistId)
-
+			totalTracks := len(playlistTracks)
+			// set if the total tracks is not set
+			if conversion.TotalTracks == -1 {
+				conversion.TotalTracks = totalTracks
+			}
 			if err != nil {
 				log.Println("error getting all playlist tracks client:", err)
 				return err

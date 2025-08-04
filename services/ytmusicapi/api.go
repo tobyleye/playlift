@@ -33,6 +33,7 @@ type PlaylistDetails struct {
 	TotalTracks    int
 	PlaylistTracks []Track
 	Link           string
+	Thumbnails     []string
 }
 
 type PlaylistAllTracksResponse struct {
@@ -586,6 +587,24 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 		Title:       title,
 		Description: description,
 	}, nil
+}
+
+func FetchLikedPlaylist(client *http.Client) (YoutubePlaylist, error) {
+	// Fetch the liked playlists
+	playlistId := "LM" // Liked music playlist ID is always "LM"
+	playlistDetails, err := FetchPlaylist(client, playlistId)
+	if err != nil {
+		return YoutubePlaylist{}, err
+
+	}
+	playlist := YoutubePlaylist{
+		Title:       playlistDetails.Title,
+		Thumbnails:  playlistDetails.Thumbnails,
+		TotalTracks: strconv.Itoa(playlistDetails.TotalTracks),
+		PlaylistId:  playlistId,
+		Url:         createPlaylistLink(playlistId),
+	}
+	return playlist, err
 }
 
 // ExtractPlaylistsFromNextPage extracts playlist information from a next-page continuation response
