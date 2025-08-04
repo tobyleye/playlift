@@ -48,9 +48,9 @@ func (h Handlers) GetSingleConversion(c echo.Context) error {
 
 func (h Handlers) DeleteConversion(c echo.Context) error {
 	conversionId := c.Param("id")
-	var conversion models.Conversion
+	var conversion models.PlaylistConversion
 	h.Db.First(&conversion, "id = ?", conversionId)
-	if conversion.ID == "" {
+	if conversion.ConversionID == "" {
 		return c.JSON(404, struct{}{})
 	}
 	h.Db.Delete(&conversion)

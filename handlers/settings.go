@@ -15,8 +15,8 @@ func (h *Handlers) DeactivateAccount(c echo.Context) error {
 	user, _ := session.GetUserFromSession(c)
 
 	err := h.Db.Transaction(func(tx *gorm.DB) error {
-		// Delete user playlists
 
+		// deactivate user..
 		if err := tx.Model(&models.User{}).Where("user_id = ?", user.UserId).Updates(models.User{
 			Active: false,
 			Email:  fmt.Sprintf("%s-deactivated-%d", user.Email, time.Now().UnixMilli()),

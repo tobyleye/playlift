@@ -18,34 +18,15 @@ type Token struct {
 }
 
 type User struct {
-	UserId                    string    `gorm:"primaryKey;size:200;unique" json:"user_id"`
-	Email                     string    `gorm:"size:200;unique" json:"username"`
-	Name                      string    `gorm:"size:200" json:"name"`
-	Picture                   string    `json:"picture"`
-	CreatedAt                 time.Time `json:"created_at"`
-	Tokens                    []Token
-	SpotifyId                 string `json:"spotify_id"`
-	YoutubeId                 string `json:"youtube_id"`
-	PlatformsConnectionStatus PlatformsConnectionStatus
-	Active                    bool `gorm:"default:true" json:"active"`
-}
-
-type Conversion struct {
-	Title                  string                 `gorm:"column:title" json:"title"`
-	ID                     string                 `gorm:"primaryKey" json:"id"`
-	Link                   string                 `gorm:"column:link" json:"link"`
-	ResourceType           string                 `gorm:"column:resource_type" json:"resource_type"`
-	ResourceId             string                 `gorm:"column:resource_id" json:"resource_id"`
-	SourcePlatform         string                 `gorm:"column:source_platform" json:"source_platform"`
-	DestinationPlatform    string                 `gorm:"column:destination_platform" json:"destination_platform"`
-	CreatedAt              time.Time              `gorm:"column:created_at" json:"created_at"`
-	Status                 string                 `gorm:"column:status" json:"status"`
-	PlaylistInfo           interface{}            `gorm:"serializer:json;column:playlist_info" json:"playlist_info"`
-	Result                 map[string]interface{} `gorm:"serializer:json;column:result" json:"result"`
-	UserId                 string                 `gorm:"column:user_id" json:"user_id"`
-	User                   User
-	PlaylistCreationStatus bool   `gorm:"column:playlist_creation_status" json:"playlist_creation_status"`
-	CreatedPlaylistLink    string `gorm:"column:created_playlist_link" json:"created_playlist_link"`
+	UserId    string    `gorm:"primaryKey;size:200;unique" json:"user_id"`
+	Email     string    `gorm:"size:200;unique" json:"username"`
+	Name      string    `gorm:"size:200" json:"name"`
+	Picture   string    `json:"picture"`
+	CreatedAt time.Time `json:"created_at"`
+	Tokens    []Token
+	SpotifyId string `json:"spotify_id"`
+	YoutubeId string `json:"youtube_id"`
+	Active    bool   `gorm:"default:true" json:"active"`
 }
 
 type PlaylistTrack struct {
@@ -74,10 +55,4 @@ type PlaylistConversion struct {
 	PlaylistTracks      []PlaylistTrack                  `gorm:"serializer:json;column:playlist_tracks" json:"playlist_tracks"`
 	Result              map[string]TrackConversionResult `gorm:"serializer:json;column:result" json:"result"`
 	CreatedPlaylistLink string                           `gorm:"column:created_playlist_link" json:"created_playlist_link"`
-}
-
-type PlatformsConnectionStatus struct {
-	UserId       string `gorm:"primaryKey" json:"user_id"`
-	Spotify      bool   `json:"spotify"`
-	YoutubeMusic bool   `json:"youtube_music"`
 }

@@ -67,7 +67,6 @@ func main() {
 		&models.User{},
 		&models.PlaylistConversion{},
 		&models.Token{},
-		&models.Conversion{},
 	)
 
 	e := echo.New()

@@ -73,7 +73,7 @@ const api = {
   },
 
   deactivateAccount: () => {
-    return client.post("/deactivate-account").then((res) => res.data);
+    return client.post("/deactivate-account");
   },
 };
 
