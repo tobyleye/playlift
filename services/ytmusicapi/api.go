@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -60,6 +61,10 @@ type PlaylistPageResponse struct {
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
 const YTM_DOMAIN = "https://music.youtube.com"
+const AND_SEPERATOR = "&"
+const COMMA = ","
+
+var TRACK_TITLE_WITH_FEAT_REGEX = regexp.MustCompile(`(.*?) \(feat. (.*?)\)`)
 
 var headers = map[string]string{
 	"user-agent":   USER_AGENT,
@@ -172,11 +177,13 @@ func getParam2(filter string) string {
 	return filterParams[filter]
 }
 
-func getArtists(artistsFlexRendererRuns []interface{}) []string {
+func getArtists(artistsFlexRendererRuns interface{}) []string {
 	var artists = []string{}
-	for _, artistRun := range artistsFlexRendererRuns {
+	artistsRuns, _ := artistsFlexRendererRuns.([]interface{})
+	for _, artistRun := range artistsRuns {
 		artist := ReadValueString(artistRun, []interface{}{"text"})
-		if artist != "" {
+		artist = strings.TrimSpace(artist)
+		if artist != "" && artist != AND_SEPERATOR && artist != COMMA {
 			artists = append(artists, artist)
 		}
 	}
@@ -187,15 +194,21 @@ func parseTrack(result interface{}) Track {
 	result = ReadValue(result, []interface{}{"musicResponsiveListItemRenderer"})
 	flexColumns := ReadValue(result, []interface{}{"flexColumns"})
 
-	var title string = ""
-	// var artist string = ""
-	var artists []string
+	title := ReadValueString(flexColumns, []interface{}{0, "musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "text"})
+	artists := getArtists(
+		ReadValue(flexColumns, []interface{}{1, "musicResponsiveListItemFlexColumnRenderer", "text", "runs"}),
+	)
 
-	flexColumnsSlice, ok := flexColumns.([]interface{})
-	if ok {
-		title = ReadValueString(flexColumnsSlice[0], []interface{}{"musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "text"})
-		artists = getArtists(ReadValue(flexColumnsSlice[1], []interface{}{"musicResponsiveListItemFlexColumnRenderer", "text", "runs"}).([]interface{}))
-		// artist = ReadValueString(flexColumnsSlice[1], []interface{}{"musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "text"})
+	// check if title has featured artist
+	titleWithFeaturedArtists := TRACK_TITLE_WITH_FEAT_REGEX.FindStringSubmatch(title)
+
+	if len(titleWithFeaturedArtists) > 2 {
+		title = titleWithFeaturedArtists[1]
+		artist := titleWithFeaturedArtists[2]
+		artists = append(artists,
+			strings.Split(artist,
+				fmt.Sprintf(" %s ", AND_SEPERATOR),
+			)...)
 	}
 
 	videoId := ReadValueString(result, []interface{}{
