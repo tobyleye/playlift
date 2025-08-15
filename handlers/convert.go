@@ -326,7 +326,7 @@ func runSingleConversion(db *gorm.DB, cache *redis.Client, conversion *models.Pl
 					log.Println("error searching for track on youtube music:", err)
 					trackConversionResult.Error = "server error"
 
-				} else if searchResult.ID == "" {
+				} else if searchResult == nil {
 					log.Println("no result found for track:", track.Title)
 					trackConversionResult.Error = "Not found"
 
