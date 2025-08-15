@@ -139,20 +139,27 @@ export default function DetailsPage() {
 
   const getFilteredTracks = () => {
     if (!data) return [];
-    if (!data.result) return data.playlist_tracks;
+    const playlistTracks = data.playlist_tracks || [];
+    if (!data.result) return playlistTracks;
 
     if (trackFilter === "completed") {
-      return data.playlist_tracks.filter(
-        (track) => data.result![track.id]?.data
-      );
+      return playlistTracks.filter((track) => data.result![track.id]?.data);
     } else if (trackFilter === "failed") {
-      return data.playlist_tracks.filter(
-        (track) => data.result![track.id]?.error
-      );
+      return playlistTracks.filter((track) => data.result![track.id]?.error);
     }
 
     return data.playlist_tracks;
   };
+
+  const formatDuration = (duration: number) => {
+    duration = Math.round(duration);
+    if (duration > 60) {
+      return `${Math.floor(duration / 60)} mins, ${duration % 60} secs`;
+    }
+
+    return `${duration} secs`;
+  };
+
   return (
     <Box pb={10}>
       <Nav />
@@ -203,7 +210,7 @@ export default function DetailsPage() {
                   <Heading fontSize="2xl">{data?.playlist_title}</Heading>
                   {["completed", "failed"].includes(data.status) && (
                     <Text ml="auto" fontSize="sm" color="whiteAlpha.600">
-                      Took {data.time_taken.toFixed(2)} seconds
+                      Took {formatDuration(data.time_taken)}
                     </Text>
                   )}
                 </Box>
@@ -373,7 +380,7 @@ export default function DetailsPage() {
                     return (
                       <Box
                         className="track-item"
-                        key={track.id}
+                        key={`track-id-${track.id}-${index}`}
                         display="flex"
                         alignItems="center"
                         gap={2}
