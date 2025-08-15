@@ -276,7 +276,7 @@ export default function Landing() {
           <Box display="flex" alignItems="center" gap={4}>
             <StyledLink
               as={Link}
-              to="/privacy-policy"
+              to="mailto:hey@playlift.lol?subject=Hey Playlift"
               fontWeight="semibold"
               color="whiteAlpha.800"
             >
