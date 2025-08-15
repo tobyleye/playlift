@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"github.com/tobyleye/playlift/types"
 )
 
 // ****** ------- models ----------- *****
@@ -29,12 +31,12 @@ type User struct {
 	Active    bool   `gorm:"default:true" json:"active"`
 }
 
-type PlaylistTrack struct {
-	TrackId string   `gorm:"primaryKey;column:track_id" json:"track_id"`
-	Title   string   `gorm:"column:title" json:"title"`
-	Artists []string `gorm:"column:artists" json:"artists"`
-	Album   string   `gorm:"column:album" json:"album"`
-}
+// type PlaylistTrack struct {
+// 	TrackId string   `gorm:"primaryKey;column:track_id" json:"track_id"`
+// 	Title   string   `gorm:"column:title" json:"title"`
+// 	Artists []string `gorm:"column:artists" json:"artists"`
+// 	Album   string   `gorm:"column:album" json:"album"`
+// }
 
 type TrackConversionResult struct {
 	Error string `json:"error,omitempty"`
@@ -52,7 +54,8 @@ type PlaylistConversion struct {
 	TotalTracks         int                              `gorm:"column:total_tracks" json:"total_tracks"`
 	CreatedAt           time.Time                        `gorm:"column:created_at" json:"created_at"`
 	UserId              string                           `gorm:"column:user_id" json:"user_id"`
-	PlaylistTracks      []PlaylistTrack                  `gorm:"serializer:json;column:playlist_tracks" json:"playlist_tracks"`
+	PlaylistTracks      []types.Track                    `gorm:"serializer:json;column:playlist_tracks" json:"playlist_tracks"`
 	Result              map[string]TrackConversionResult `gorm:"serializer:json;column:result" json:"result"`
 	CreatedPlaylistLink string                           `gorm:"column:created_playlist_link" json:"created_playlist_link"`
+	TimeTaken           float64                          `gorm:"column:time_taken" json:"time_taken"`
 }

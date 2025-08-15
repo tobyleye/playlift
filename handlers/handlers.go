@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gorilla/sessions"
+	"github.com/redis/go-redis/v9"
 	"github.com/zmb3/spotify/v2"
 	"google.golang.org/api/youtube/v3"
 	"gorm.io/gorm"
@@ -15,4 +16,5 @@ type Handlers struct {
 	Context       context.Context
 	YoutubeClient *youtube.Service
 	SessionStore  *sessions.CookieStore
+	Cache         *redis.Client
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/sessions"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/redis/go-redis/v9"
 
 	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -90,12 +91,27 @@ func main() {
 		panic(err)
 	}
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     config.REDIS_URL,
+		Password: config.REDIS_PASSWORD,
+		DB:       0, // use default DB
+	})
+
+	val, err := redisClient.Ping(ctx).Result()
+	if err != nil {
+		log.Fatal("Error connecting to Redis:", err)
+	}
+
+	log.Println("Redis connected ✅", val)
+
 	handlers := handlers.Handlers{
 		Db:           db,
 		Context:      ctx,
 		SessionStore: SessionStore,
+		Cache:        redisClient,
 	}
 
+	// Load templates
 	// define api routes
 	// public routes
 	e.GET("/health", func(c echo.Context) error {

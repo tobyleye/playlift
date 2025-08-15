@@ -32,6 +32,7 @@ type ConversionDetails = {
   source_platform: string;
   destination_platform: string;
   status: string;
+  time_taken: number;
   playlist_link: string;
   result: null | Record<
     string,
@@ -41,7 +42,7 @@ type ConversionDetails = {
     }
   >;
   playlist_tracks: {
-    track_id: string;
+    id: string;
     artists: string[];
     title: string;
     album: string;
@@ -94,7 +95,7 @@ export default function DetailsPage() {
     }
   );
 
-  const [trackFilter, settrackFilter] = useState<string>("all");
+  const [trackFilter, setTrackFilter] = useState<string>("all");
 
   const { completedCount, failedCount, successRate, overallProgress } =
     useMemo(() => {
@@ -106,7 +107,7 @@ export default function DetailsPage() {
       if (data && data.result) {
         let totalProcessed = 0;
         for (const track of data.playlist_tracks) {
-          const trackId = track.track_id;
+          const trackId = track.id;
           const trackResult = data.result[trackId];
           if (trackResult && trackResult.data) {
             completedCount++;
@@ -142,11 +143,11 @@ export default function DetailsPage() {
 
     if (trackFilter === "completed") {
       return data.playlist_tracks.filter(
-        (track) => data.result![track.track_id]?.data
+        (track) => data.result![track.id]?.data
       );
     } else if (trackFilter === "failed") {
       return data.playlist_tracks.filter(
-        (track) => data.result![track.track_id]?.error
+        (track) => data.result![track.id]?.error
       );
     }
 
@@ -180,14 +181,7 @@ export default function DetailsPage() {
           <Box py={"20vh"} textAlign="center">
             <EllipsisLoader text="Loading details" />
           </Box>
-        ) : error ? (
-          <DefaultErrorState
-            title="Error Loading Details"
-            description="We're having trouble loading your migration details. Please try again."
-          />
-        ) : null}
-
-        {data && (
+        ) : data ? (
           <Box>
             {/* header */}
             <Box
@@ -204,16 +198,20 @@ export default function DetailsPage() {
             >
               {/* <Box w={20} h={20} bg="orange.200" rounded="md" /> */}
 
-              <Box>
-                <Heading fontSize="2xl" mb={4}>
-                  {data?.playlist_title}
-                </Heading>
+              <Box w="full">
+                <Box display="flex" alignItems="center" gap={2} mb={4}>
+                  <Heading fontSize="2xl">{data?.playlist_title}</Heading>
+                  {["completed", "failed"].includes(data.status) && (
+                    <Text ml="auto" fontSize="sm" color="whiteAlpha.600">
+                      Took {data.time_taken.toFixed(2)} seconds
+                    </Text>
+                  )}
+                </Box>
                 <Box display="flex" alignItems="center" gap={2} mb={4}>
                   <Box display="flex" gap={1.5} alignItems="center">
                     <Icon as={MusicIcon} color="blue.400" w={4} h={4} />
                     {data?.total_tracks > -1 ? data.total_tracks : `∞`} tracks
                   </Box>
-                  {/* <Text>7m 0s</Text> */}
                 </Box>
                 <Box
                   display="flex"
@@ -221,13 +219,27 @@ export default function DetailsPage() {
                   gridRowGap={4}
                   gridColumnGap={6}
                   flexWrap="wrap"
+                  css={{
+                    ".link[href]:hover": {
+                      textDecoration: "underline",
+                    },
+                  }}
                 >
                   <Box
                     display="flex"
                     alignItems="center"
                     color="whiteAlpha.800"
                   >
-                    <Box display="flex" alignItems="center" gap={1.5}>
+                    <Box
+                      as={"a"}
+                      className="link"
+                      href={data.playlist_link}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                      display="flex"
+                      alignItems="center"
+                      gap={1.5}
+                    >
                       <Box
                         w={3}
                         h={3}
@@ -236,16 +248,19 @@ export default function DetailsPage() {
                       />
                       {getServiceLabel(data.source_platform)}
 
-                      <StyledLink
-                        display="inline-flex"
-                        href={data.playlist_link}
-                        isExternal
-                      >
-                        <Icon as={ExternalLinkIcon} />
-                      </StyledLink>
+                      <Icon as={ExternalLinkIcon} />
                     </Box>
                     <Icon as={ArrowRight} mx={4} />
-                    <Box display="flex" alignItems="center" gap={1.5}>
+                    <Box
+                      as="a"
+                      className="link"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                      href={data.created_playlist_link}
+                      display="flex"
+                      alignItems="center"
+                      gap={1.5}
+                    >
                       <Box
                         w={3}
                         h={3}
@@ -254,13 +269,7 @@ export default function DetailsPage() {
                       />
                       {getServiceLabel(data.destination_platform)}
                       {data.created_playlist_link && (
-                        <StyledLink
-                          display={"inline-flex"}
-                          href={data.created_playlist_link}
-                          isExternal
-                        >
-                          <Icon as={ExternalLinkIcon} />
-                        </StyledLink>
+                        <Icon as={ExternalLinkIcon} />
                       )}
                     </Box>
                   </Box>
@@ -332,7 +341,7 @@ export default function DetailsPage() {
                     display="inline-block"
                     size="sm"
                     value={trackFilter}
-                    onChange={(e) => settrackFilter(e.target.value)}
+                    onChange={(e) => setTrackFilter(e.target.value)}
                   >
                     <option value="all">All</option>
                     <option value="completed">Completed</option>
@@ -357,14 +366,14 @@ export default function DetailsPage() {
                   }}
                 >
                   {getFilteredTracks().map((track, index) => {
-                    const result = data.result?.[track.track_id];
+                    const result = data.result?.[track.id];
                     const isCompleted = result && result.data;
                     const isFailed = result && result.error;
 
                     return (
                       <Box
                         className="track-item"
-                        key={track.track_id}
+                        key={track.id}
                         display="flex"
                         alignItems="center"
                         gap={2}
@@ -408,7 +417,12 @@ export default function DetailsPage() {
               )}
             </Box>
           </Box>
-        )}
+        ) : error ? (
+          <DefaultErrorState
+            title="Error Loading Details"
+            description="We're having trouble loading your migration details. Please try again."
+          />
+        ) : null}
       </Container>
     </Box>
   );

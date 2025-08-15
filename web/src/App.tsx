@@ -1,10 +1,17 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
-import { lazy, Suspense, useState } from "react";
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  RouterProvider,
+  ScrollRestoration,
+} from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { ChakraProvider } from "@chakra-ui/react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { theme } from "./theme/theme.ts";
 import SessionProvider from "./providers/SessionProvider.tsx";
 import { SWRConfig } from "swr";
+import useLoggedIn from "./hooks/useLoggedIn.ts";
 
 const Landing = lazy(() => import("./views/landing/landing.tsx"));
 const Home = lazy(() => import("./views/home.tsx"));
@@ -24,7 +31,7 @@ const PrivacyPolicy = lazy(() => import("./views/privacy-policy.tsx"));
 const Settings = lazy(() => import("./views/settings.tsx"));
 
 const PrivateRouteProtector = () => {
-  const [loggedIn] = useState(() => !!localStorage.getItem("userId"));
+  const loggedIn = useLoggedIn();
   if (!loggedIn) {
     return <Navigate to="/" replace />;
   } else {
@@ -32,7 +39,7 @@ const PrivateRouteProtector = () => {
   }
 };
 
-function App() {
+function Root() {
   return (
     <ChakraProvider theme={theme}>
       <SessionProvider>
@@ -49,37 +56,47 @@ function App() {
             }}
           >
             <Suspense fallback={<div />}>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-
-                <Route path="/convert" element={<Convert />}>
-                  <Route
-                    index
-                    path=""
-                    element={<Navigate to="/convert/connect-youtube" replace />}
-                  />
-                  <Route path="connect-youtube" element={<ConnectYoutube />} />
-                  <Route path="connect-spotify" element={<ConnectSpotify />} />
-                  <Route
-                    path="select-playlists"
-                    element={<PlaylistsSelection />}
-                  />
-                </Route>
-                <Route path="/" element={<PrivateRouteProtector />}>
-                  <Route path="/home" element={<Home />} />
-                  <Route path="/details/:id" element={<DetailsPage />} />
-                  <Route path="/settings" element={<Settings />} />
-                </Route>
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
+              <Outlet />
             </Suspense>
           </SWRConfig>
         </GoogleOAuthProvider>
       </SessionProvider>
+      <ScrollRestoration />
     </ChakraProvider>
   );
 }
+
+const router = createBrowserRouter([
+  {
+    Component: Root,
+    children: [
+      { index: true, Component: Landing },
+      { path: "/privacy-policy", Component: PrivacyPolicy },
+      {
+        path: "/convert",
+        Component: Convert,
+        children: [
+          {
+            index: true,
+            Component: () => <Navigate to="connect-youtube" replace />,
+          },
+          { path: "connect-youtube", index: true, Component: ConnectYoutube },
+          { path: "connect-spotify", Component: ConnectSpotify },
+          { path: "select-playlists", Component: PlaylistsSelection },
+        ],
+      },
+      {
+        Component: PrivateRouteProtector,
+        children: [
+          { path: "/home", Component: Home },
+          { path: "/details/:id", Component: DetailsPage },
+          { path: "/settings", Component: Settings },
+        ],
+      },
+    ],
+  },
+]);
+
+const App = () => <RouterProvider router={router} />;
 
 export default App;
