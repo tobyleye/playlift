@@ -104,7 +104,7 @@ export default function DetailsPage() {
 
       let successRate = 0;
       let overallProgress = 0;
-      if (data && data.result) {
+      if (data && data.result && data.playlist_tracks) {
         let totalProcessed = 0;
         for (const track of data.playlist_tracks) {
           const trackId = track.id;
@@ -139,7 +139,9 @@ export default function DetailsPage() {
 
   const getFilteredTracks = () => {
     if (!data) return [];
+
     const playlistTracks = data.playlist_tracks || [];
+
     if (!data.result) return playlistTracks;
 
     if (trackFilter === "completed") {
@@ -148,7 +150,7 @@ export default function DetailsPage() {
       return playlistTracks.filter((track) => data.result![track.id]?.error);
     }
 
-    return data.playlist_tracks;
+    return playlistTracks;
   };
 
   const formatDuration = (duration: number) => {
@@ -208,7 +210,7 @@ export default function DetailsPage() {
               <Box w="full">
                 <Box display="flex" alignItems="center" gap={2} mb={4}>
                   <Heading fontSize="2xl">{data?.playlist_title}</Heading>
-                  {["completed", "failed"].includes(data.status) && (
+                  {["completed"].includes(data.status) && (
                     <Text ml="auto" fontSize="sm" color="whiteAlpha.600">
                       Took {formatDuration(data.time_taken)}
                     </Text>
