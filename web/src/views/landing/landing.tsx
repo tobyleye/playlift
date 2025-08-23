@@ -64,7 +64,7 @@ export default function Landing() {
       console.error("Login Failed:", error);
       toastHelper(toast, {
         title: "Error",
-        description: `Couldn't initialize login. Please try again.`,
+        description: `Couldn't complete login. Please try again.`,
         status: "error",
       });
     },

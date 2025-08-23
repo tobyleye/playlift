@@ -11,7 +11,9 @@ type Track struct {
 	Album     string   `json:"album"`
 }
 
-func (t Track) MarshalBinary() ([]byte, error) {
+// BinaryMarshaler implements the encoding.BinaryMarshaler interface
+
+func (t *Track) MarshalBinary() ([]byte, error) {
 	return json.Marshal(t) // Marshal the struct into JSON bytes
 }
 
@@ -50,4 +52,10 @@ type SearchQuery struct {
 	Title   string   `json:"title"`
 	Artists []string `json:"artists"`
 	Type    string   `json:"type"`
+}
+
+type PlaylistDetails struct {
+	Title       string `json:"title"`
+	Link        string `json:"link"`
+	TotalTracks int    `json:"total_tracks"`
 }
