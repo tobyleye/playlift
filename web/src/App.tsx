@@ -29,6 +29,7 @@ const PlaylistsSelection = lazy(
 const DetailsPage = lazy(() => import("./views/details-page/details-page.tsx"));
 const PrivacyPolicy = lazy(() => import("./views/privacy-policy.tsx"));
 const Settings = lazy(() => import("./views/settings.tsx"));
+const HealthCheck = lazy(() => import("./views/HealthCheck.tsx"));
 
 const PrivateRouteProtector = () => {
   const loggedIn = useLoggedIn();
@@ -72,6 +73,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, Component: Landing },
       { path: "/privacy-policy", Component: PrivacyPolicy },
+      { path: "/healthcheck", Component: HealthCheck },
+
       {
         path: "/convert",
         Component: Convert,
