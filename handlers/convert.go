@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/redis/go-redis/v9"
+	"github.com/valkey-io/valkey-go"
 	"github.com/zmb3/spotify/v2"
 
 	"github.com/tobyleye/playlift/config"
@@ -178,81 +178,84 @@ func createSpotifyPlaylistForUser(spotifyClient *spotify.Client, ctx context.Con
 	return createdPlaylist, nil
 }
 
-func searchSpotifyTrackOnYoutube(ctx context.Context, cache *redis.Client, youtubeClient *http.Client, track *types.Track) (*types.Track, error) {
+// func searchSpotifyTrackOnYoutube(ctx context.Context, cache valkey.Client, youtubeClient *http.Client, track *types.Track) (*types.Track, error) {
 
-	var foundTrack = types.Track{}
+// 	var foundTrack = types.Track{}
 
-	key := fmt.Sprintf("spotify(%s)-youtube", track.ID)
-	err := cache.Get(ctx, key).Scan(&foundTrack)
-	if err != nil {
-		fmt.Println("error fetching track from cache:", err)
-	}
-	if foundTrack.ID != "" {
-		fmt.Println("found track in cache:", foundTrack.ID)
-		return &foundTrack, nil
-	}
+// 	key := fmt.Sprintf("spotify(%s)-youtube", track.ID)
+// 	res := cache.Do(ctx, cache.B().Get().Key(key).Build())
+// 	// .Scan(&foundTrack)
 
-	searchResult, err := ytmusicapi.SearchOne(youtubeClient, types.SearchQuery{
-		Title:   track.Title,
-		Artists: track.Artists,
-		Type:    "audio",
-	})
-	if err != nil {
-		return nil, err
-	}
+// 	if res.Error() != nil {
+// 		fmt.Println("error fetching track from cache:", res.Error())
+// 	}
+// 	if foundTrack.ID != "" {
+// 		fmt.Println("found track in cache:", foundTrack.ID)
+// 		return &foundTrack, nil
+// 	}
 
-	if searchResult.VideoId == "" {
-		return nil, nil // No result found
-	}
+// 	searchResult, err := ytmusicapi.SearchOne(youtubeClient, types.SearchQuery{
+// 		Title:   track.Title,
+// 		Artists: track.Artists,
+// 		Type:    "audio",
+// 	})
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	foundTrack = formatters.FormatYoutubeTrack(&searchResult)
+// 	if searchResult.VideoId == "" {
+// 		return nil, nil // No result found
+// 	}
 
-	// save track
-	err = cache.Set(ctx, key, foundTrack, 0).Err()
-	if err != nil {
-		fmt.Println("error saving track..", err)
-	}
+// 	foundTrack = formatters.FormatYoutubeTrack(&searchResult)
 
-	return &foundTrack, nil
-}
+// 	// save track
+// 	foundTrackString, _ := foundTrack.MarshalBinary()
+// 	err = cache.Do(ctx, cache.B().Set().Key(key).Value(string(foundTrackString)).Build()).Error()
+// 	if err != nil {
+// 		fmt.Println("error saving track..", err)
+// 	}
 
-func searchYoutubeTrackOnSpotify(ctx context.Context, cache *redis.Client, spotifyClient *spotify.Client, track *types.Track) (*types.Track, error) {
-	var foundTrack = types.Track{}
+// 	return &foundTrack, nil
+// }
 
-	key := fmt.Sprintf("youtube(%s)-spotify", track.ID)
-	err := cache.Get(ctx, key).Scan(&foundTrack)
-	if err != nil {
-		fmt.Println("error fetching track from cache:", err)
-	}
+// func searchYoutubeTrackOnSpotify(ctx context.Context, cache valkey.Client, spotifyClient *spotify.Client, track *types.Track) (*types.Track, error) {
+// 	var foundTrack = types.Track{}
 
-	if foundTrack.ID != "" {
-		fmt.Println("found track in cache:", foundTrack.ID)
-		return &foundTrack, nil
-	}
+// 	key := fmt.Sprintf("youtube(%s)-spotify", track.ID)
+// 	err := cache.Get(ctx, key).Scan(&foundTrack)
+// 	if err != nil {
+// 		fmt.Println("error fetching track from cache:", err)
+// 	}
 
-	query := fmt.Sprintf("track:%s artist:%s", track.Title, strings.Join(track.Artists, ", "))
-	result, err := spotifyClient.Search(ctx, query, spotify.SearchTypeTrack, spotify.Limit(1))
-	if err != nil {
-		return nil, err
-	}
+// 	if foundTrack.ID != "" {
+// 		fmt.Println("found track in cache:", foundTrack.ID)
+// 		return &foundTrack, nil
+// 	}
 
-	if result.Tracks.Total == 0 {
-		return nil, nil // No result found
-	}
+// 	query := fmt.Sprintf("track:%s artist:%s", track.Title, strings.Join(track.Artists, ", "))
+// 	result, err := spotifyClient.Search(ctx, query, spotify.SearchTypeTrack, spotify.Limit(1))
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	bestMatch := result.Tracks.Tracks[0]
+// 	if result.Tracks.Total == 0 {
+// 		return nil, nil // No result found
+// 	}
 
-	foundTrack = formatters.FormatSpotifyTrack(&bestMatch)
+// 	bestMatch := result.Tracks.Tracks[0]
 
-	err = cache.Set(ctx, key, foundTrack, 0).Err()
-	if err != nil {
-		fmt.Println("error saving track..", err)
-	}
+// 	foundTrack = formatters.FormatSpotifyTrack(&bestMatch)
 
-	return &foundTrack, nil
-}
+// 	err = cache.Set(ctx, key, foundTrack, 0).Err()
+// 	if err != nil {
+// 		fmt.Println("error saving track..", err)
+// 	}
 
-func searchTrack(ctx context.Context, cache *redis.Client, sourcePlatform string, track *types.Track, client clients.PlatformClient) (*types.Track, error) {
+// 	return &foundTrack, nil
+// }
+
+func searchTrack(ctx context.Context, cache valkey.Client, sourcePlatform string, track *types.Track, client clients.PlatformClient) (*types.Track, error) {
 	var cacheKey string
 	if sourcePlatform == SPOTIFY {
 		cacheKey = fmt.Sprintf("spotify(%s)-youtube", track.ID)
@@ -262,9 +265,14 @@ func searchTrack(ctx context.Context, cache *redis.Client, sourcePlatform string
 
 	var foundTrack = types.Track{}
 
-	err := cache.Get(ctx, cacheKey).Scan(&foundTrack)
+	trackBytes, err := cache.Do(ctx, cache.B().Get().Key(cacheKey).Build()).AsBytes()
+
 	if err != nil {
 		fmt.Println("error fetching track from cache:", err)
+	}
+
+	if trackBytes != nil {
+		foundTrack.UnmarshalBinary(trackBytes)
 	}
 
 	if foundTrack.ID != "" {
@@ -279,7 +287,8 @@ func searchTrack(ctx context.Context, cache *redis.Client, sourcePlatform string
 	}
 
 	if result != nil {
-		err = cache.Set(ctx, cacheKey, result, 0).Err()
+		resultStr, _ := json.Marshal(result)
+		err = cache.Do(ctx, cache.B().Set().Key(cacheKey).Value(string(resultStr)).Build()).Error()
 		if err != nil {
 			fmt.Println("error saving track..", err)
 		}
@@ -301,9 +310,10 @@ type ConversionState struct {
 	CreatedPlaylistLink string                                  `json:"created_playlist_link"`
 }
 
-func (s *ConversionState) Save(ctx context.Context, cache *redis.Client) error {
+func (s *ConversionState) Save(ctx context.Context, cache valkey.Client) error {
 	fmt.Println("saving conversion with id..", s.ConversionID)
-	return cache.Set(ctx, fmt.Sprintf("conversion:%s", s.ConversionID), s, 0).Err()
+	str, _ := s.MarshalBinary()
+	return cache.Do(ctx, cache.B().Set().Key(fmt.Sprintf("conversion:%s", s.ConversionID)).Value(string(str)).Build()).Error()
 }
 
 func (s *ConversionState) saveToDb(db *gorm.DB, timeTaken float64) {
@@ -330,7 +340,7 @@ func (s *ConversionState) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, s) // Unmarshal the JSON bytes into the struct
 }
 
-func runSingleConversion(db *gorm.DB, cache *redis.Client, conversion *models.PlaylistConversion) error {
+func runSingleConversion(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConversion) error {
 
 	conversionState := ConversionState{
 		ConversionID: conversion.ConversionID,
@@ -537,7 +547,7 @@ func runSingleConversion(db *gorm.DB, cache *redis.Client, conversion *models.Pl
 
 }
 
-func startConversions(db *gorm.DB, cache *redis.Client, conversions ...*models.PlaylistConversion) {
+func startConversions(db *gorm.DB, cache valkey.Client, conversions ...*models.PlaylistConversion) {
 	log.Println("starting conversions for", len(conversions), "playlists")
 
 	for _, conversion := range conversions {

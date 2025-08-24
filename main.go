@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/sessions"
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/redis/go-redis/v9"
+	"github.com/valkey-io/valkey-go"
 
 	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -91,24 +91,20 @@ func main() {
 		panic(err)
 	}
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     config.REDIS_URL,
-		Password: config.REDIS_PASSWORD,
-		DB:       0, // use default DB
-	})
-
-	val, err := redisClient.Ping(ctx).Result()
+	cache, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{config.VALKEY_URL}})
 	if err != nil {
 		log.Fatal("Error connecting to Redis:", err)
 	}
 
-	log.Println("Redis connected ✅", val)
+	res, _ := cache.Do(ctx, cache.B().Ping().Build()).ToString()
+
+	log.Println("Valkey connected ✅", res)
 
 	handlers := handlers.Handlers{
 		Db:           db,
 		Context:      ctx,
 		SessionStore: SessionStore,
-		Cache:        redisClient,
+		Cache:        cache,
 	}
 
 	// Load templates

@@ -21,8 +21,7 @@ var (
 	SESSION_KEY                  string
 	SPOTIFY_CONNECT_REDIRECT_URL string
 	FRONTEND_BASE_URL            string
-	REDIS_URL                    string
-	REDIS_PASSWORD               string
+	VALKEY_URL                   string
 )
 
 const (
@@ -67,8 +66,8 @@ func LoadEnv() {
 	FRONTEND_BASE_URL = os.Getenv("FRONTEND_BASE_URL")
 
 	SPOTIFY_CONNECT_REDIRECT_URL = FRONTEND_BASE_URL + "/convert/connect-spotify"
-	REDIS_URL = getEnvOrThrow("REDIS_URL")
-	REDIS_PASSWORD = os.Getenv("REDIS_PASSWORD")
+
+	VALKEY_URL = getEnvOrThrow("VALKEY_URL")
 
 }
 
