@@ -16,7 +16,6 @@ import (
 
 	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/core/converter/clients"
-	"github.com/tobyleye/playlift/formatters"
 	"github.com/tobyleye/playlift/models"
 	"github.com/tobyleye/playlift/services/ytmusicapi"
 	"github.com/tobyleye/playlift/session"
@@ -302,9 +301,6 @@ func searchTrack(ctx context.Context, cache valkey.Client, sourcePlatform string
 type ConversionState struct {
 	ConversionID        string                                  `json:"conversion_id"`
 	PlaylistLink        string                                  `json:"playlist_link"`
-	PlaylistTitle       string                                  `json:"playlist_title"`
-	TotalTracks         int                                     `json:"total_tracks"`
-	PlaylistTracks      []types.Track                           `json:"playlist_tracks"`
 	Status              string                                  `json:"status"`
 	Result              map[string]models.TrackConversionResult `json:"result"`
 	CreatedPlaylistLink string                                  `json:"created_playlist_link"`
@@ -318,7 +314,7 @@ func (s *ConversionState) Save(ctx context.Context, cache valkey.Client) error {
 
 func (s *ConversionState) saveToDb(db *gorm.DB, timeTaken float64) {
 
-	fmt.Println("saving all tracks to db...", len(s.PlaylistTracks), s.Status, s.PlaylistTitle, s.TotalTracks)
+	fmt.Println("saving all tracks to db...", s.Status)
 	conversion := models.PlaylistConversion{
 		ConversionID:        s.ConversionID,
 		Status:              s.Status,
