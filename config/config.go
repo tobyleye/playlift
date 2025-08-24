@@ -26,6 +26,7 @@ var (
 	VALKEY_URL                   string
 	VALKEY_USERNAME              string
 	VALKEY_PASSWORD              string
+	APP_DOMAIN                   string
 	VALKEY_CLIENT_OPTIONS        valkey.ClientOption
 )
 
@@ -75,6 +76,8 @@ func LoadEnv() {
 	SPOTIFY_CONNECT_REDIRECT_URL = FRONTEND_BASE_URL + "/convert/connect-spotify"
 
 	VALKEY_URL = getEnvOrThrow("VALKEY_URL")
+
+	APP_DOMAIN = os.Getenv("APP_DOMAIN")
 
 	if GO_ENV == "production" {
 		VALKEY_CLIENT_OPTIONS = valkey.ClientOption{

@@ -37,7 +37,7 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		Secure:   true,
-		Domain:   config.FRONTEND_BASE_URL,
+		Domain:   config.APP_DOMAIN,
 	}
 
 	// since this function is called after login with youtube
