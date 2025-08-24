@@ -91,7 +91,8 @@ func main() {
 		panic(err)
 	}
 
-	cache, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{config.VALKEY_URL}})
+	cache, err := valkey.NewClient(config.VALKEY_CLIENT_OPTIONS)
+
 	if err != nil {
 		log.Fatal("Error connecting to Redis:", err)
 	}

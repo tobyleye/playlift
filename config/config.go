@@ -1,10 +1,12 @@
 package config
 
 import (
+	"crypto/tls"
 	"log"
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/valkey-io/valkey-go"
 )
 
 var (
@@ -22,6 +24,9 @@ var (
 	SPOTIFY_CONNECT_REDIRECT_URL string
 	FRONTEND_BASE_URL            string
 	VALKEY_URL                   string
+	VALKEY_USERNAME              string
+	VALKEY_PASSWORD              string
+	VALKEY_CLIENT_OPTIONS        valkey.ClientOption
 )
 
 const (
@@ -44,6 +49,8 @@ func LoadEnv() {
 	if err != nil {
 		log.Fatal("Error occured loading the project .env")
 	}
+
+	GO_ENV := os.Getenv("GO_ENV")
 
 	DB_USER = getEnvOrThrow("DB_USER")
 	DB_PASSWORD = getEnvOrThrow("DB_PASSWORD")
@@ -69,6 +76,19 @@ func LoadEnv() {
 
 	VALKEY_URL = getEnvOrThrow("VALKEY_URL")
 
+	if GO_ENV == "production" {
+		VALKEY_CLIENT_OPTIONS = valkey.ClientOption{
+			InitAddress: []string{VALKEY_URL},
+			Username:    getEnvOrThrow("VALKEY_USERNAME"),
+			Password:    getEnvOrThrow("VALKEY_PASSWORD"),
+			TLSConfig:   &tls.Config{},
+		}
+	} else {
+		VALKEY_CLIENT_OPTIONS = valkey.ClientOption{
+			InitAddress: []string{VALKEY_URL},
+		}
+
+	}
 }
 
 func init() {
