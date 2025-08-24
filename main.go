@@ -73,12 +73,15 @@ func main() {
 	e := echo.New()
 	e.Use(echoSession.Middleware(SessionStore))
 
-	var corsConfig = middleware.DefaultCORSConfig
-	corsConfig.AllowCredentials = true
-	corsConfig.AllowOrigins = []string{
-		config.FRONTEND_BASE_URL,
-		"www.playlift.lol",
-		"playlift.lol",
+	corsConfig := middleware.CORSConfig{
+		AllowOrigins: []string{
+			"https://playlift.lol",
+			"https://www.playlift.lol",
+			config.FRONTEND_BASE_URL,
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"*"},
+		AllowCredentials: true,
 	}
 
 	e.Use(middleware.CORSWithConfig(corsConfig))
