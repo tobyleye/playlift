@@ -77,6 +77,8 @@ func main() {
 	corsConfig.AllowCredentials = true
 	corsConfig.AllowOrigins = []string{
 		config.FRONTEND_BASE_URL,
+		"www.playlift.lol",
+		"playlift.lol",
 	}
 
 	e.Use(middleware.CORSWithConfig(corsConfig))
