@@ -64,7 +64,7 @@ export default function Landing() {
       console.error("Login Failed:", error);
       toastHelper(toast, {
         title: "Error",
-        description: `Couldn't initialize login. Please try again.`,
+        description: `Couldn't complete login. Please try again.`,
         status: "error",
       });
     },
@@ -250,6 +250,8 @@ export default function Landing() {
         <Box
           as="footer"
           display="flex"
+          flexDir={{ base: "column", lg: "row" }}
+          gap={4}
           alignItems="center"
           justifyContent="space-between"
           pt={4}
@@ -260,25 +262,38 @@ export default function Landing() {
             base: "full",
             lg: "90%",
           }}
-          textAlign="center"
+          sx={{
+            a: {
+              color: "whiteAlpha.800",
+              textDecor: "none",
+              _hover: {
+                color: "white",
+                textDecor: "underline",
+              },
+            },
+          }}
         >
-          <StyledLink
-            as={Link}
-            to="/privacy-policy"
-            fontWeight="semibold"
-            textDecor="underline"
-            _hover={{ textDecor: "underline" }}
-            color="whiteAlpha.800"
-          >
-            Privacy Policy
-          </StyledLink>
-          <Text color="white">
+          <Box display="flex" alignItems="center" gap={4}>
+            <StyledLink
+              as={Link}
+              to="mailto:hey@playlift.lol?subject=Hey Playlift"
+              fontWeight="semibold"
+              color="whiteAlpha.800"
+            >
+              Contact us
+            </StyledLink>
+            <StyledLink
+              as={Link}
+              to="/privacy-policy"
+              fontWeight="semibold"
+              color="whiteAlpha.800"
+            >
+              Privacy Policy
+            </StyledLink>
+          </Box>
+          <Box>
             <StyledLink
               fontWeight="semibold"
-              textDecor="underline"
-              _hover={{
-                textDecor: "underline",
-              }}
               href="http://oluwatobi.vercel.app"
               rel="noreferrer"
               target="_blank"
@@ -287,7 +302,7 @@ export default function Landing() {
             </StyledLink>
             {"・"}
             ❤️
-          </Text>
+          </Box>
         </Box>
         <Outlet />
       </Box>

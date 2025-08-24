@@ -45,7 +45,7 @@ export default function Home() {
   const conversions = data || [];
 
   const pendingConversions = conversions.filter(
-    (conversion) => conversion.status === "pending"
+    (conversion) => conversion.status !== "completed"
   );
   const completedConversions = conversions.filter(
     (conversion) => conversion.status === "completed"

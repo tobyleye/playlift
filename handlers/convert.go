@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,9 +11,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/valkey-io/valkey-go"
 	"github.com/zmb3/spotify/v2"
 
 	"github.com/tobyleye/playlift/config"
+	"github.com/tobyleye/playlift/core/converter/clients"
 	"github.com/tobyleye/playlift/models"
 	"github.com/tobyleye/playlift/services/ytmusicapi"
 	"github.com/tobyleye/playlift/session"
@@ -31,49 +34,7 @@ type AllPlaylistDetails map[string]PlaylistDetails
 
 var LIKED_PLAYLIST_ID = "LM" // Liked music playlist ID is always "LM"
 
-func formatSpotifyPlaylistTrack(track *spotify.FullTrack) models.PlaylistTrack {
-
-	artists := []string{}
-	for _, artist := range track.Artists {
-		artists = append(artists, artist.Name)
-	}
-	formattedTrack := models.PlaylistTrack{
-		TrackId: string(track.ID),
-		Title:   track.Name,
-		Artists: artists,
-		Album:   track.Album.Name,
-	}
-	return formattedTrack
-
-}
-
-func formatSpotifyPlaylistTracks(tracks []*spotify.FullTrack) []models.PlaylistTrack {
-	formattedTracks := []models.PlaylistTrack{}
-
-	for _, track := range tracks {
-		formattedTrack := formatSpotifyPlaylistTrack(track)
-		formattedTracks = append(formattedTracks, formattedTrack)
-	}
-
-	return formattedTracks
-}
-
-func formatYoutubePlaylistTracks(tracks []ytmusicapi.Track) []models.PlaylistTrack {
-	formattedTracks := []models.PlaylistTrack{}
-
-	for _, track := range tracks {
-		formattedTrack := models.PlaylistTrack{
-			TrackId: track.VideoId,
-			Title:   track.Title,
-			Artists: track.Artists,
-			Album:   "",
-		}
-		formattedTracks = append(formattedTracks, formattedTrack)
-	}
-	return formattedTracks
-}
-
-func getAllPlaylistTracks(spotifyClient *spotify.Client, ctx context.Context, playlistId string) ([]*spotify.FullTrack, error) {
+func getAllSpotifyPlaylistTracks(spotifyClient *spotify.Client, ctx context.Context, playlistId string) ([]*spotify.FullTrack, error) {
 	var playlistTracks []*spotify.FullTrack
 	// options := spotify.RequestOption() // Spotify API allows a maximum of 100 items per request, but we use 50 for better performance
 
@@ -216,225 +177,378 @@ func createSpotifyPlaylistForUser(spotifyClient *spotify.Client, ctx context.Con
 	return createdPlaylist, nil
 }
 
-func startConversions(db *gorm.DB, conversions ...*models.PlaylistConversion) {
-	log.Println("starting conversions for", len(conversions), "playlists")
+// func searchSpotifyTrackOnYoutube(ctx context.Context, cache valkey.Client, youtubeClient *http.Client, track *types.Track) (*types.Track, error) {
 
-	runSingleConversion := func(conversion *models.PlaylistConversion) error {
+// 	var foundTrack = types.Track{}
 
-		user := &models.User{}
-		db.First(user, "user_id = ?", conversion.UserId)
+// 	key := fmt.Sprintf("spotify(%s)-youtube", track.ID)
+// 	res := cache.Do(ctx, cache.B().Get().Key(key).Build())
+// 	// .Scan(&foundTrack)
 
-		// handle single conversion
-		userId := conversion.UserId
+// 	if res.Error() != nil {
+// 		fmt.Println("error fetching track from cache:", res.Error())
+// 	}
+// 	if foundTrack.ID != "" {
+// 		fmt.Println("found track in cache:", foundTrack.ID)
+// 		return &foundTrack, nil
+// 	}
 
-		// create context
-		ctx := context.Background()
+// 	searchResult, err := ytmusicapi.SearchOne(youtubeClient, types.SearchQuery{
+// 		Title:   track.Title,
+// 		Artists: track.Artists,
+// 		Type:    "audio",
+// 	})
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-		if conversion.SourcePlatform == SPOTIFY {
-			log.Println("starting conversion from spotify to youtube music...", conversion.PlaylistId)
-			youtubeClient, spotifyClient, err := createClientsForUser(db, userId)
+// 	if searchResult.VideoId == "" {
+// 		return nil, nil // No result found
+// 	}
 
-			if err != nil {
-				log.Println("error creating youtube/spotify client:", err)
-				return err
+// 	foundTrack = formatters.FormatYoutubeTrack(&searchResult)
 
-			}
+// 	// save track
+// 	foundTrackString, _ := foundTrack.MarshalBinary()
+// 	err = cache.Do(ctx, cache.B().Set().Key(key).Value(string(foundTrackString)).Build()).Error()
+// 	if err != nil {
+// 		fmt.Println("error saving track..", err)
+// 	}
 
-			if conversion.PlaylistId == LIKED_PLAYLIST_ID {
-				// update playlist details
-				conversion.PlaylistTitle = "Liked Music"
-				conversion.PlaylistLink = "https://open.spotify.com/collection/tracks"
-			} else {
-				playlist, err := spotifyClient.GetPlaylist(ctx, spotify.ID(conversion.PlaylistId))
-				if err != nil {
-					log.Println("error getting playlist details:", err)
-					return err
-				}
+// 	return &foundTrack, nil
+// }
 
-				// update playlist details
-				conversion.PlaylistTitle = playlist.Name
-				conversion.PlaylistLink = playlist.ExternalURLs["spotify"]
-				conversion.TotalTracks = int(playlist.Tracks.Total)
+// func searchYoutubeTrackOnSpotify(ctx context.Context, cache valkey.Client, spotifyClient *spotify.Client, track *types.Track) (*types.Track, error) {
+// 	var foundTrack = types.Track{}
 
-			}
+// 	key := fmt.Sprintf("youtube(%s)-spotify", track.ID)
+// 	err := cache.Get(ctx, key).Scan(&foundTrack)
+// 	if err != nil {
+// 		fmt.Println("error fetching track from cache:", err)
+// 	}
 
-			db.Save(conversion)
+// 	if foundTrack.ID != "" {
+// 		fmt.Println("found track in cache:", foundTrack.ID)
+// 		return &foundTrack, nil
+// 	}
 
-			playlistTracks, err := getAllPlaylistTracks(spotifyClient, ctx, conversion.PlaylistId)
-			totalTracks := len(playlistTracks)
-			// set if the total tracks is not set
-			if conversion.TotalTracks == -1 {
-				conversion.TotalTracks = totalTracks
-			}
-			if err != nil {
-				log.Println("error getting all playlist tracks client:", err)
-				return err
-			}
+// 	query := fmt.Sprintf("track:%s artist:%s", track.Title, strings.Join(track.Artists, ", "))
+// 	result, err := spotifyClient.Search(ctx, query, spotify.SearchTypeTrack, spotify.Limit(1))
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-			log.Println("got a total of ", len(playlistTracks), "tracks from spotify playlist")
-			formattedTracks := formatSpotifyPlaylistTracks(playlistTracks)
-			conversion.PlaylistTracks = formattedTracks
-			db.Save(conversion)
+// 	if result.Tracks.Total == 0 {
+// 		return nil, nil // No result found
+// 	}
 
-			youtubeTracksIds := []string{}
-			conversionResults := map[string]models.TrackConversionResult{}
+// 	bestMatch := result.Tracks.Tracks[0]
 
-			for _, track := range formattedTracks {
-				trackConversionResult := models.TrackConversionResult{}
+// 	foundTrack = formatters.FormatSpotifyTrack(&bestMatch)
 
-				searchResult, err := ytmusicapi.SearchOne(youtubeClient, types.SearchQuery{
-					Title:   track.Title,
-					Artists: track.Artists,
-					Type:    "audio",
-				})
+// 	err = cache.Set(ctx, key, foundTrack, 0).Err()
+// 	if err != nil {
+// 		fmt.Println("error saving track..", err)
+// 	}
 
-				if err != nil {
-					log.Println("error searching for track on youtube music:", err)
-					trackConversionResult.Error = "server error"
+// 	return &foundTrack, nil
+// }
 
-				} else if searchResult.VideoId == "" {
-					log.Println("no result found for track:", track.Title)
-					trackConversionResult.Error = "Not found"
+func searchTrack(ctx context.Context, cache valkey.Client, sourcePlatform string, track *types.Track, client clients.PlatformClient) (*types.Track, error) {
+	var cacheKey string
+	if sourcePlatform == SPOTIFY {
+		cacheKey = fmt.Sprintf("spotify(%s)-youtube", track.ID)
+	} else if sourcePlatform == YOUTUBE_MUSIC {
+		cacheKey = fmt.Sprintf("youtube(%s)-spotify", track.ID)
+	}
 
-				} else {
-					log.Println("found track on youtube music:", searchResult.Link)
-					trackConversionResult.Data = searchResult.VideoId
-					youtubeTracksIds = append(youtubeTracksIds, searchResult.VideoId)
+	var foundTrack = types.Track{}
 
-				}
+	trackBytes, err := cache.Do(ctx, cache.B().Get().Key(cacheKey).Build()).AsBytes()
 
-				conversionResults[track.TrackId] = trackConversionResult
+	if err != nil {
+		fmt.Println("error fetching track from cache:", err)
+	}
 
-			}
+	if trackBytes != nil {
+		foundTrack.UnmarshalBinary(trackBytes)
+	}
 
-			createdPlaylistLink := ""
+	if foundTrack.ID != "" {
+		fmt.Println("found track in cache:", foundTrack.ID)
+		return &foundTrack, nil
+	}
 
-			log.Println("found a total of", len(youtubeTracksIds), "tracks to add to youtube music playlist")
+	result, err := client.SearchTrack(track.Title, track.Artists)
 
-			if len(youtubeTracksIds) > 0 {
+	if err != nil {
+		return nil, err
+	}
 
-				playlistTitle := fmt.Sprintf("Spotify/%s", conversion.PlaylistTitle)
-				playlistDescription := ""
-
-				createdPlaylist, err := ytmusicapi.CreatePlaylist(youtubeClient, playlistTitle,
-					playlistDescription, youtubeTracksIds)
-
-				if err != nil {
-					log.Println("error creating youtube music playlist:", err)
-					return err
-				}
-
-				createdPlaylistLink = createdPlaylist.Link
-
-			}
-
-			// update the conversion status
-			conversion.Result = conversionResults
-			conversion.CreatedPlaylistLink = createdPlaylistLink
-			conversion.Status = "completed"
-			db.Save(conversion)
-
-		} else if conversion.SourcePlatform == YOUTUBE_MUSIC {
-			log.Println("starting conversion from youtube music to spotify...", conversion.PlaylistId)
-
-			youtubeClient, spotifyClient, err := createClientsForUser(db, userId)
-
-			if err != nil {
-				log.Println("error creating youtube/spotify client:", err)
-				return err
-			}
-
-			playlist, err := ytmusicapi.FetchPlaylist(youtubeClient, conversion.PlaylistId)
-
-			if err != nil {
-				log.Println("error fetching playlist details:", err)
-				return err
-			}
-
-			conversion.PlaylistTitle = playlist.Title
-			conversion.PlaylistLink = playlist.Link
-			conversion.TotalTracks = playlist.TotalTracks
-
-			db.Save(conversion)
-
-			// fetch all the youtube music playlist tracks
-			log.Println("fetching youtube music playlist tracks...")
-
-			playlistTracks, err := ytmusicapi.FetchAllPlaylistTracks(youtubeClient, conversion.PlaylistId)
-
-			if err != nil {
-				log.Println("error fetching youtube playlists:", err)
-				return err
-			}
-
-			formattedTracks := formatYoutubePlaylistTracks(playlistTracks.Tracks)
-			conversion.PlaylistTracks = formattedTracks
-			db.Save(conversion)
-
-			spotifyTracks := []spotify.ID{}
-			conversionResults := map[string]models.TrackConversionResult{}
-
-			for _, track := range playlistTracks.Tracks {
-				trackConversionResult := models.TrackConversionResult{}
-
-				query := fmt.Sprintf("track:%s artist:%s", track.Title, strings.Join(track.Artists, ", "))
-				result, err := spotifyClient.Search(ctx, query, spotify.SearchTypeTrack, spotify.Limit(1))
-
-				if err != nil {
-					log.Printf("error searching for track %s(%s) on spotify:", track.Title, track.VideoId)
-					trackConversionResult.Error = "server error"
-
-				} else if result.Tracks == nil || result.Tracks.Total == 0 {
-					log.Println("no result found for track:", track.Title, track.VideoId, track.Artists)
-					trackConversionResult.Error = "no result found"
-				} else {
-					bestResult := result.Tracks.Tracks[0]
-					spotifyTracks = append(spotifyTracks, bestResult.ID)
-					trackConversionResult.Data = bestResult.ID.String()
-
-				}
-				conversionResults[track.VideoId] = trackConversionResult
-			}
-
-			log.Println("found a total of", len(spotifyTracks), "tracks to add to spotify playlist")
-
-			createdPlaylistLink := ""
-			if len(spotifyTracks) > 0 {
-				playlistTitle := fmt.Sprintf("Youtube Music/%s", conversion.PlaylistTitle)
-
-				createdPlaylist, err := createSpotifyPlaylistForUser(
-					spotifyClient, ctx, user.SpotifyId, playlistTitle, spotifyTracks,
-				)
-				createdPlaylistLink = createdPlaylist.ExternalURLs["spotify"]
-
-				if err != nil {
-					log.Println("error creating spotify playlist:", err)
-
-					return err
-				}
-
-			}
-			conversion.Status = "completed"
-			conversion.Result = conversionResults
-			conversion.CreatedPlaylistLink = createdPlaylistLink
-			db.Save(conversion)
-			log.Println("created spotify playlist:", conversion.CreatedPlaylistLink)
+	if result != nil {
+		resultStr, _ := json.Marshal(result)
+		err = cache.Do(ctx, cache.B().Set().Key(cacheKey).Value(string(resultStr)).Build()).Error()
+		if err != nil {
+			fmt.Println("error saving track..", err)
 		}
-
-		return nil
 
 	}
 
-	for _, conversion := range conversions {
+	return result, nil
+
+}
+
+type ConversionState struct {
+	ConversionID        string                                  `json:"conversion_id"`
+	PlaylistLink        string                                  `json:"playlist_link"`
+	Status              string                                  `json:"status"`
+	Result              map[string]models.TrackConversionResult `json:"result"`
+	CreatedPlaylistLink string                                  `json:"created_playlist_link"`
+}
+
+func (s *ConversionState) Save(ctx context.Context, cache valkey.Client) error {
+	fmt.Println("saving conversion with id..", s.ConversionID)
+	str, _ := s.MarshalBinary()
+	return cache.Do(ctx, cache.B().Set().Key(fmt.Sprintf("conversion:%s", s.ConversionID)).Value(string(str)).Build()).Error()
+}
+
+func (s *ConversionState) saveToDb(db *gorm.DB, timeTaken float64) {
+
+	fmt.Println("saving all tracks to db...", s.Status)
+	conversion := models.PlaylistConversion{
+		ConversionID:        s.ConversionID,
+		Status:              s.Status,
+		Result:              s.Result,
+		CreatedPlaylistLink: s.CreatedPlaylistLink,
+		TimeTaken:           float64(timeTaken),
+	}
+
+	if err := db.Where(models.PlaylistConversion{ConversionID: s.ConversionID}).Updates(conversion).Error; err != nil {
+		log.Println("error saving conversion state to db:", err)
+	}
+}
+
+func (s *ConversionState) MarshalBinary() ([]byte, error) {
+	return json.Marshal(s) // Marshal the struct into JSON bytes
+}
+
+func (s *ConversionState) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, s) // Unmarshal the JSON bytes into the struct
+}
+
+func runSingleConversion(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConversion) error {
+
+	conversionState := ConversionState{
+		ConversionID: conversion.ConversionID,
+	}
+
+	startTime := time.Now()
+
+	user := &models.User{}
+	db.First(user, "user_id = ?", conversion.UserId)
+
+	// handle single conversion
+	userId := conversion.UserId
+
+	// create context
+	ctx := context.Background()
+
+	err := func() error {
+
+		youtubeClient, spotifyClient, err := createClientsForUser(db, userId)
+		if err != nil {
+			return err
+		}
+
+		var sourceClient clients.PlatformClient
+		var destinationClient clients.PlatformClient
+
+		if conversion.SourcePlatform == SPOTIFY {
+			sourceClient = clients.NewSpotifyClient(spotifyClient, user.SpotifyId)
+			destinationClient = clients.NewYoutubeConverterClient(youtubeClient)
+		} else if conversion.SourcePlatform == YOUTUBE_MUSIC {
+			destinationClient = clients.NewSpotifyClient(spotifyClient, user.SpotifyId)
+			sourceClient = clients.NewYoutubeConverterClient(youtubeClient)
+		}
+
+		// get playlist details
+		playlistDetails, err := sourceClient.GetPlaylistDetails(conversion.PlaylistId)
+		if err != nil {
+			return err
+		}
+
+		conversion.PlaylistTitle = playlistDetails.Title
+		conversion.PlaylistLink = playlistDetails.Link
+		conversion.TotalTracks = playlistDetails.TotalTracks
+
+		playlistTracks, err := sourceClient.GetPlaylistTracks(conversion.PlaylistId)
+		if err != nil {
+			return err
+		}
+
+		conversion.PlaylistTracks = playlistTracks
+		if conversion.TotalTracks == 0 {
+			conversion.TotalTracks = len(playlistTracks)
+		}
+
+		db.Save(conversion)
+
+		destinationTracksId := []string{}
+
+		conversionResults := map[string]models.TrackConversionResult{}
+
+		totalSearchWorkers := 10
+		trackQueue := make(chan *types.Track)
+		workersDone := make(chan bool)
+		saved := make(chan bool)
+
+		type TrackConversionResultWithSourceId struct {
+			models.TrackConversionResult
+			trackId string
+		}
+
+		convertedTracksResult := make(chan TrackConversionResultWithSourceId, totalSearchWorkers)
+
+		// channel to collect results from workers
 		go func() {
-			err := runSingleConversion(conversion)
-			if err != nil {
-				// handle error
-				conversion.Status = "failed"
-				db.Save(conversion)
-				log.Println("error running conversion:", err)
+			// save data after 5 records have been entered
+			buffer := 0
+			for result := range convertedTracksResult {
+
+				conversionResults[result.trackId] = result.TrackConversionResult
+				if result.Data != "" {
+
+					destinationTracksId = append(destinationTracksId, result.Data)
+				}
+				buffer++
+				if buffer >= 5 {
+					conversionState.Result = conversionResults
+					conversionState.Save(ctx, cache)
+					buffer = 0
+
+				}
 			}
+
+			conversionState.Result = conversionResults
+			conversionState.Save(ctx, cache)
+
+			saved <- true
 		}()
+
+		// start workers to search for tracks on youtube music
+		go func() {
+			for _, track := range playlistTracks {
+				trackQueue <- &track
+			}
+			close(trackQueue)
+		}()
+
+		// start workers to search for tracks on youtube music
+		for range totalSearchWorkers {
+			go func() {
+				for track := range trackQueue {
+					trackConversionResult := TrackConversionResultWithSourceId{
+						TrackConversionResult: models.TrackConversionResult{},
+						trackId:               track.ID,
+					}
+
+					searchResult, err := searchTrack(ctx, cache, conversion.SourcePlatform,
+						track, destinationClient)
+
+					if err != nil {
+						log.Println("error searching for track on youtube music:", err)
+						trackConversionResult.Error = "server error"
+
+					} else if searchResult == nil {
+						log.Println("no result found for track:", track.Title)
+						trackConversionResult.Error = "Not found"
+
+					} else {
+						log.Println("found track on youtube music:", searchResult.Link)
+						trackConversionResult.Data = searchResult.ID
+					}
+
+					convertedTracksResult <- trackConversionResult
+
+				}
+				workersDone <- true
+
+			}()
+
+		}
+
+		for range totalSearchWorkers {
+			<-workersDone
+		}
+
+		close(convertedTracksResult)
+
+		// fmt.Println("ALL WORKERS DONE!!!..")
+
+		<-saved
+
+		// fmt.Println("DONE SAVING!!!..")
+
+		if len(destinationTracksId) == 0 {
+			return nil
+		}
+
+		playlistTitle := func() string {
+			if conversion.SourcePlatform == SPOTIFY {
+				return fmt.Sprintf("Spotify/%s", playlistDetails.Title)
+			} else if conversion.SourcePlatform == YOUTUBE_MUSIC {
+				return fmt.Sprintf("YouTube Music/%s", playlistDetails.Title)
+			}
+			return ""
+		}()
+
+		createdPlaylistLink, err := destinationClient.CreatePlaylist(
+			playlistTitle,
+			"",
+			destinationTracksId,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		conversionState.Result = conversionResults
+		conversionState.CreatedPlaylistLink = createdPlaylistLink
+		conversionState.Status = "completed"
+		conversionState.Save(ctx, cache)
+
+		return nil
+	}()
+
+	timeTaken := time.Since(startTime).Seconds()
+
+	if err != nil {
+		log.Println("error running conversion:", err)
+
+		conversionState.Status = "failed"
+		// conversion.Status = "failed"
+		// conversion.TimeTaken = timeTaken
+		// db.Save(conversion)
+
+	} else {
+		log.Println("conversion completed successfully for", conversion.PlaylistId)
+		// conversion.TimeTaken = timeTaken
+		// db.Save(conversion)
+	}
+
+	// time.Sleep(2 * time.Minute)
+	conversionState.saveToDb(db, timeTaken)
+
+	return nil
+
+}
+
+func startConversions(db *gorm.DB, cache valkey.Client, conversions ...*models.PlaylistConversion) {
+	log.Println("starting conversions for", len(conversions), "playlists")
+
+	for _, conversion := range conversions {
+		go runSingleConversion(db, cache, conversion)
+
 	}
 }
 
@@ -469,46 +583,9 @@ func (h Handlers) Convert(c echo.Context) error {
 		return c.JSON(400, errorResponse("invalid platform"))
 	}
 
-	// handle playlist requests
-
-	// a container where all the playlist details will be stored
-	// var allPlaylistsDetails AllPlaylistDetails
-
-	// this is just to verify the playlist exists, we don't need to fetch all playlists
-	// if sourcePlatform == SPOTIFY {
-	// 	// get the playlist info from spotify to verify they exists
-	// 	// might remove this, i don't know. it's actually needed but it might make the
-	// 	// response time longer because of the number of requests we make.
-	// 	// spotify makes this easy though because the playlists cant be passed in batches.
-	// 	// youtube music on the other hand, the playlists have to be fetched one by one.
-
-	// 	client, err := config.CreateUserSpotifyClient(h.Db, user.UserId)
-	// 	// we don't expect an error but we check anyways
-	// 	if err != nil {
-	// 		log.Println("Convert-Handler: error creating spotify client:", err)
-	// 		return c.JSON(401, errorResponse("unauthorized"))
-	// 	}
-
-	// 	allPlaylistsDetails = fetchSpotifyPlaylistsDetails(client, c.Request().Context(), body.Playlists)
-
-	// } else if sourcePlatform == YOUTUBE_MUSIC {
-	// 	// do the same thing for youtube music
-	// 	// ytubeClient, err := config.CreateYoutubeClientForUser(h.Db, user.UserId)
-	// 	client, err := config.CreateYoutubeClientForUser(h.Db, user.UserId)
-	// 	if err != nil {
-	// 		log.Println("Convert-Handler: error creating spotify client:", err)
-	// 		return c.JSON(401, errorResponse("unauthorized"))
-	// 	}
-
-	// 	allPlaylistsDetails = fetchYoutubePlaylistsDetails(client, c.Request().Context(), body.Playlists)
-
-	// }
-
 	var conversions = []*models.PlaylistConversion{}
 
 	for _, playlist := range body.Playlists {
-
-		// playlistDetails := allPlaylistsDetails[playlistId]
 
 		conversion := models.PlaylistConversion{
 			UserId:              user.UserId,
@@ -526,15 +603,13 @@ func (h Handlers) Convert(c echo.Context) error {
 	}
 
 	// create conversions in the database
-	result := h.Db.Create(&conversions)
-
-	if result.Error != nil {
-		log.Println("error creating conversions: ", result.Error)
+	if err := h.Db.Create(&conversions).Error; err != nil {
+		log.Println("error creating conversions: ", err)
 		return c.JSON(500, errorResponse("internal server error"))
 	}
 
 	// start a goroutine to handle the conversion
-	go startConversions(h.Db, conversions...)
+	go startConversions(h.Db, h.Cache, conversions...)
 
 	conversionIds := []string{}
 	for _, conversion := range conversions {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/sessions"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/valkey-io/valkey-go"
 
 	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -90,12 +91,23 @@ func main() {
 		panic(err)
 	}
 
+	cache, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{config.VALKEY_URL}})
+	if err != nil {
+		log.Fatal("Error connecting to Redis:", err)
+	}
+
+	res, _ := cache.Do(ctx, cache.B().Ping().Build()).ToString()
+
+	log.Println("Valkey connected ✅", res)
+
 	handlers := handlers.Handlers{
 		Db:           db,
 		Context:      ctx,
 		SessionStore: SessionStore,
+		Cache:        cache,
 	}
 
+	// Load templates
 	// define api routes
 	// public routes
 	e.GET("/health", func(c echo.Context) error {

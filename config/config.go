@@ -21,6 +21,7 @@ var (
 	SESSION_KEY                  string
 	SPOTIFY_CONNECT_REDIRECT_URL string
 	FRONTEND_BASE_URL            string
+	VALKEY_URL                   string
 )
 
 const (
@@ -65,6 +66,8 @@ func LoadEnv() {
 	FRONTEND_BASE_URL = os.Getenv("FRONTEND_BASE_URL")
 
 	SPOTIFY_CONNECT_REDIRECT_URL = FRONTEND_BASE_URL + "/convert/connect-spotify"
+
+	VALKEY_URL = getEnvOrThrow("VALKEY_URL")
 
 }
 

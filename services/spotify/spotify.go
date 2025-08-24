@@ -2,46 +2,11 @@ package spotify_service
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/tobyleye/playlift/types"
 	"github.com/tobyleye/playlift/utils"
 	"github.com/zmb3/spotify/v2"
 )
-
-func getArtists(artists []spotify.SimpleArtist) []string {
-	var artistNames []string
-	for _, artist := range artists {
-		artistNames = append(artistNames, artist.Name)
-	}
-	return artistNames
-}
-
-func SearchSpotify(spotifyClient *spotify.Client, ctx context.Context, searchQuery types.SearchQuery) (types.SimpleTrack, error) {
-
-	query := fmt.Sprintf("track:%s artist:%s", searchQuery.Title, strings.Join(searchQuery.Artists, ", "))
-
-	searchResult, err := spotifyClient.Search(ctx, query, spotify.SearchTypeTrack)
-	if err != nil {
-		return types.SimpleTrack{}, err
-	}
-
-	tracks := searchResult.Tracks.Tracks
-
-	if len(tracks) > 0 {
-		bestMatch := tracks[0]
-
-		return types.SimpleTrack{
-			Name:    bestMatch.Name,
-			Artists: getArtists(bestMatch.Artists),
-			Link:    bestMatch.ExternalURLs["spotify"],
-		}, nil
-	}
-
-	return types.SimpleTrack{}, nil
-
-}
 
 func GetUserPlaylists(ctx context.Context, client *spotify.Client, page int) (types.SpotifyPlaylistPage, error) {
 
