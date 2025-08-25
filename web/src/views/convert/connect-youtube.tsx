@@ -76,6 +76,8 @@ export default function ConnectYoutube() {
           code: codeResponse.code,
           origin: "connect",
         });
+        // not likely to not have data, but just in case
+        if (!data) throw new Error("No data received");
         setYoutubeConnected(true);
         const { user, is_new_user } = data.data;
         localStorage.setItem("userId", user.user_id);

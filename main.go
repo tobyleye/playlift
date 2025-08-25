@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -80,11 +81,16 @@ func main() {
 			config.FRONTEND_BASE_URL,
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"*"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
 	}
 
 	e.Use(middleware.CORSWithConfig(corsConfig))
+
+	// Optional: Explicit OPTIONS handler for debugging
+	e.OPTIONS("/*", func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	})
 
 	e.Renderer = &Template{
 		templates: nil,
