@@ -360,7 +360,7 @@ export default function DetailsPage() {
               </Box>
 
               {data.status === "failed" ? null : data.total_tracks === -1 ? (
-                <Box>
+                <Box p={4}>
                   <EllipsisLoader text="Loading tracks" />
                 </Box>
               ) : (
