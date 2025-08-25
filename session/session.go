@@ -32,10 +32,11 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 
 	// x.Seconds()
 	session.Options = &sessions.Options{
+
 		Path:     "/",
 		MaxAge:   int(expiration.Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		Secure:   true,
 		Domain:   config.APP_DOMAIN,
 	}
