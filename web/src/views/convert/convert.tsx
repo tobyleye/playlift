@@ -16,7 +16,6 @@ import "./playlist-selection";
 import ConfirmationModal from "./confirmation-modal";
 import { GradientButton, SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
-import EllipsisLoader from "@/components/ellipsis-loader";
 import BackdropLoader from "@/components/backdrop-loader";
 
 // import { useTransition, animated } from "@react-spring/web";
