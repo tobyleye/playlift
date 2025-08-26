@@ -1,7 +1,6 @@
 package session
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -111,7 +110,6 @@ func ClearSession(c echo.Context) error {
 	}
 
 	for k := range session.Values {
-		fmt.Println("deleting session key:", k)
 		delete(session.Values, k)
 	}
 
