@@ -165,9 +165,10 @@ func (h Handlers) Logout(c echo.Context) error {
 	// clear session
 
 	err := session.ClearSession(c)
+
 	if err != nil {
 		log.Println("error clearing session:", err)
-		return c.JSON(400, map[string]string{"error": "no session found"})
+		return c.JSON(500, map[string]string{"error": "server error"})
 	}
 
 	return c.JSON(200, map[string]string{"message": "logged out successfully"})

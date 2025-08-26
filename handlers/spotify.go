@@ -123,7 +123,8 @@ func (h Handlers) SpotifyLoginCallback(c echo.Context) error {
 
 	h.Db.Model(&models.User{}).Where("user_id = ?", user.UserId).Update("spotify_id", spotifyUser.ID)
 
-	err = session.SetUserSession(c, "spotifyId", spotifyUser.ID)
+	user.SpotifyId = spotifyUser.ID
+	err = session.UpdateSession(c, user)
 
 	if err != nil {
 		log.Printf("error setting user %s session %v\n", user.UserId, err)

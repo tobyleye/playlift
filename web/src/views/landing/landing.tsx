@@ -6,9 +6,6 @@ import {
   Link as StyledLink,
   Icon,
   useToast,
-  ModalOverlay,
-  Modal,
-  ModalContent,
 } from "@chakra-ui/react";
 import { Link, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { ArrowRight, Music, Play } from "lucide-react";
@@ -18,10 +15,10 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { FcGoogle } from "react-icons/fc";
 import { SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
-import EllipsisLoader from "@/components/ellipsis-loader";
 import { client } from "@/api/api";
 import { useState } from "react";
 import useLoggedIn from "@/hooks/useLoggedIn";
+import BackdropLoader from "@/components/backdrop-loader";
 
 export default function Landing() {
   const { session, loadingSession, setSession } = useSessionContext();
@@ -77,19 +74,7 @@ export default function Landing() {
 
   return (
     <Box>
-      <Modal isOpen={loading} onClose={() => {}} isCentered>
-        <ModalOverlay
-          bg="blackAlpha.300"
-          backdropFilter="blur(6px) hue-rotate(40deg)"
-        />
-        <ModalContent bg="unset" textAlign="center" shadow="none">
-          <EllipsisLoader
-            text="Signing you in"
-            fontWeight="bold"
-            fontSize="xl"
-          />
-        </ModalContent>
-      </Modal>
+      {loading && <BackdropLoader loadingText="Signing you in" />}
 
       <BGShapes />
       <Box position="relative">

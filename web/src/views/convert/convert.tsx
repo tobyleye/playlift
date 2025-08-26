@@ -16,7 +16,7 @@ import "./playlist-selection";
 import ConfirmationModal from "./confirmation-modal";
 import { GradientButton, SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
-import EllipsisLoader from "@/components/ellipsis-loader";
+import BackdropLoader from "@/components/backdrop-loader";
 
 // import { useTransition, animated } from "@react-spring/web";
 
@@ -216,6 +216,9 @@ export default function ConversionWizard() {
             );
           })} */}
 
+              {transferLoading && (
+                <BackdropLoader loadingText="Starting migration" />
+              )}
               <ConvertWizardContext.Provider
                 value={{
                   steps: steps,
@@ -298,16 +301,10 @@ export default function ConversionWizard() {
                           selectedPlaylists.length === 0 || transferLoading
                         }
                       >
-                        {transferLoading ? (
-                          <EllipsisLoader text="Loading" />
-                        ) : (
-                          <>
-                            Start Migration{" "}
-                            {selectedPlaylists.length > 0 &&
-                              `(${selectedPlaylists.length})`}
-                            <Icon as={ArrowRight} ml={2} />
-                          </>
-                        )}
+                        Start Migration{" "}
+                        {selectedPlaylists.length > 0 &&
+                          `(${selectedPlaylists.length})`}
+                        <Icon as={ArrowRight} ml={2} />
                       </GradientButton>
                     ) : curStep.completed && nextStep ? (
                       <GradientButton
