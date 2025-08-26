@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/models"
 )
+
+var SESSION_NAME = "sess"
 
 type UserSession struct {
 	UserId           string `json:"user_id"`
@@ -25,18 +28,17 @@ type UserSession struct {
 func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 	// Initialize the session for the user
 
-	session, _ := echoSessionMiddleware.Get("sess", c)
+	session, _ := echoSessionMiddleware.Get(SESSION_NAME, c)
 
 	// 7 days
 	expiration := (time.Hour * 24) * 7
 
-	// x.Seconds()
 	session.Options = &sessions.Options{
 
 		Path:     "/",
 		MaxAge:   int(expiration.Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteLaxMode,
 		Secure:   true,
 		Domain:   config.APP_DOMAIN,
 	}
@@ -68,11 +70,6 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 
 	session.Values["user"] = userSession
 
-	// session.Values["email"] = user.Email
-	// session.Values["name"] = user.Name
-	// session.Values["picture"] = user.Picture
-	// session.Values["spotifyId"] = user.SpotifyId
-
 	err := session.Save(c.Request(), c.Response())
 
 	return userSession, err
@@ -80,7 +77,7 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 }
 
 func GetUserFromSession(c echo.Context) (UserSession, error) {
-	sess, err := echoSessionMiddleware.Get("sess", c)
+	sess, err := echoSessionMiddleware.Get(SESSION_NAME, c)
 
 	if err != nil {
 		// If session not found, return empty UserSession
@@ -90,32 +87,16 @@ func GetUserFromSession(c echo.Context) (UserSession, error) {
 
 	user, _ := sess.Values["user"].(UserSession)
 
-	// email, _ := sess.Values["email"].(string)
-	// name, _ := sess.Values["name"].(string)
-	// picture, _ := sess.Values["picture"].(string)
-	// spotifyId, _ := sess.Values["spotifyId"].(string)
-	// youtubeId, _ := sess.Values["youtubeId"].(string)
-
-	// user := UserSession{
-	// 	UserId:    userId,
-	// 	Email:     email,
-	// 	Name:      name,
-	// 	Picture:   picture,
-	// 	SpotifyId: spotifyId,
-	// 	YoutubeId: youtubeId,
-	// }
-
 	return user, nil
 }
 
-func SetUserSession(c echo.Context, field string, value string) error {
-	// nothing yet
-	session, err := echoSessionMiddleware.Get("sess", c)
+func UpdateSession(c echo.Context, user UserSession) error {
+	session, err := echoSessionMiddleware.Get(SESSION_NAME, c)
 	if err != nil {
 		return err
 	}
 
-	session.Values["user"].(map[string]string)[field] = value
+	session.Values["user"] = user
 
 	err = session.Save(c.Request(), c.Response())
 
@@ -123,14 +104,18 @@ func SetUserSession(c echo.Context, field string, value string) error {
 }
 
 func ClearSession(c echo.Context) error {
-	session, err := echoSessionMiddleware.Get("sess", c)
+	session, err := echoSessionMiddleware.Get(SESSION_NAME, c)
+
 	if err != nil {
 		return err
 	}
 
 	for k := range session.Values {
+		fmt.Println("deleting session key:", k)
 		delete(session.Values, k)
 	}
+
+	session.Options.MaxAge = -1
 
 	err = session.Save(c.Request(), c.Response())
 

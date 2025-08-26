@@ -607,7 +607,6 @@ func (h Handlers) Convert(c echo.Context) error {
 		log.Println("error creating conversions: ", err)
 		return c.JSON(500, errorResponse("internal server error"))
 	}
-
 	// start a goroutine to handle the conversion
 	go startConversions(h.Db, h.Cache, conversions...)
 
