@@ -140,10 +140,9 @@ export default function UserMenu() {
                   localStorage.removeItem("userId");
                   window.location.assign("/");
                 })
-                .finally(() => {
+                .catch(() => {
                   setLogoutLoading(false);
-                })
-                .catch(() => {});
+                });
             }}
             bg="unset"
             _hover={{
