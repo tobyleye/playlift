@@ -61,8 +61,9 @@ type PlaylistPageResponse struct {
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
 const YTM_DOMAIN = "https://music.youtube.com"
-const AND_SEPERATOR = "&"
+const AND_SEPARATOR = "&"
 const COMMA = ","
+const DOT_SEPARATOR = "•"
 
 var TRACK_TITLE_WITH_FEAT_REGEX = regexp.MustCompile(`(.*?) \(feat. (.*?)\)`)
 
@@ -82,8 +83,6 @@ var defaultBody = map[string]interface{}{
 		"user": map[string]interface{}{},
 	},
 }
-
-var SEPERATOR = " • "
 
 func createPlaylistLink(playlistId string) string {
 	return fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId)
@@ -177,14 +176,21 @@ func getParam2(filter string) string {
 	return filterParams[filter]
 }
 
-func getArtists(artistsFlexRendererRuns interface{}) []string {
+func getArtists(artistsRow interface{}) []string {
 	var artists = []string{}
-	artistsRuns, _ := artistsFlexRendererRuns.([]interface{})
+	// the artist row contains not just the artist names, but the
+	// album title as well and duration. they are each seperated by the dot
+	// so to read the artist we read the first set of text before the first dot
+	artistsRuns, _ := artistsRow.([]interface{})
 	for _, artistRun := range artistsRuns {
-		artist := ReadValueString(artistRun, []interface{}{"text"})
-		artist = strings.TrimSpace(artist)
-		if artist != "" && artist != AND_SEPERATOR && artist != COMMA {
-			artists = append(artists, artist)
+		text := ReadValueString(artistRun, []interface{}{"text"})
+		text = strings.TrimSpace(text)
+		if text == DOT_SEPARATOR {
+			break
+		}
+
+		if text != "" && text != AND_SEPARATOR && text != COMMA {
+			artists = append(artists, text)
 		}
 	}
 	return artists
@@ -207,7 +213,7 @@ func parseTrack(result interface{}) Track {
 		artist := titleWithFeaturedArtists[2]
 		artists = append(artists,
 			strings.Split(artist,
-				fmt.Sprintf(" %s ", AND_SEPERATOR),
+				fmt.Sprintf(" %s ", AND_SEPARATOR),
 			)...)
 	}
 
@@ -280,11 +286,27 @@ func Search(client *http.Client, searchQuery types.SearchQuery) ([]Track, error)
 		return nil, err
 	}
 
-	content := ReadValue(data, []interface{}{"contents", "tabbedSearchResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicShelfRenderer", "contents"})
+	SaveJson(data, fmt.Sprintf("ytmusic-search-%s.json", searchQuery.Title)) // for debugging
+
+	sectionListContent := ReadValue(data, []interface{}{"contents", "tabbedSearchResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents"})
+
+	sectionListContentArray, _ := sectionListContent.([]interface{})
+
+	//  0, "musicShelfRenderer", "contents"
+
+	musicShelfIndex := 0
+	//  in cases where the search query is misspelt an additional section that
+	// contains spelling suggestions is also returned, pushing the musicShelfRenderer to the end of the array
+
+	if len(sectionListContentArray) > 1 {
+		musicShelfIndex = len(sectionListContentArray) - 1
+	}
+
+	musicShelfContent := ReadValue(sectionListContentArray[musicShelfIndex], []interface{}{"musicShelfRenderer", "contents"})
 
 	var results []Track
 
-	if content, ok := content.([]interface{}); ok {
+	if content, ok := musicShelfContent.([]interface{}); ok {
 		for _, item := range content {
 			parsedResult := parseTrack(item)
 			results = append(results, parsedResult)
