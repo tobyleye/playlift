@@ -50,6 +50,10 @@ func (c YoutubeConverterClient) SearchTrack(title string, artists []string) (*ty
 		return nil, err
 	}
 
+	if searchResult.VideoId == "" {
+		return nil, nil
+	}
+
 	formattedResult := formatters.FormatYoutubeTrack(&searchResult)
 	return &formattedResult, nil
 }
