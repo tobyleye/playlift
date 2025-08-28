@@ -16,8 +16,8 @@ import (
 
 	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/core/converter/clients"
+	"github.com/tobyleye/playlift/core/ytmusicapi"
 	"github.com/tobyleye/playlift/models"
-	"github.com/tobyleye/playlift/services/ytmusicapi"
 	"github.com/tobyleye/playlift/session"
 	"github.com/tobyleye/playlift/types"
 	"github.com/tobyleye/playlift/utils"

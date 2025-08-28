@@ -3,8 +3,8 @@ package clients
 import (
 	"net/http"
 
+	"github.com/tobyleye/playlift/core/ytmusicapi"
 	"github.com/tobyleye/playlift/formatters"
-	"github.com/tobyleye/playlift/services/ytmusicapi"
 	"github.com/tobyleye/playlift/types"
 )
 

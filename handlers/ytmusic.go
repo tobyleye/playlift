@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/tobyleye/playlift/config"
-	"github.com/tobyleye/playlift/services/ytmusicapi"
+	"github.com/tobyleye/playlift/core/ytmusicapi"
 	"github.com/tobyleye/playlift/session"
 )
 

@@ -1,7 +1,7 @@
 package formatters
 
 import (
-	"github.com/tobyleye/playlift/services/ytmusicapi"
+	"github.com/tobyleye/playlift/core/ytmusicapi"
 	"github.com/tobyleye/playlift/types"
 	"github.com/zmb3/spotify/v2"
 )
