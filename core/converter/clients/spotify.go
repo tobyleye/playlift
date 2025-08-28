@@ -20,6 +20,14 @@ type SpotifyClient struct {
 
 func (c SpotifyClient) GetPlaylistDetails(playlistId string) (types.PlaylistDetails, error) {
 
+	if playlistId == "LM" {
+		return types.PlaylistDetails{
+			Title:       "Liked Music",
+			Link:        "https://open.spotify.com/collection/tracks",
+			TotalTracks: -1,
+		}, nil
+	}
+
 	playlist, err := c.Client.GetPlaylist(c.context, spotify.ID(playlistId))
 	if err != nil {
 		return types.PlaylistDetails{}, err

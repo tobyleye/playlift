@@ -307,14 +307,12 @@ type ConversionState struct {
 }
 
 func (s *ConversionState) Save(ctx context.Context, cache valkey.Client) error {
-	fmt.Println("saving conversion with id..", s.ConversionID)
 	str, _ := s.MarshalBinary()
 	return cache.Do(ctx, cache.B().Set().Key(fmt.Sprintf("conversion:%s", s.ConversionID)).Value(string(str)).Build()).Error()
 }
 
 func (s *ConversionState) saveToDb(db *gorm.DB, timeTaken float64) {
 
-	fmt.Println("saving all tracks to db...", s.Status)
 	conversion := models.PlaylistConversion{
 		ConversionID:        s.ConversionID,
 		Status:              s.Status,
@@ -382,12 +380,13 @@ func runSingleConversion(db *gorm.DB, cache valkey.Client, conversion *models.Pl
 		conversion.TotalTracks = playlistDetails.TotalTracks
 
 		playlistTracks, err := sourceClient.GetPlaylistTracks(conversion.PlaylistId)
+
 		if err != nil {
 			return err
 		}
 
 		conversion.PlaylistTracks = playlistTracks
-		if conversion.TotalTracks == 0 {
+		if conversion.TotalTracks <= 0 {
 			conversion.TotalTracks = len(playlistTracks)
 		}
 
