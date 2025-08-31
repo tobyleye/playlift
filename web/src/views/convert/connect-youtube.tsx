@@ -19,6 +19,8 @@ export default function ConnectYoutube() {
   const { setSession } = useSessionContext();
   const { youtubeConnected, setYoutubeConnected } = useConvertWizardContext();
 
+  const [showDescription] = useState(() => !youtubeConnected);
+
   // useEffect(() => {
   //   const connectCallback = async () => {
   //     setLoading(true);
@@ -131,10 +133,12 @@ export default function ConnectYoutube() {
         <Heading fontSize="3xl" mb={4} fontWeight={"bold"}>
           Connect YouTube Music
         </Heading>
-        <Text mb={8} fontSize="md" maxW="md" mx="auto" color="gray.200">
-          First, let's connect your YouTube Music account to access your
-          playlists and create your profile.
-        </Text>
+        {showDescription && (
+          <Text mb={8} fontSize="md" maxW="md" mx="auto" color="gray.200">
+            First, let's connect your YouTube Music account to access your
+            playlists and create your profile.
+          </Text>
+        )}
 
         <chakra.button
           py={2}

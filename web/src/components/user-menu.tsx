@@ -10,7 +10,7 @@ import {
   Avatar,
   MenuButton,
 } from "@chakra-ui/react";
-import { User, LogOut, ArrowLeftRight, Settings } from "lucide-react";
+import { User, LogOut, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import BackdropLoader from "./backdrop-loader";
 import { useState } from "react";
@@ -18,17 +18,17 @@ import { useState } from "react";
 export default function UserMenu() {
   const { session } = useSessionContext();
   const [logoutLoading, setLogoutLoading] = useState(false);
-
   return !session ? (
     <Box
-      w={10}
-      h={10}
+      w={12}
+      h={12}
       borderRadius={"full"}
       border="2px solid"
       borderColor="whiteAlpha.200"
-      bg="linear-gradient(to right, #9f7aea, #ec4899)"
       color="white"
+      bg="whiteAlpha.500"
       fontWeight="semibold"
+      animation="pulse 2s infinite"
     />
   ) : (
     <>
@@ -97,21 +97,6 @@ export default function UserMenu() {
           >
             <Icon as={User} w={4} h={4} mr={2} />
             Home
-          </MenuItem>
-
-          <Box h="1px" bg="whiteAlpha.200" />
-
-          <MenuItem
-            as={Link}
-            to="/convert/select-playlists"
-            bg="unset"
-            _hover={{ bg: "whiteAlpha.100" }}
-            _focus={{ bg: "whiteAlpha.100" }}
-            display="flex"
-            alignItems="center"
-          >
-            <Icon as={ArrowLeftRight} w={4} h={4} mr={2} />
-            New migration
           </MenuItem>
 
           <Box h="1px" bg="whiteAlpha.200" />

@@ -17,6 +17,9 @@ export default function ConnectSpotify() {
   const navigate = useNavigate();
 
   const { spotifyConnected, setSpotifyConnected } = useConvertWizardContext();
+
+  const [showDescription] = useState(() => !spotifyConnected);
+
   const toast = useToast();
 
   useEffect(() => {
@@ -103,10 +106,13 @@ export default function ConnectSpotify() {
         <Heading fontSize="3xl" mb={4} fontWeight={"bold"}>
           Connect Your Spotify Account
         </Heading>
-        <Text mb={8} fontSize="md" maxW="md" mx="auto" color="gray.200">
-          Now let's connect your Spotify account to access your playlists and
-          music library.
-        </Text>
+
+        {showDescription && (
+          <Text mb={8} fontSize="md" maxW="md" mx="auto" color="gray.200">
+            Now let's connect your Spotify account to access your playlists and
+            music library.
+          </Text>
+        )}
         <chakra.button
           bg="spotify-green"
           color="white"

@@ -12,9 +12,10 @@ import { theme } from "./theme/theme.ts";
 import SessionProvider from "./providers/SessionProvider.tsx";
 import { SWRConfig } from "swr";
 import useLoggedIn from "./hooks/useLoggedIn.ts";
+import "./css/animation.css";
 
 const Landing = lazy(() => import("./views/landing/landing.tsx"));
-const Home = lazy(() => import("./views/home.tsx"));
+const Home = lazy(() => import("./views/home/home.tsx"));
 const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
 const ConnectSpotify = lazy(
@@ -45,17 +46,7 @@ function Root() {
     <ChakraProvider theme={theme}>
       <SessionProvider>
         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-          <SWRConfig
-            value={{
-              shouldRetryOnError: (err) => {
-                if (err.response && err.response.status === 401) {
-                  return false;
-                }
-                // retry on other errors?
-                return true;
-              },
-            }}
-          >
+          <SWRConfig>
             <Suspense fallback={<div />}>
               <Outlet />
             </Suspense>

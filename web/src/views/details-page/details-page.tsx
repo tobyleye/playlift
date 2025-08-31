@@ -3,6 +3,7 @@ import EllipsisLoader from "@/components/ellipsis-loader";
 import DefaultErrorState from "@/components/errors/default-error-state";
 import Nav from "@/components/nav";
 import { getServiceColor, getServiceLabel } from "@/constants/constants";
+import { formatNumber } from "@/utils/utils";
 import {
   Heading,
   Text,
@@ -219,7 +220,10 @@ export default function DetailsPage() {
                 <Box display="flex" alignItems="center" gap={2} mb={4}>
                   <Box display="flex" gap={1.5} alignItems="center">
                     <Icon as={MusicIcon} color="blue.400" w={4} h={4} />
-                    {data?.total_tracks > -1 ? data.total_tracks : `∞`} tracks
+                    {data?.total_tracks > -1
+                      ? formatNumber(data.total_tracks)
+                      : `-`}{" "}
+                    tracks
                   </Box>
                 </Box>
                 <Box

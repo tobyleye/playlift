@@ -1,0 +1,28 @@
+.progress-bar {
+  /* border: 1px solid red; */
+  animation: pp 1s ease infinite;
+}
+
+.progress-bar-bar {
+  animation: waves 1s ease infinite;
+  animation-delay: 0.2s;
+  animation-fill-mode: backwards;
+}
+
+@keyframes pp {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
+@keyframes waves {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

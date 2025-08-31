@@ -22,7 +22,7 @@ func (c YoutubeConverterClient) GetPlaylistDetails(playlistId string) (types.Pla
 	return types.PlaylistDetails{
 		Title:       playlist.Title,
 		Link:        playlist.Link,
-		TotalTracks: len(playlist.PlaylistTracks),
+		TotalTracks: playlist.TotalTracks,
 	}, nil
 
 }

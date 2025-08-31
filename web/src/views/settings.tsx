@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   CardBody,
-  CardHeader,
   Heading,
   Text,
   Avatar,
@@ -166,7 +165,7 @@ export default function Settings() {
                 borderColor="rgba(229,62,62, .3)"
                 backdropFilter="blur(10px)"
               >
-                <CardHeader pb={2}>
+                <CardBody>
                   <HStack mb={2}>
                     <Icon as={AlertTriangle} color="red.400" />
                     <Heading size="md" color="red.400">
@@ -177,37 +176,20 @@ export default function Settings() {
                     Irreversible actions that will permanently affect your
                     account
                   </Text>
-                </CardHeader>
-                <CardBody>
-                  <VStack spacing={4} align="stretch">
-                    <Divider borderColor="red.500" opacity={0.2} />
-
-                    <VStack spacing={3} align="stretch">
-                      <Box mb={2}>
-                        <Heading size="sm" color="white" mb={2}>
-                          Deactivate Account
-                        </Heading>
-                        <Text color="whiteAlpha.700" fontSize="sm">
-                          Permanently delete your account and all associated
-                          data. This will remove all your migrations, revoke
-                          access tokens from connected services (Spotify,
-                          YouTube Music), and cannot be undone.
-                        </Text>
-                      </Box>
-
-                      <Button
-                        colorScheme="red"
-                        leftIcon={<Icon as={Trash2} />}
-                        onClick={onOpen}
-                        isLoading={isDeactivating}
-                        loadingText="Deactivating..."
-                        size="sm"
-                        alignSelf="flex-start"
-                      >
-                        Deactivate Account
-                      </Button>
-                    </VStack>
-                  </VStack>
+                  <Divider mt={4} mb={6} borderColor="red.500" opacity={0.2} />
+                  <Box>
+                    <Button
+                      colorScheme="red"
+                      leftIcon={<Icon as={Trash2} />}
+                      onClick={onOpen}
+                      isLoading={isDeactivating}
+                      loadingText="Deactivating..."
+                      size="sm"
+                      alignSelf="flex-start"
+                    >
+                      Deactivate Account
+                    </Button>
+                  </Box>
                 </CardBody>
               </Card>
             </VStack>
@@ -234,8 +216,11 @@ export default function Settings() {
                 >
                   Are you absolutely sure?
                 </AlertDialogHeader>
-                <Text color="whiteAlpha.700" fontSize="md" mb={6}>
-                  This action cannot be undone.
+
+                <Text color="whiteAlpha.700" fontSize="sm" mb={4}>
+                  Deleting your account will remove all your migrations, revoke
+                  access tokens from connected services (Spotify, YouTube
+                  Music), and cannot be undone.
                 </Text>
 
                 <FormControl>

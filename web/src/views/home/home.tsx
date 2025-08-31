@@ -7,26 +7,23 @@ import {
   useToast,
   Container,
   SimpleGrid,
+  Link as StyledLink,
 } from "@chakra-ui/react";
+
 import useSWR from "swr";
-import api from "../api/api";
-import { AlertCircle, Clock, Check, ArrowRight } from "lucide-react";
+import api from "../../api/api";
+import { Clock, Check, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { Rabbit } from "lucide-react";
 import { Link } from "react-router-dom";
 import Nav from "@/components/nav";
-import dayjs from "dayjs";
 import { PlaylistConversion } from "@/types";
-import { getServiceColor, getServiceLabel } from "@/constants/constants";
-import { useSessionContext } from "@/contexts/session";
 import EllipsisLoader from "@/components/ellipsis-loader";
-import { useNavigate } from "react-router-dom";
 import { PrimaryButton } from "@/components/buttons";
 import DefaultErrorState from "@/components/errors/default-error-state";
+import ConversionCard from "@/components/conversion-card/conversion-card";
 
 export default function Home() {
-  const { session } = useSessionContext();
-
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,17 +32,14 @@ export default function Home() {
     data,
     error,
     mutate,
-  } = useSWR<PlaylistConversion[]>(
-    session?.user_id ? "/conversions" : null,
-    async () => {
-      return api.fetchConversions();
-    }
-  );
+  } = useSWR<PlaylistConversion[]>("/conversions", async () => {
+    return api.fetchConversions();
+  });
 
   const conversions = data || [];
 
   const pendingConversions = conversions.filter(
-    (conversion) => conversion.status !== "completed"
+    (conversion) => conversion.status === "pending"
   );
   const completedConversions = conversions.filter(
     (conversion) => conversion.status === "completed"
@@ -95,6 +89,25 @@ export default function Home() {
     <Box pb={8}>
       <Nav />
 
+      <Box position="fixed" left={0} right={0} bottom={0} py={6}>
+        <Container maxW="68rem" display="flex" justifyContent="end">
+          <StyledLink
+            borderRadius="full"
+            bgGradient="linear(to-r, pink.500, purple.500)"
+            color="white"
+            w={14}
+            h={14}
+            display="grid"
+            placeItems="center"
+            boxShadow="2xl"
+            fontSize={"2xl"}
+            as={Link}
+            to="/convert/select-playlists"
+          >
+            <Icon as={PlusIcon} w={8} h={8} />
+          </StyledLink>
+        </Container>
+      </Box>
       <Container maxWidth="container.lg" mt={8}>
         <Box display="flex" gap={4} flexWrap="wrap" alignItems="center" mb={8}>
           <Box>
@@ -182,51 +195,25 @@ export default function Home() {
                   })}
                 </SimpleGrid>
 
-                {pendingConversions.length > 0 && (
-                  <Box>
-                    <Heading mb={4} fontSize="xl" color="whiteAlpha.800">
-                      Pending Migrations
-                    </Heading>
-                    <SimpleGrid
-                      columns={{ base: 1, md: 2, lg: 3 }}
-                      gap={6}
-                      pointerEvents={isLoading ? "none" : "auto"}
-                      opacity={isLoading ? 0.5 : 1}
-                    >
-                      {pendingConversions.map((conversion) => {
+                <Box>
+                  <SimpleGrid
+                    columns={{ base: 1, md: 2, lg: 3 }}
+                    gap={6}
+                    pointerEvents={isLoading ? "none" : "auto"}
+                    opacity={isLoading ? 0.5 : 1}
+                  >
+                    {[...pendingConversions, ...completedConversions].map(
+                      (conversion) => {
                         return (
                           <ConversionCard
                             key={conversion.conversion_id}
                             conversion={conversion}
                           />
                         );
-                      })}
-                    </SimpleGrid>
-                  </Box>
-                )}
-
-                {completedConversions.length > 0 && (
-                  <Box mt={12}>
-                    <Heading mb={4} fontSize="xl" color="whiteAlpha.800">
-                      Completed Migrations
-                    </Heading>
-                    <SimpleGrid
-                      columns={{ base: 1, md: 2, lg: 3 }}
-                      gap={6}
-                      pointerEvents={isLoading ? "none" : "auto"}
-                      opacity={isLoading ? 0.5 : 1}
-                    >
-                      {completedConversions.map((conversion) => {
-                        return (
-                          <ConversionCard
-                            key={conversion.conversion_id}
-                            conversion={conversion}
-                          />
-                        );
-                      })}
-                    </SimpleGrid>
-                  </Box>
-                )}
+                      }
+                    )}
+                  </SimpleGrid>
+                </Box>
               </Box>
             )}
           </Box>
@@ -261,94 +248,6 @@ const EmptyState = () => {
         <Link to="/convert/select-playlists">
           <PrimaryButton>Create one</PrimaryButton>
         </Link>
-      </Box>
-    </Box>
-  );
-};
-
-const ConversionCard = ({ conversion }: { conversion: PlaylistConversion }) => {
-  const navigate = useNavigate();
-
-  return (
-    <Box
-      onClick={() => navigate(`/details/${conversion.conversion_id}`)}
-      bg="whiteAlpha.100"
-      border="1px solid"
-      borderColor="whiteAlpha.200"
-      rounded="md"
-      px={4}
-      py={3}
-      cursor="pointer"
-    >
-      <Box display="flex" alignItems="center" mb={4}>
-        <Text fontWeight="bold" fontSize="medium">
-          {conversion.playlist_title}
-        </Text>
-        <Box ml="auto">
-          {conversion.status === "pending" ? (
-            <Icon color="yellow.500" as={Clock}></Icon>
-          ) : conversion.status === "failed" ? (
-            <Icon color="red.500" as={AlertCircle}></Icon>
-          ) : conversion.status === "completed" ? (
-            <Icon color="green.500" as={Check}></Icon>
-          ) : null}
-        </Box>
-      </Box>
-
-      <Box display="flex" alignItems="center" justifyContent="center" mb={5}>
-        <Box
-          w={3}
-          h={3}
-          mr={2}
-          rounded="full"
-          bg={getServiceColor(conversion.source_platform)}
-        />
-        <Text>{getServiceLabel(conversion.source_platform)}</Text>
-        <Icon color="whiteAlpha.700" mx={4} as={ArrowRight} />
-
-        <Box
-          mr={2}
-          w={3}
-          h={3}
-          rounded="full"
-          bg={getServiceColor(conversion.destination_platform)}
-        />
-        <Text>{getServiceLabel(conversion.destination_platform)}</Text>
-      </Box>
-
-      <Box display="grid" gap={4} fontSize="sm">
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Text color="whiteAlpha.700" fontSize="sm">
-            Tracks
-          </Text>
-          <Text>
-            {conversion.total_tracks > -1 ? conversion.total_tracks : `∞`}
-          </Text>
-        </Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Text color="whiteAlpha.700" fontSize="sm">
-            Status
-          </Text>
-          <Text
-            textTransform="capitalize"
-            color={
-              conversion.status === "completed"
-                ? "green.400"
-                : conversion.status === "pending"
-                ? "yellow.400"
-                : "red.400"
-            }
-            fontWeight="semibold"
-          >
-            {conversion.status}
-          </Text>
-        </Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Text color="whiteAlpha.700" fontSize="sm">
-            Created
-          </Text>
-          <Text color="whiteAlpha.700">{dayjs().format("MMM DD, YYYY")}</Text>
-        </Box>
       </Box>
     </Box>
   );
