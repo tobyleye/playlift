@@ -22,9 +22,25 @@ import {
   Loader,
   MusicIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import useSWR from "swr";
+import { useVirtualizer } from "@tanstack/react-virtual";
+
+type Track = {
+  id: string;
+  artists: string[];
+  title: string;
+  album: string;
+};
+
+type ConversionResult = null | Record<
+  string,
+  {
+    data: string;
+    error: string;
+  }
+>;
 
 type ConversionDetails = {
   conversion_id: string;
@@ -35,20 +51,8 @@ type ConversionDetails = {
   status: string;
   time_taken: number;
   playlist_link: string;
-  result: null | Record<
-    string,
-    {
-      data: string;
-      error: string;
-    }
-  >;
-  playlist_tracks: {
-    id: string;
-    artists: string[];
-    title: string;
-    album: string;
-  }[];
-
+  result: ConversionResult;
+  playlist_tracks: Track[];
   created_playlist_link: string;
 };
 
@@ -138,7 +142,16 @@ export default function DetailsPage() {
       };
     }, [data]);
 
-  const getFilteredTracks = () => {
+  const formatDuration = (duration: number) => {
+    duration = Math.round(duration);
+    if (duration > 60) {
+      return `${Math.floor(duration / 60)} mins, ${duration % 60} secs`;
+    }
+
+    return `${duration} secs`;
+  };
+
+  const tracks = useMemo(() => {
     if (!data) return [];
 
     const playlistTracks = data.playlist_tracks || [];
@@ -152,17 +165,9 @@ export default function DetailsPage() {
     }
 
     return playlistTracks;
-  };
+  }, [data, trackFilter]);
 
-  const formatDuration = (duration: number) => {
-    duration = Math.round(duration);
-    if (duration > 60) {
-      return `${Math.floor(duration / 60)} mins, ${duration % 60} secs`;
-    }
-
-    return `${duration} secs`;
-  };
-
+  console.log("tracks..", tracks);
   return (
     <Box pb={10}>
       <Nav />
@@ -363,70 +368,30 @@ export default function DetailsPage() {
                 </Box>
               </Box>
 
-              {data.status === "failed" ? null : data.total_tracks === -1 ? (
+              {data.status === "failed" ? (
+                <Box>
+                  {data.total_tracks === -1 ? (
+                    <Box p={4}>
+                      <Text>Failed to load tracks</Text>
+                    </Box>
+                  ) : (
+                    <TrackList
+                      key={trackFilter}
+                      tracks={tracks || []}
+                      result={data?.result ?? {}}
+                    />
+                  )}
+                </Box>
+              ) : data.total_tracks === -1 ? (
                 <Box p={4}>
                   <EllipsisLoader text="Loading tracks" />
                 </Box>
               ) : (
-                <Box
-                  maxH="80"
-                  overflow="auto"
-                  sx={{
-                    ".track-item:not(:last-child)": {
-                      borderBottom: "1px solid",
-                      borderColor: "whiteAlpha.200",
-                    },
-                  }}
-                >
-                  {getFilteredTracks().map((track, index) => {
-                    const result = data.result?.[track.id];
-                    const isCompleted = result && result.data;
-                    const isFailed = result && result.error;
-
-                    return (
-                      <Box
-                        className="track-item"
-                        key={`track-id-${track.id}-${index}`}
-                        display="flex"
-                        alignItems="center"
-                        gap={2}
-                        p={4}
-                        _hover={{
-                          bg: "whiteAlpha.100",
-                        }}
-                      >
-                        <Box
-                          fontSize="sm"
-                          color="whiteAlpha.700"
-                          fontWeight={"medium"}
-                          mr={4}
-                        >
-                          {index + 1}
-                        </Box>
-                        <Box>
-                          <Text fontSize="sm" fontWeight="medium">
-                            {track.title}
-                          </Text>
-                          <Text fontSize="smaller" color="whiteAlpha.700">
-                            {track.artists.join(", ")}
-                          </Text>
-                        </Box>
-
-                        <Box ml="auto" fontSize="sm">
-                          <StatusBadge
-                            status={
-                              isCompleted
-                                ? "completed"
-                                : isFailed
-                                ? "failed"
-                                : "pending"
-                            }
-                          />
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
+                <TrackList
+                  key={trackFilter}
+                  tracks={tracks || []}
+                  result={data?.result ?? {}}
+                />
               )}
             </Box>
           </Box>
@@ -440,3 +405,116 @@ export default function DetailsPage() {
     </Box>
   );
 }
+
+const TrackList = ({
+  tracks,
+  result,
+}: {
+  tracks: Track[];
+  result: ConversionResult;
+}) => {
+  // The scrollable element for your list
+  const parentRef = useRef(null);
+
+  // The virtualizer
+  const rowVirtualizer = useVirtualizer({
+    count: tracks.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 75,
+    enabled: true,
+  });
+
+  const renderTrack = (index: number) => {
+    const track = tracks[index];
+    const trackResult = result?.[track.id];
+    const isCompleted = trackResult && trackResult.data;
+    const isFailed = trackResult && trackResult.error;
+
+    return (
+      <Box
+        className="track"
+        key={`track-id-${track.id}-${index}`}
+        display="flex"
+        alignItems="center"
+        px={4}
+        py={4}
+        _hover={{
+          bg: "whiteAlpha.100",
+        }}
+      >
+        <Box
+          fontSize="sm"
+          flexShrink={0}
+          color="whiteAlpha.700"
+          fontWeight={"medium"}
+          mr={5}
+        >
+          {index + 1}
+        </Box>
+        <Box mr={4}>
+          <Text fontSize="sm" fontWeight="medium">
+            {track.title}
+          </Text>
+          <Text fontSize="smaller" color="whiteAlpha.700">
+            {track.artists.join(", ")}
+          </Text>
+        </Box>
+
+        <Box ml="auto" fontSize="sm">
+          <StatusBadge
+            status={isCompleted ? "completed" : isFailed ? "failed" : "pending"}
+          />
+        </Box>
+      </Box>
+    );
+  };
+
+  return (
+    <Box
+      ref={parentRef}
+      height={80}
+      position="relative"
+      overflow="auto"
+      sx={{
+        ".track-list-item": {
+          borderBottom: "1px solid",
+          borderColor: "whiteAlpha.200",
+        },
+        ".track-list-item:last-child": {
+          borderBottom: "none",
+        },
+      }}
+    >
+      {/* The large inner element to hold all of the items */}
+      <Box
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+        className="track-list"
+      >
+        {/* Only the visible items in the virtualizer, manually positioned to be in view */}
+        {rowVirtualizer.getVirtualItems().map((virtualItem) => (
+          <Box
+            key={virtualItem.key}
+            data-index={virtualItem.index}
+            ref={rowVirtualizer.measureElement}
+            className="track-list-item"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              // height: `${virtualItem.size}px`,
+              transform: `translateY(${virtualItem.start}px)`,
+            }}
+          >
+            {/* Row {virtualItem.index} */}
+            {renderTrack(virtualItem.index)}
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+};
