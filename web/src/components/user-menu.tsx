@@ -34,18 +34,21 @@ export default function UserMenu() {
     <>
       {logoutLoading && <BackdropLoader loadingText="Logging out" />}
       <Menu>
-        <MenuButton
-          as={Box}
+        <Box
+          as={MenuButton}
           cursor="pointer"
+          shadow={"xl"}
           _hover={{
-            ".avatar-border": {
-              borderColor: "whiteAlpha.400",
-            },
+            transition: "transform .25s ease",
+            transform: "scale(0.96)",
+          }}
+          _active={{
+            transform: "scale(0.96)",
           }}
           transition="all 0.2s"
         >
           <Avatar
-            className="avatar-border"
+            className="avatar"
             size={{ base: "sm", md: "md" }}
             name={session.name}
             src={session.picture}
@@ -55,7 +58,7 @@ export default function UserMenu() {
             color="white"
             fontWeight="semibold"
           />
-        </MenuButton>
+        </Box>
         <MenuList
           bg="blackAlpha.200"
           backdropFilter="blur(16px)"
