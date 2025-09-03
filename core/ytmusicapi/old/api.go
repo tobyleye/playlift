@@ -1,4 +1,6 @@
-package ytmusicapi
+package old_api
+
+// Todo: implement formatters
 
 import (
 	"context"
@@ -7,8 +9,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/carlmjohnson/requests"
+	"github.com/tobyleye/playlift/core/ytmusicapi"
 	"github.com/tobyleye/playlift/types"
 )
 
@@ -76,8 +80,8 @@ var headers = map[string]string{
 var defaultBody = map[string]interface{}{
 	"context": map[string]interface{}{
 		"client": map[string]interface{}{
-			"clientName":    "IOS_MUSIC",
-			"clientVersion": "6.42",
+			"clientName":    "WEB_REMIX",
+			"clientVersion": fmt.Sprintf("1.%s.01.00", time.Now().UTC().Format("20060102")),
 		},
 		"user": map[string]interface{}{},
 	},
@@ -182,7 +186,7 @@ func getArtists(artistsRow interface{}) []string {
 	// so to read the artist we read the first set of text before the first dot
 	artistsRuns, _ := artistsRow.([]interface{})
 	for _, artistRun := range artistsRuns {
-		text := ReadValueString(artistRun, []interface{}{"text"})
+		text := ytmusicapi.ReadValueString(artistRun, []interface{}{"text"})
 		text = strings.TrimSpace(text)
 		if text == DOT_SEPARATOR {
 			break
@@ -195,15 +199,16 @@ func getArtists(artistsRow interface{}) []string {
 	return artists
 }
 
-func parseTrack(trackJson interface{}) Track {
-	itemRenderer := ReadValue(trackJson, []interface{}{"musicTwoColumnItemRenderer"})
+func parseTrack(result interface{}) Track {
+	result = ytmusicapi.ReadValue(result, []interface{}{"musicResponsiveListItemRenderer"})
+	flexColumns := ytmusicapi.ReadValue(result, []interface{}{"flexColumns"})
 
-	title := ReadValueString(itemRenderer, []interface{}{"title", "runs", 0, "text"})
+	title := ytmusicapi.ReadValueString(flexColumns, []interface{}{0, "musicResponsiveListItemFlexColumnRenderer", "text", "runs", 0, "text"})
 	artists := getArtists(
-		ReadValue(itemRenderer, []interface{}{"subtitle", "runs"}),
+		ytmusicapi.ReadValue(flexColumns, []interface{}{1, "musicResponsiveListItemFlexColumnRenderer", "text", "runs"}),
 	)
 
-	// check if song title has featured artist
+	// check if title has featured artist
 	titleWithFeaturedArtists := TRACK_TITLE_WITH_FEAT_REGEX.FindStringSubmatch(title)
 
 	if len(titleWithFeaturedArtists) > 2 {
@@ -215,12 +220,14 @@ func parseTrack(trackJson interface{}) Track {
 			)...)
 	}
 
-	videoId := ReadValueString(itemRenderer, []interface{}{
-		"subtitleBadges",
-		0,
-		"musicDownloadStateBadgeRenderer",
-		"videoId",
-	})
+	videoId := ytmusicapi.ReadValueString(result, []interface{}{
+		"overlay",
+		"musicItemThumbnailOverlayRenderer",
+		"content",
+		"musicPlayButtonRenderer",
+		"playNavigationEndpoint",
+		"watchEndpoint",
+		"videoId"})
 
 	return Track{
 		VideoId: videoId,
@@ -278,9 +285,9 @@ func Search(client *http.Client, searchQuery types.SearchQuery) ([]Track, error)
 		return nil, err
 	}
 
-	SaveJson(data, fmt.Sprintf("ytmusic-search-%s.json", searchQuery.Title)) // for debugging
+	ytmusicapi.SaveJson(data, fmt.Sprintf("ytmusic-search-%s.json", searchQuery.Title)) // for debugging
 
-	sectionListContent := ReadValue(data, []interface{}{"contents", "tabbedSearchResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents"})
+	sectionListContent := ytmusicapi.ReadValue(data, []interface{}{"contents", "tabbedSearchResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents"})
 
 	sectionListContentArray, _ := sectionListContent.([]interface{})
 
@@ -294,7 +301,7 @@ func Search(client *http.Client, searchQuery types.SearchQuery) ([]Track, error)
 		musicShelfIndex = len(sectionListContentArray) - 1
 	}
 
-	musicShelfContent := ReadValue(sectionListContentArray[musicShelfIndex], []interface{}{"musicShelfRenderer", "contents"})
+	musicShelfContent := ytmusicapi.ReadValue(sectionListContentArray[musicShelfIndex], []interface{}{"musicShelfRenderer", "contents"})
 
 	var results []Track
 
@@ -322,48 +329,6 @@ func SearchOne(client *http.Client, searchQuery types.SearchQuery) (Track, error
 	return results[0], nil
 }
 
-func extractPlaylistTracks(playlistPage interface{}, isFirstPage bool) []Track {
-
-	playlistTracks := []Track{}
-
-	playlistHeader := ReadValue(playlistPage, []interface{}{"header", "musicEditablePlaylistDetailHeaderRenderer",
-		"header", "musicElementHeaderRenderer",
-	})
-
-	_, isUserCreatedPlaylist := playlistHeader.(map[string]interface{})
-
-	if isFirstPage {
-		playlistItemsContents := ReadValue(playlistPage, []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
-
-		if content, ok := playlistItemsContents.([]interface{}); ok {
-			if isUserCreatedPlaylist {
-				// skip first item
-				content = content[1:]
-
-			}
-			for _, itemContent := range content {
-				item := parseTrack(itemContent)
-				playlistTracks = append(playlistTracks, item)
-			}
-		}
-	} else {
-		continuationItems := ReadValue(playlistPage, []interface{}{
-			"continuationContents",
-			"musicPlaylistShelfContinuation",
-			"contents",
-		})
-
-		if items, ok := continuationItems.([]interface{}); ok {
-			for _, itemContent := range items {
-				track := parseTrack(itemContent)
-				playlistTracks = append(playlistTracks, track)
-			}
-		}
-	}
-
-	return playlistTracks
-}
-
 func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, error) {
 	browseId := playlistId
 
@@ -379,26 +344,25 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 		return PlaylistDetails{}, err
 	}
 
-	playlistHeader := ReadValue(jsonResponse, []interface{}{"header", "musicEditablePlaylistDetailHeaderRenderer",
-		"header", "musicElementHeaderRenderer",
+	var playlistTracks []Track
+
+	playlistItemsContents := ytmusicapi.ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "secondaryContents", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
+	playlistHeader := ytmusicapi.ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents",
+		0, "musicEditablePlaylistDetailHeaderRenderer",
+		"header", "musicResponsiveHeaderRenderer",
 	})
 
-	// saved playlists that isn't created by the user, has a different structure
+	// saved playlists that not for the user, has a different structure
+
 	if _, ok := playlistHeader.(map[string]interface{}); !ok {
-		playlistHeader = ReadValue(jsonResponse, []interface{}{"header", "musicElementHeaderRenderer"})
+		playlistHeader = ytmusicapi.ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents",
+			0, "musicResponsiveHeaderRenderer",
+		})
+
 	}
 
-	title := ReadValueString(playlistHeader, []interface{}{"title", "runs", 0, "text"})
-	totalTracksText := ReadValueString(jsonResponse, []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "subFooter", "messageRenderer", "subtext", "messageSubtextRenderer", "text", "runs", 0, "text"})
-
-	textItems := strings.Split(totalTracksText, DOT_SEPARATOR)
-	totalTracks := ""
-
-	if len(textItems) > 0 {
-		totalTracks = textItems[0]
-	}
-
-	totalTracks = strings.TrimSpace(totalTracks)
+	title := ytmusicapi.ReadValueString(playlistHeader, []interface{}{"title", "runs", 0, "text"})
+	totalTracks := ytmusicapi.ReadValueString(playlistHeader, []interface{}{"secondSubtitle", "runs", 0, "text"})
 
 	// sometimes the total tracks is suffixed with 'tracks' sometimes it's songs
 	// thats why we handle both cases
@@ -412,9 +376,14 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 
 	totalTracksInt, _ := strconv.Atoi(totalTracks)
 
-	description := ""
+	description := ytmusicapi.ReadValueString(playlistHeader, []interface{}{"description", "musicDescriptionShelfRenderer", "description", "runs", 0, "text"})
 
-	playlistTracks := extractPlaylistTracks(jsonResponse, true)
+	if content, ok := playlistItemsContents.([]interface{}); ok {
+		for _, itemContent := range content {
+			item := parseTrack(itemContent)
+			playlistTracks = append(playlistTracks, item)
+		}
+	}
 
 	playlist := PlaylistDetails{
 		Title:          title,
@@ -445,42 +414,59 @@ func FetchPlaylistTracks(client *http.Client, playlistId string, continuation st
 
 	jsonResponse, err := sendRequest(client, "browse", body)
 
-	// if continuation != "" {
-	// 	SaveJson(jsonResponse, "page-2-tracks")
-	// }
-
 	if err != nil {
 		return PlaylistTracksResponse{}, err
 	}
 
-	playlistTracks := extractPlaylistTracks(jsonResponse, continuation == "")
+	var nextContinuation string
+	var playlistTracks []Track
 
-	nextContinuation := ""
-	var continuations interface{}
-	if continuation == "" {
-		continuations = ReadValue(jsonResponse, []interface{}{
-			"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "continuations",
-		})
+	// parse response
+	// Todo: collapse the two for loop below into 1
+	if continuation != "" {
 
+		continuationItems := ytmusicapi.ReadValue(jsonResponse, []interface{}{
+			"onResponseReceivedActions",
+			0,
+			"appendContinuationItemsAction",
+			"continuationItems"})
+
+		if items, ok := continuationItems.([]interface{}); ok {
+			for index, itemContent := range items {
+				item := parseTrack(itemContent)
+
+				if index == len(items)-1 && item.VideoId == "" {
+					// it's possible that the last item is a continuation item
+					nextContinuation = ytmusicapi.ReadValueString(itemContent, []interface{}{"continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"})
+				} else {
+					playlistTracks = append(playlistTracks, item)
+				}
+			}
+		} else {
+			fmt.Println("no continuation items found")
+		}
 	} else {
-		continuations = ReadValue(jsonResponse, []interface{}{
-			"continuationContents", "musicPlaylistShelfContinuation", "continuations",
-		})
+
+		playlistItemsContents := ytmusicapi.ReadValue(jsonResponse, []interface{}{"contents", "twoColumnBrowseResultsRenderer", "secondaryContents", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
+
+		if content, ok := playlistItemsContents.([]interface{}); ok {
+			for index, itemContent := range content {
+				item := parseTrack(itemContent)
+				// it's possible that the last item is a continuation item
+
+				if index == len(content)-1 && item.VideoId == "" {
+					nextContinuation = ytmusicapi.ReadValueString(itemContent, []interface{}{"continuationItemRenderer", "continuationEndpoint", "continuationCommand", "token"})
+				} else {
+					playlistTracks = append(playlistTracks, item)
+				}
+			}
+		}
 	}
 
-	if pagination, ok := continuations.([]interface{}); ok {
-		// get last item in array
-		lastItemIndex := len(pagination) - 1
-		nextContinuation = ReadValueString(pagination[lastItemIndex], []interface{}{"nextContinuationData", "continuation"})
-	}
-
-	response := PlaylistTracksResponse{
+	return PlaylistTracksResponse{
 		NextContinuation: nextContinuation, // You can set this to the next continuation token if available
 		Tracks:           playlistTracks,
-	}
-
-	// SaveJson(response, "playlist-"+playlistId+"-tracks")
-	return response, nil
+	}, nil
 }
 
 func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAllTracksResponse, error) {
@@ -502,8 +488,6 @@ func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAll
 			break // no more tracks to fetch
 		}
 	}
-
-	// SaveJson(tracks, "all-tracks")
 	return PlaylistAllTracksResponse{
 		Total:  len(tracks),
 		Tracks: tracks,
@@ -513,7 +497,7 @@ func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAll
 
 func getPlaylistTotalTracks(subtitleRuns []interface{}) string {
 	lastTextRun := subtitleRuns[len(subtitleRuns)-1]
-	totalTracksText := ReadValueString(lastTextRun, []interface{}{"text"})
+	totalTracksText := ytmusicapi.ReadValueString(lastTextRun, []interface{}{"text"})
 	totalTracks := strings.Split(totalTracksText, " ")[0]
 	return totalTracks
 }
@@ -533,84 +517,77 @@ func FetchUserPlaylists(httpClient *http.Client, continuation string) (PlaylistP
 		return PlaylistPageResponse{}, err
 	}
 
-	// var filename string
-
-	// if continuation != "" {
-	// 	filename = "user-playlists-page-2"
-	// } else {
-	// 	filename = "user-playlists"
-	// }
-
-	// SaveJson(jsonResponse, filename)
+	ytmusicapi.SaveJson(jsonResponse, "user-playlists")
 
 	var playlistItemsContents interface{}
 	var nextContinuation string
 
 	if continuation == "" {
+		// itemsKey := []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "gridRenderer", "items"}
 		itemsKey := []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicShelfRenderer", "contents"}
-		playlistItemsContents = ReadValue(jsonResponse, itemsKey)
-		nextContinuation = ReadValueString(jsonResponse, []interface{}{
+		playlistItemsContents = ytmusicapi.ReadValue(jsonResponse, itemsKey)
+		nextContinuation = ytmusicapi.ReadValueString(jsonResponse, []interface{}{
 			"contents", "singleColumnBrowseResultsRenderer", "tabs",
-			0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicShelfRenderer",
+			0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "gridRenderer",
 			"continuations", 0, "nextContinuationData", "continuation",
 		})
 
 	} else {
-		itemsKey := []interface{}{"continuationContents", "sectionListContinuation", "contents", 0, "musicShelfRenderer", "contents"}
-		playlistItemsContents = ReadValue(jsonResponse, itemsKey)
-		nextContinuation = ReadValueString(jsonResponse, []interface{}{
-			"continuationContents", "sectionListContinuation", "contents", 0, "musicShelfRenderer", "continuations", 0, "nextContinuationData", "continuation",
+		itemsKey := []interface{}{"continuationContents", "gridContinuation", "items"}
+		playlistItemsContents = ytmusicapi.ReadValue(jsonResponse, itemsKey)
+		nextContinuation = ytmusicapi.ReadValueString(jsonResponse, []interface{}{
+			"continuationContents", "gridContinuation", "continuations", 0, "nextContinuationData", "continuation",
 		})
 	}
 
 	youtubePlaylists := []YoutubePlaylist{}
 
 	if items, ok := playlistItemsContents.([]interface{}); ok {
-		if continuation == "" && len(items) > 1 {
-			// if first page, first item is liked music playlists
-			// so we skip the 1st item
-			items = items[1:]
-		}
+		// first item is a  new playlist button
+		// second item is liked music plalists
+		// so we skip the first 2 items
 
-		for _, item := range items {
-			itemRow := ReadValue(item, []interface{}{"musicTwoColumnItemRenderer"})
-			title := ReadValueString(itemRow, []interface{}{"title", "runs", 0, "text"})
+		if len(items) > 2 {
+			for _, item := range items[2:] {
+				// itemRow := ytmusicapi.ReadValue(item, []interface{}{"musicTwoRowItemRenderer"})
+				itemRow := ytmusicapi.ReadValue(item, []interface{}{"musicTwoColumnItemRenderer"})
+				title := ytmusicapi.ReadValueString(itemRow, []interface{}{"title", "runs", 0, "text"})
 
-			thumbnails, _ := ReadValue(itemRow, []interface{}{"thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"}).([]interface{})
+				thumbnails, _ := ytmusicapi.ReadValue(itemRow, []interface{}{"thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"}).([]interface{})
 
-			thumbnailUrls := []string{}
+				thumbnailUrls := []string{}
 
-			subtitleRuns, _ := ReadValue(itemRow, []interface{}{"subtitle", "runs"}).([]interface{})
+				subtitleRuns, _ := ytmusicapi.ReadValue(itemRow, []interface{}{"subtitle", "runs"}).([]interface{})
 
-			for _, thumbnail := range thumbnails {
-				thumnailMap, _ := thumbnail.(map[string]interface{})
-				url, _ := thumnailMap["url"].(string)
-				if url != "" {
-					thumbnailUrls = append(thumbnailUrls, url)
+				for _, thumbnail := range thumbnails {
+					thumnailMap, _ := thumbnail.(map[string]interface{})
+					url, _ := thumnailMap["url"].(string)
+					if url != "" {
+						thumbnailUrls = append(thumbnailUrls, url)
+					}
+
 				}
 
+				totalTracks := getPlaylistTotalTracks(subtitleRuns)
+
+				playlistId := ytmusicapi.ReadValueString(itemRow, []interface{}{"title", "runs", 0, "navigationEndpoint", "browseEndpoint", "browseId"})
+
+				if len(playlistId) > 2 && playlistId[0:2] == "VL" {
+					playlistId = playlistId[2:]
+				}
+
+				playlist := YoutubePlaylist{
+					Title:       title,
+					Thumbnails:  thumbnailUrls,
+					TotalTracks: totalTracks,
+					PlaylistId:  playlistId,
+					Url:         createPlaylistLink(playlistId),
+				}
+
+				youtubePlaylists = append(youtubePlaylists, playlist)
+
 			}
-
-			totalTracks := getPlaylistTotalTracks(subtitleRuns)
-
-			playlistId := ReadValueString(itemRow, []interface{}{"navigationEndpoint", "browseEndpoint", "browseId"})
-
-			if len(playlistId) > 2 && strings.HasPrefix(playlistId, "VL") {
-				playlistId = playlistId[2:]
-			}
-
-			playlist := YoutubePlaylist{
-				Title:       title,
-				Thumbnails:  thumbnailUrls,
-				TotalTracks: totalTracks,
-				PlaylistId:  playlistId,
-				Url:         createPlaylistLink(playlistId),
-			}
-
-			youtubePlaylists = append(youtubePlaylists, playlist)
-
 		}
-
 	}
 
 	response := PlaylistPageResponse{
@@ -638,7 +615,7 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 		return CreatedPlaylist{}, err
 	}
 
-	playlistId := ReadValueString(data, []interface{}{
+	playlistId := ytmusicapi.ReadValueString(data, []interface{}{
 		"playlistId",
 	})
 
@@ -658,7 +635,6 @@ func FetchLikedPlaylist(client *http.Client) (YoutubePlaylist, error) {
 		return YoutubePlaylist{}, err
 
 	}
-
 	playlist := YoutubePlaylist{
 		Title:       playlistDetails.Title,
 		Thumbnails:  playlistDetails.Thumbnails,
@@ -674,7 +650,7 @@ func ExtractPlaylistsFromNextPage(jsonResponse interface{}) []YoutubePlaylist {
 	var playlists []YoutubePlaylist
 
 	// Navigate to the contents array in the continuation response
-	contents := ReadValue(jsonResponse, []interface{}{
+	contents := ytmusicapi.ReadValue(jsonResponse, []interface{}{
 		"continuationContents",
 		"sectionListContinuation",
 		"contents",
@@ -686,16 +662,16 @@ func ExtractPlaylistsFromNextPage(jsonResponse interface{}) []YoutubePlaylist {
 	if contentsList, ok := contents.([]interface{}); ok {
 		for _, item := range contentsList {
 			// Extract musicTwoRowItemRenderer
-			itemRenderer := ReadValue(item, []interface{}{"musicTwoRowItemRenderer"})
+			itemRenderer := ytmusicapi.ReadValue(item, []interface{}{"musicTwoRowItemRenderer"})
 			if itemRenderer == nil {
 				continue
 			}
 
 			// Extract title
-			title := ReadValueString(itemRenderer, []interface{}{"title", "runs", 0, "text"})
+			title := ytmusicapi.ReadValueString(itemRenderer, []interface{}{"title", "runs", 0, "text"})
 
 			// Extract playlist ID from browseId
-			browseId := ReadValueString(itemRenderer, []interface{}{
+			browseId := ytmusicapi.ReadValueString(itemRenderer, []interface{}{
 				"navigationEndpoint",
 				"browseEndpoint",
 				"browseId",
@@ -708,7 +684,7 @@ func ExtractPlaylistsFromNextPage(jsonResponse interface{}) []YoutubePlaylist {
 			}
 
 			// Extract thumbnails
-			thumbnails := ReadValue(itemRenderer, []interface{}{
+			thumbnails := ytmusicapi.ReadValue(itemRenderer, []interface{}{
 				"thumbnailRenderer",
 				"musicThumbnailRenderer",
 				"thumbnail",
@@ -727,7 +703,7 @@ func ExtractPlaylistsFromNextPage(jsonResponse interface{}) []YoutubePlaylist {
 			}
 
 			// Extract subtitle runs to get total tracks
-			subtitleRuns := ReadValue(itemRenderer, []interface{}{"subtitle", "runs"})
+			subtitleRuns := ytmusicapi.ReadValue(itemRenderer, []interface{}{"subtitle", "runs"})
 			totalTracks := ""
 			if runs, ok := subtitleRuns.([]interface{}); ok {
 				totalTracks = getPlaylistTotalTracks(runs)
