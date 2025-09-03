@@ -79,8 +79,8 @@ var defaultBody = map[string]interface{}{
 			"clientName":    "IOS_MUSIC",
 			"clientVersion": "6.42",
 		},
+		"user": map[string]interface{}{},
 	},
-	"user": map[string]interface{}{},
 }
 
 func createPlaylistLink(playlistId string) string {

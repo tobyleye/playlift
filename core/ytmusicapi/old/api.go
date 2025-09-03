@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/carlmjohnson/requests"
 	"github.com/tobyleye/playlift/core/ytmusicapi"
@@ -79,11 +80,11 @@ var headers = map[string]string{
 var defaultBody = map[string]interface{}{
 	"context": map[string]interface{}{
 		"client": map[string]interface{}{
-			"clientName":    "IOS_MUSIC",
-			"clientVersion": "6.42",
+			"clientName":    "WEB_REMIX",
+			"clientVersion": fmt.Sprintf("1.%s.01.00", time.Now().UTC().Format("20060102")),
 		},
+		"user": map[string]interface{}{},
 	},
-	"user": map[string]interface{}{},
 }
 
 func createPlaylistLink(playlistId string) string {
