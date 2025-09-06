@@ -12,7 +12,7 @@ import {
   ToastId,
 } from "@chakra-ui/react";
 import { ArrowRight, MusicIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Playlist } from "@/types";
 import useSWRInfinite from "swr/infinite";
 import api from "@/api/api";
@@ -22,6 +22,7 @@ import { serverErrorToast, toastHelper } from "@/components/utils/toast";
 import { SecondaryButton } from "@/components/buttons";
 import { PlaylistSelect } from "@/components/playlist-select";
 import EllipsisLoader from "@/components/ellipsis-loader";
+import { Navigate } from "react-router-dom";
 
 type YoutubePlaylistsResponse = {
   playlists: Playlist[];
@@ -186,6 +187,7 @@ const YoutubePlaylists = ({
 
 function PlaylistsSelection() {
   const {
+    steps,
     selectedPlaylists,
     togglePlaylist,
     setSelectedPlaylists,
@@ -201,6 +203,20 @@ function PlaylistsSelection() {
 
   const toast = useToast();
   const toastRef = useRef<ToastId>();
+
+  // some simple route validation logic
+
+  // first 2 steps are required before this can be accessed
+  // find the first step that is not completed
+  const firstUncompletedStep = useMemo(
+    () => steps.slice(0, 2).find((step) => step.completed === false),
+    [steps]
+  );
+
+  if (steps && steps.length > 0 && firstUncompletedStep) {
+    // navigate if there's an uncompleted step before the current step
+    return <Navigate to={`/convert/${firstUncompletedStep.path}`} replace />;
+  }
 
   return (
     <Box color="white" pt={10}>

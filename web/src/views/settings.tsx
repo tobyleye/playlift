@@ -45,7 +45,7 @@ export default function Settings() {
   const [nameConfirmation, setNameConfirmation] = useState("");
   const { session } = useSessionContext();
   const [deactivated, setDeactivated] = useState(false);
-  const [redirectCountdown, setRedirectCountdown] = useState(10);
+  const [redirectCountdown, setRedirectCountdown] = useState(6);
 
   const toast = useToast();
 

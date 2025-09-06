@@ -15,15 +15,22 @@ export default function SessionProvider({
   const [session, setSession] = useState<null | UserSession>(null);
   const navigate = useNavigate();
   const toast = useToast();
-  const userIdRef = useRef(localStorage.getItem("userId"));
+  const { current: savedUserId } = useRef(localStorage.getItem("userId"));
+
+  const isLoggedIn = session?.user_id || savedUserId;
 
   useEffect(() => {
-    if (userIdRef.current) {
+    if (isLoggedIn) {
       const requestInterceptor = client.interceptors.response.use(
         null,
         (err) => {
           if (err.response && err.response.status === 401) {
             localStorage.removeItem("userId");
+            toastHelper(toast, {
+              title: "Session expired",
+              description: "Please log in again to continue",
+              status: "error",
+            });
             navigate("/");
             return Promise.reject(err);
           }
@@ -36,10 +43,10 @@ export default function SessionProvider({
         client.interceptors.request.eject(requestInterceptor);
       };
     }
-  }, []);
+  }, [isLoggedIn]);
 
   useEffect(() => {
-    if (userIdRef.current) {
+    if (savedUserId) {
       // user is probably logged in.
       // fetch user session
       api
@@ -47,12 +54,7 @@ export default function SessionProvider({
         .then((data) => {
           setSession(data);
         })
-        .catch((err) => {
-          // remove userId from localStorage if session returns 401
-          if (err.response && err.response.status === 401) {
-            localStorage.removeItem("userId");
-          }
-        })
+        .catch(() => {})
         .finally(() => {
           setLoadingSession(false);
         });
@@ -60,27 +62,6 @@ export default function SessionProvider({
       setLoadingSession(false);
     }
   }, []);
-
-  useEffect(() => {
-    // intercept the request and clear user session if the request fails with 401
-    const requestInterceptor = client.interceptors.response.use(null, (err) => {
-      if (err.response && err.response.status === 401) {
-        // clear session
-        setSession(null);
-        localStorage.removeItem("userId");
-        toastHelper(toast, {
-          title: "Session expired",
-          description: "Please log in again to continue",
-          status: "error",
-        });
-        navigate("/");
-      }
-    });
-
-    return () => {
-      client.interceptors.response.eject(requestInterceptor);
-    };
-  }, [session]);
 
   return (
     <SessionContext.Provider

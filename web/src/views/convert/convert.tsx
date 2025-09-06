@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Nav from "@/components/nav";
 import WizardProgress from "./wizard-progress";
-import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ConvertWizardContext } from "./context";
 import api from "@/api/api";
 import { Playlist } from "@/types";
@@ -86,7 +86,6 @@ export default function ConversionWizard() {
   const curStep = stepIndex > -1 ? steps[stepIndex] : null;
   const totalSteps = steps.length;
   const nextStep = stepIndex < totalSteps - 1 ? steps[stepIndex + 1] : null;
-  const firstUncompleted = steps.findIndex((step) => !step.completed);
 
   const navigate = useNavigate();
 
@@ -153,17 +152,6 @@ export default function ConversionWizard() {
       setTransferLoading(false);
     }
   };
-
-  // some simple route validation logic
-
-  if (
-    !loadingConnectionStatus &&
-    firstUncompleted > -1 &&
-    firstUncompleted < stepIndex
-  ) {
-    // navigate if there's an uncompleted step before the current step
-    return <Navigate to={`/convert/${steps[firstUncompleted].path}`} replace />;
-  }
 
   return (
     <Box minHeight="100vh" pb={20}>
