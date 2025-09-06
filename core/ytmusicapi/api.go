@@ -278,7 +278,7 @@ func Search(client *http.Client, searchQuery types.SearchQuery) ([]Track, error)
 		return nil, err
 	}
 
-	SaveJson(data, fmt.Sprintf("ytmusic-search-%s.json", searchQuery.Title)) // for debugging
+	// SaveJson(data, fmt.Sprintf("ytmusic-search-%s.json", searchQuery.Title)) // for debugging
 
 	sectionListContent := ReadValue(data, []interface{}{"contents", "tabbedSearchResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents"})
 
