@@ -1,8 +1,10 @@
-Playlist converter
+# Playlift
 
-## how to start
+Playlift is a playlist converter
 
-ensure [air](https://github.com/cosmtrek/air) is installed, then run
+## how to run
+
+ensure [air](https://github.com/cosmtrek/air) is installed, then after navigating into the project directory, run
 
 ```
 air
