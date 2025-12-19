@@ -4,67 +4,33 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/carlmjohnson/requests"
+	"github.com/tobyleye/playlift/core/ytmusicapi/parsers"
 	"github.com/tobyleye/playlift/types"
 )
 
-type Track struct {
-	VideoId string
-	Title   string
-	Artists []string
-	Link    string
-}
-
-type YoutubePlaylist struct {
-	Title       string   `json:"title"`
-	Thumbnails  []string `json:"thumbnails"`
-	TotalTracks string   `json:"total_tracks"`
-	PlaylistId  string   `json:"playlist_id"`
-	Url         string   `json:"url"`
-}
-
-type PlaylistDetails struct {
-	Title          string
-	Description    string
-	TotalTracks    int
-	PlaylistTracks []Track
-	Link           string
-	Thumbnails     []string
-}
-
-type PlaylistAllTracksResponse struct {
-	Total  int     `json:"total"`
-	Tracks []Track `json:"tracks"`
-}
-
-type PlaylistTracksResponse struct {
-	NextContinuation string  `json:"next_continuation"`
-	Tracks           []Track `json:"tracks"`
-}
-
-type CreatedPlaylist struct {
-	PlaylistId  string `json:"playlist_id"`
-	Link        string `json:"link"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
-
-type PlaylistPageResponse struct {
-	Continuation string            `json:"continuation"`
-	Playlists    []YoutubePlaylist `json:"playlists"`
-}
+// Re-export types from parsers package for backward compatibility
+type Track = parsers.Track
+type YoutubePlaylist = parsers.YoutubePlaylist
+type PlaylistDetails = parsers.PlaylistDetails
+type PlaylistAllTracksResponse = parsers.PlaylistAllTracksResponse
+type PlaylistTracksResponse = parsers.PlaylistTracksResponse
+type CreatedPlaylist = parsers.CreatedPlaylist
+type PlaylistPageResponse = parsers.PlaylistPageResponse
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
 const YTM_DOMAIN = "https://music.youtube.com"
-const AND_SEPARATOR = "&"
-const COMMA = ","
-const DOT_SEPARATOR = "•"
 
-var TRACK_TITLE_WITH_FEAT_REGEX = regexp.MustCompile(`(.*?) \(feat. (.*?)\)`)
+// Helper functions
+
+func getPlaylistTotalTracks(subtitleRuns []interface{}) string {
+	lastTextRun := subtitleRuns[len(subtitleRuns)-1]
+	totalTracksText := ReadValueString(lastTextRun, []interface{}{"text"})
+	totalTracks := strings.Split(totalTracksText, " ")[0]
+	return totalTracks
+}
 
 var headers = map[string]string{
 	// "user-agent":   USER_AGENT,
@@ -73,22 +39,28 @@ var headers = map[string]string{
 	"origin":       YTM_DOMAIN,
 }
 
-var defaultBody = map[string]interface{}{
-	"context": map[string]interface{}{
-		"client": map[string]interface{}{
-			"clientName":    "IOS_MUSIC",
-			"clientVersion": "6.42",
-		},
-		"user": map[string]interface{}{},
-	},
+type WebClient struct {
+	name    string
+	version string
+	parser  parsers.Parser
 }
 
-func createPlaylistLink(playlistId string) string {
-	return fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId)
+var HTML5Client = &WebClient{
+	name:    "TVHTML5",
+	version: "7.20240925.00.00",
+	parser:  parsers.NewTVHTML5Parser(),
 }
 
-func createTrackLink(trackId string) string {
-	return fmt.Sprintf("https://music.youtube.com/watch?v=%s", trackId)
+var HTML5EmbeddedClient = &WebClient{
+	name:    "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+	version: "2.0",
+	parser:  nil,
+}
+
+var WebRemix = &WebClient{
+	name:    "WEB_REMIX",
+	version: "1.20250910.01.00",
+	parser:  parsers.NewWebRemixParser(),
 }
 
 func getSearchParams(filter, scope string, ignoreSpelling bool) string {
@@ -175,63 +147,28 @@ func getParam2(filter string) string {
 	return filterParams[filter]
 }
 
-func getArtists(artistsRow interface{}) []string {
-	var artists = []string{}
-	// the artist row contains not just the artist names, but the
-	// album title as well and duration. they are each seperated by the dot
-	// so to read the artist we read the first set of text before the first dot
-	artistsRuns, _ := artistsRow.([]interface{})
-	for _, artistRun := range artistsRuns {
-		text := ReadValueString(artistRun, []interface{}{"text"})
-		text = strings.TrimSpace(text)
-		if text == DOT_SEPARATOR {
-			break
-		}
-
-		if text != "" && text != AND_SEPARATOR && text != COMMA {
-			artists = append(artists, text)
-		}
-	}
-	return artists
-}
-
-func parseTrack(trackJson interface{}) Track {
-	itemRenderer := ReadValue(trackJson, []interface{}{"musicTwoColumnItemRenderer"})
-
-	title := ReadValueString(itemRenderer, []interface{}{"title", "runs", 0, "text"})
-	artists := getArtists(
-		ReadValue(itemRenderer, []interface{}{"subtitle", "runs"}),
-	)
-
-	// check if song title has featured artist
-	titleWithFeaturedArtists := TRACK_TITLE_WITH_FEAT_REGEX.FindStringSubmatch(title)
-
-	if len(titleWithFeaturedArtists) > 2 {
-		title = titleWithFeaturedArtists[1]
-		artist := titleWithFeaturedArtists[2]
-		artists = append(artists,
-			strings.Split(artist,
-				fmt.Sprintf(" %s ", AND_SEPARATOR),
-			)...)
-	}
-
-	videoId := ReadValueString(itemRenderer, []interface{}{
-		"subtitleBadges",
-		0,
-		"musicDownloadStateBadgeRenderer",
-		"videoId",
-	})
-
-	return Track{
-		VideoId: videoId,
-		Title:   title,
-		Artists: artists,
-		Link:    createTrackLink(videoId),
-	}
-}
-
-func sendRequest(httpClient *http.Client, endpoint string, body map[string]interface{}) (interface{}, error) {
+func sendRequest(httpClient *http.Client, webClient *WebClient, endpoint string, body map[string]interface{}) (interface{}, error) {
 	url := fmt.Sprintf("https://music.youtube.com/youtubei/v1/%s?alt=json", endpoint)
+
+	var defaultBody = map[string]interface{}{
+		"context": map[string]interface{}{
+			"client": map[string]interface{}{
+				// "clientName":    "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+				// "clientVersion": "2.0",
+				// "clientName":    "IOS_MUSIC",
+				// "clientVersion": "6.42",
+				// "clientName":    "WEB_REMIX",
+				// "clientVersion": "1.20250910.01.00",
+				// "clientName":    "TVHTML5",
+				// "clientVersion": "7.20240925.00.00",
+				// "clientName":    "WEB_REMIX",
+				// "clientVersion": fmt.Sprintf("1.%s.01.00", time.Now().UTC().Format("20060102")),
+				"clientName":    webClient.name,
+				"clientVersion": webClient.version,
+			},
+			"user": map[string]interface{}{},
+		},
+	}
 
 	for key, value := range defaultBody {
 		body[key] = value
@@ -251,9 +188,13 @@ func sendRequest(httpClient *http.Client, endpoint string, body map[string]inter
 		builder.Header(key, val)
 	}
 
+	var errorJson interface{}
+
 	err := builder.BodyJSON(&body).
-		ToJSON(&jsonResponse).
+		ToJSON(&jsonResponse).ErrorJSON(&errorJson).
 		Fetch(ctx)
+
+	fmt.Printf("%v", errorJson)
 
 	return jsonResponse, err
 
@@ -273,40 +214,14 @@ func Search(client *http.Client, searchQuery types.SearchQuery) ([]Track, error)
 
 	}
 
-	data, err := sendRequest(client, "search", body)
+	data, err := sendRequest(client, HTML5Client, "search", body)
 	if err != nil {
 		return nil, err
 	}
 
-	// SaveJson(data, fmt.Sprintf("ytmusic-search-%s.json", searchQuery.Title)) // for debugging
+	SaveJson(data, fmt.Sprintf("ytmusic-search-%s.json", searchQuery.Title)) // for debugging
 
-	sectionListContent := ReadValue(data, []interface{}{"contents", "tabbedSearchResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents"})
-
-	sectionListContentArray, _ := sectionListContent.([]interface{})
-
-	//  0, "musicShelfRenderer", "contents"
-
-	musicShelfIndex := 0
-	//  in cases where the search query is misspelt an additional section that
-	// contains spelling suggestions is also returned, pushing the musicShelfRenderer to the end of the array
-
-	if len(sectionListContentArray) > 1 {
-		musicShelfIndex = len(sectionListContentArray) - 1
-	}
-
-	musicShelfContent := ReadValue(sectionListContentArray[musicShelfIndex], []interface{}{"musicShelfRenderer", "contents"})
-
-	var results []Track
-
-	if content, ok := musicShelfContent.([]interface{}); ok {
-		for _, item := range content {
-			parsedResult := parseTrack(item)
-			results = append(results, parsedResult)
-
-		}
-	}
-
-	return results, nil
+	return HTML5Client.parser.ParseSearchResults(data), nil
 }
 
 func SearchOne(client *http.Client, searchQuery types.SearchQuery) (Track, error) {
@@ -322,48 +237,6 @@ func SearchOne(client *http.Client, searchQuery types.SearchQuery) (Track, error
 	return results[0], nil
 }
 
-func extractPlaylistTracks(playlistPage interface{}, isFirstPage bool) []Track {
-
-	playlistTracks := []Track{}
-
-	playlistHeader := ReadValue(playlistPage, []interface{}{"header", "musicEditablePlaylistDetailHeaderRenderer",
-		"header", "musicElementHeaderRenderer",
-	})
-
-	_, isUserCreatedPlaylist := playlistHeader.(map[string]interface{})
-
-	if isFirstPage {
-		playlistItemsContents := ReadValue(playlistPage, []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "contents"})
-
-		if content, ok := playlistItemsContents.([]interface{}); ok {
-			if isUserCreatedPlaylist {
-				// skip first item
-				content = content[1:]
-
-			}
-			for _, itemContent := range content {
-				item := parseTrack(itemContent)
-				playlistTracks = append(playlistTracks, item)
-			}
-		}
-	} else {
-		continuationItems := ReadValue(playlistPage, []interface{}{
-			"continuationContents",
-			"musicPlaylistShelfContinuation",
-			"contents",
-		})
-
-		if items, ok := continuationItems.([]interface{}); ok {
-			for _, itemContent := range items {
-				track := parseTrack(itemContent)
-				playlistTracks = append(playlistTracks, track)
-			}
-		}
-	}
-
-	return playlistTracks
-}
-
 func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, error) {
 	browseId := playlistId
 
@@ -374,57 +247,17 @@ func FetchPlaylist(client *http.Client, playlistId string) (PlaylistDetails, err
 	body := map[string]interface{}{
 		"browseId": browseId,
 	}
-	jsonResponse, err := sendRequest(client, "browse", body)
+	jsonResponse, err := sendRequest(client, HTML5Client, "browse", body)
 	if err != nil {
 		return PlaylistDetails{}, err
 	}
 
-	playlistHeader := ReadValue(jsonResponse, []interface{}{"header", "musicEditablePlaylistDetailHeaderRenderer",
-		"header", "musicElementHeaderRenderer",
-	})
+	SaveJson(jsonResponse, "playlist_fetch_new")
 
-	// saved playlists that isn't created by the user, has a different structure
-	if _, ok := playlistHeader.(map[string]interface{}); !ok {
-		playlistHeader = ReadValue(jsonResponse, []interface{}{"header", "musicElementHeaderRenderer"})
-	}
+	playlistDetails := HTML5Client.parser.ParsePlaylistDetails(jsonResponse)
+	playlistDetails.Link = fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId)
 
-	title := ReadValueString(playlistHeader, []interface{}{"title", "runs", 0, "text"})
-	totalTracksText := ReadValueString(jsonResponse, []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "subFooter", "messageRenderer", "subtext", "messageSubtextRenderer", "text", "runs", 0, "text"})
-
-	textItems := strings.Split(totalTracksText, DOT_SEPARATOR)
-	totalTracks := ""
-
-	if len(textItems) > 0 {
-		totalTracks = textItems[0]
-	}
-
-	totalTracks = strings.TrimSpace(totalTracks)
-
-	// sometimes the total tracks is suffixed with 'tracks' sometimes it's songs
-	// thats why we handle both cases
-	// a better solution might be to use regex to extract the number.
-	// Todo:
-
-	totalTracks = strings.Replace(totalTracks, " tracks", "", 1)
-	totalTracks = strings.Replace(totalTracks, " songs", "", 1)
-
-	totalTracks = strings.ReplaceAll(totalTracks, ",", "")
-
-	totalTracksInt, _ := strconv.Atoi(totalTracks)
-
-	description := ""
-
-	playlistTracks := extractPlaylistTracks(jsonResponse, true)
-
-	playlist := PlaylistDetails{
-		Title:          title,
-		Description:    description,
-		TotalTracks:    totalTracksInt,
-		PlaylistTracks: playlistTracks,
-		Link:           createPlaylistLink(playlistId),
-	}
-
-	return playlist, nil
+	return playlistDetails, nil
 }
 
 func FetchPlaylistTracks(client *http.Client, playlistId string, continuation string) (PlaylistTracksResponse, error) {
@@ -443,44 +276,24 @@ func FetchPlaylistTracks(client *http.Client, playlistId string, continuation st
 		body["browseId"] = browseId
 	}
 
-	jsonResponse, err := sendRequest(client, "browse", body)
+	jsonResponse, err := sendRequest(client, HTML5Client, "browse", body)
 
 	// if continuation != "" {
-	// 	SaveJson(jsonResponse, "page-2-tracks")
+	// 	SaveJson(jsonResponse, "playlist-tracks-page-2")
+	// } else {
+	// 	SaveJson(jsonResponse, "playlist-tracks")
 	// }
 
 	if err != nil {
 		return PlaylistTracksResponse{}, err
 	}
 
-	playlistTracks := extractPlaylistTracks(jsonResponse, continuation == "")
+	playlistTracks, nextContinuation := HTML5Client.parser.ParsePlaylistTracks(jsonResponse, continuation == "")
 
-	nextContinuation := ""
-	var continuations interface{}
-	if continuation == "" {
-		continuations = ReadValue(jsonResponse, []interface{}{
-			"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicPlaylistShelfRenderer", "continuations",
-		})
-
-	} else {
-		continuations = ReadValue(jsonResponse, []interface{}{
-			"continuationContents", "musicPlaylistShelfContinuation", "continuations",
-		})
-	}
-
-	if pagination, ok := continuations.([]interface{}); ok {
-		// get last item in array
-		lastItemIndex := len(pagination) - 1
-		nextContinuation = ReadValueString(pagination[lastItemIndex], []interface{}{"nextContinuationData", "continuation"})
-	}
-
-	response := PlaylistTracksResponse{
-		NextContinuation: nextContinuation, // You can set this to the next continuation token if available
+	return PlaylistTracksResponse{
+		NextContinuation: nextContinuation,
 		Tracks:           playlistTracks,
-	}
-
-	// SaveJson(response, "playlist-"+playlistId+"-tracks")
-	return response, nil
+	}, nil
 }
 
 func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAllTracksResponse, error) {
@@ -508,14 +321,6 @@ func FetchAllPlaylistTracks(client *http.Client, playlistId string) (PlaylistAll
 		Total:  len(tracks),
 		Tracks: tracks,
 	}, nil
-
-}
-
-func getPlaylistTotalTracks(subtitleRuns []interface{}) string {
-	lastTextRun := subtitleRuns[len(subtitleRuns)-1]
-	totalTracksText := ReadValueString(lastTextRun, []interface{}{"text"})
-	totalTracks := strings.Split(totalTracksText, " ")[0]
-	return totalTracks
 }
 
 func FetchUserPlaylists(httpClient *http.Client, continuation string) (PlaylistPageResponse, error) {
@@ -527,11 +332,13 @@ func FetchUserPlaylists(httpClient *http.Client, continuation string) (PlaylistP
 		body = map[string]interface{}{"continuation": continuation}
 	}
 
-	jsonResponse, err := sendRequest(httpClient, "browse", body)
+	jsonResponse, err := sendRequest(httpClient, HTML5Client, "browse", body)
 
 	if err != nil {
 		return PlaylistPageResponse{}, err
 	}
+
+	SaveJson(jsonResponse, "user-playlists-response")
 
 	// var filename string
 
@@ -543,82 +350,14 @@ func FetchUserPlaylists(httpClient *http.Client, continuation string) (PlaylistP
 
 	// SaveJson(jsonResponse, filename)
 
-	var playlistItemsContents interface{}
-	var nextContinuation string
+	youtubePlaylists, nextContinuation := HTML5Client.parser.ParseUserPlaylists(jsonResponse, continuation == "")
 
-	if continuation == "" {
-		itemsKey := []interface{}{"contents", "singleColumnBrowseResultsRenderer", "tabs", 0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicShelfRenderer", "contents"}
-		playlistItemsContents = ReadValue(jsonResponse, itemsKey)
-		nextContinuation = ReadValueString(jsonResponse, []interface{}{
-			"contents", "singleColumnBrowseResultsRenderer", "tabs",
-			0, "tabRenderer", "content", "sectionListRenderer", "contents", 0, "musicShelfRenderer",
-			"continuations", 0, "nextContinuationData", "continuation",
-		})
+	SaveJson(youtubePlaylists, "user-playlists-response-parsed")
 
-	} else {
-		itemsKey := []interface{}{"continuationContents", "sectionListContinuation", "contents", 0, "musicShelfRenderer", "contents"}
-		playlistItemsContents = ReadValue(jsonResponse, itemsKey)
-		nextContinuation = ReadValueString(jsonResponse, []interface{}{
-			"continuationContents", "sectionListContinuation", "contents", 0, "musicShelfRenderer", "continuations", 0, "nextContinuationData", "continuation",
-		})
-	}
-
-	youtubePlaylists := []YoutubePlaylist{}
-
-	if items, ok := playlistItemsContents.([]interface{}); ok {
-		if continuation == "" && len(items) > 1 {
-			// if first page, first item is liked music playlists
-			// so we skip the 1st item
-			items = items[1:]
-		}
-
-		for _, item := range items {
-			itemRow := ReadValue(item, []interface{}{"musicTwoColumnItemRenderer"})
-			title := ReadValueString(itemRow, []interface{}{"title", "runs", 0, "text"})
-
-			thumbnails, _ := ReadValue(itemRow, []interface{}{"thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"}).([]interface{})
-
-			thumbnailUrls := []string{}
-
-			subtitleRuns, _ := ReadValue(itemRow, []interface{}{"subtitle", "runs"}).([]interface{})
-
-			for _, thumbnail := range thumbnails {
-				thumnailMap, _ := thumbnail.(map[string]interface{})
-				url, _ := thumnailMap["url"].(string)
-				if url != "" {
-					thumbnailUrls = append(thumbnailUrls, url)
-				}
-
-			}
-
-			totalTracks := getPlaylistTotalTracks(subtitleRuns)
-
-			playlistId := ReadValueString(itemRow, []interface{}{"navigationEndpoint", "browseEndpoint", "browseId"})
-
-			if len(playlistId) > 2 && strings.HasPrefix(playlistId, "VL") {
-				playlistId = playlistId[2:]
-			}
-
-			playlist := YoutubePlaylist{
-				Title:       title,
-				Thumbnails:  thumbnailUrls,
-				TotalTracks: totalTracks,
-				PlaylistId:  playlistId,
-				Url:         createPlaylistLink(playlistId),
-			}
-
-			youtubePlaylists = append(youtubePlaylists, playlist)
-
-		}
-
-	}
-
-	response := PlaylistPageResponse{
+	return PlaylistPageResponse{
 		Continuation: nextContinuation,
 		Playlists:    youtubePlaylists,
-	}
-
-	return response, nil
+	}, nil
 }
 
 func CreatePlaylist(client *http.Client, title string, description string, videoIds []string) (CreatedPlaylist, error) {
@@ -632,11 +371,13 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 		"privacyStatus": privacyStatus,
 		"videoIds":      videoIds,
 	}
-	data, err := sendRequest(client, endpoint, body)
+	data, err := sendRequest(client, HTML5EmbeddedClient, endpoint, body)
 
 	if err != nil {
 		return CreatedPlaylist{}, err
 	}
+
+	SaveJson(data, "create-playlist-response")
 
 	playlistId := ReadValueString(data, []interface{}{
 		"playlistId",
@@ -644,7 +385,7 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 
 	return CreatedPlaylist{
 		PlaylistId:  playlistId,
-		Link:        createPlaylistLink(playlistId),
+		Link:        parsers.CreatePlaylistLink(playlistId),
 		Title:       title,
 		Description: description,
 	}, nil
@@ -662,89 +403,9 @@ func FetchLikedPlaylist(client *http.Client) (YoutubePlaylist, error) {
 	playlist := YoutubePlaylist{
 		Title:       playlistDetails.Title,
 		Thumbnails:  playlistDetails.Thumbnails,
-		TotalTracks: strconv.Itoa(playlistDetails.TotalTracks),
+		TotalTracks: fmt.Sprintf("%d", playlistDetails.TotalTracks),
 		PlaylistId:  playlistId,
-		Url:         createPlaylistLink(playlistId),
+		Url:         fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlistId),
 	}
 	return playlist, err
-}
-
-// ExtractPlaylistsFromNextPage extracts playlist information from a next-page continuation response
-func ExtractPlaylistsFromNextPage(jsonResponse interface{}) []YoutubePlaylist {
-	var playlists []YoutubePlaylist
-
-	// Navigate to the contents array in the continuation response
-	contents := ReadValue(jsonResponse, []interface{}{
-		"continuationContents",
-		"sectionListContinuation",
-		"contents",
-		0,
-		"musicCarouselShelfRenderer",
-		"contents",
-	})
-
-	if contentsList, ok := contents.([]interface{}); ok {
-		for _, item := range contentsList {
-			// Extract musicTwoRowItemRenderer
-			itemRenderer := ReadValue(item, []interface{}{"musicTwoRowItemRenderer"})
-			if itemRenderer == nil {
-				continue
-			}
-
-			// Extract title
-			title := ReadValueString(itemRenderer, []interface{}{"title", "runs", 0, "text"})
-
-			// Extract playlist ID from browseId
-			browseId := ReadValueString(itemRenderer, []interface{}{
-				"navigationEndpoint",
-				"browseEndpoint",
-				"browseId",
-			})
-
-			// Remove "VL" prefix if present
-			playlistId := browseId
-			if len(playlistId) > 2 && playlistId[0:2] == "VL" {
-				playlistId = playlistId[2:]
-			}
-
-			// Extract thumbnails
-			thumbnails := ReadValue(itemRenderer, []interface{}{
-				"thumbnailRenderer",
-				"musicThumbnailRenderer",
-				"thumbnail",
-				"thumbnails",
-			})
-
-			var thumbnailUrls []string
-			if thumbsList, ok := thumbnails.([]interface{}); ok {
-				for _, thumb := range thumbsList {
-					if thumbMap, ok := thumb.(map[string]interface{}); ok {
-						if url, ok := thumbMap["url"].(string); ok && url != "" {
-							thumbnailUrls = append(thumbnailUrls, url)
-						}
-					}
-				}
-			}
-
-			// Extract subtitle runs to get total tracks
-			subtitleRuns := ReadValue(itemRenderer, []interface{}{"subtitle", "runs"})
-			totalTracks := ""
-			if runs, ok := subtitleRuns.([]interface{}); ok {
-				totalTracks = getPlaylistTotalTracks(runs)
-			}
-
-			// Create playlist object
-			playlist := YoutubePlaylist{
-				Title:       title,
-				Thumbnails:  thumbnailUrls,
-				TotalTracks: totalTracks,
-				PlaylistId:  playlistId,
-				Url:         createPlaylistLink(playlistId),
-			}
-
-			playlists = append(playlists, playlist)
-		}
-	}
-
-	return playlists
 }
