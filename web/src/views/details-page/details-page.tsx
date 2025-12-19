@@ -167,7 +167,6 @@ export default function DetailsPage() {
     return playlistTracks;
   }, [data, trackFilter]);
 
-  console.log("tracks..", tracks);
   return (
     <Box pb={10}>
       <Nav />
