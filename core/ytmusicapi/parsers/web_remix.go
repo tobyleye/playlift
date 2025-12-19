@@ -266,7 +266,7 @@ func parsePlaylistItem(item interface{}) YoutubePlaylist {
 		}
 	}
 
-	totalTracks := p.getPlaylistTotalTracks(subtitleRuns)
+	totalTracks := getPlaylistTotalTracks(subtitleRuns)
 
 	playlistId := ReadValueString(itemRow, []interface{}{"navigationEndpoint", "browseEndpoint", "browseId"})
 
@@ -284,7 +284,7 @@ func parsePlaylistItem(item interface{}) YoutubePlaylist {
 }
 
 // getPlaylistTotalTracks extracts the total track count from subtitle runs
-func (p *WebRemixParser) getPlaylistTotalTracks(subtitleRuns []interface{}) string {
+func getPlaylistTotalTracks(subtitleRuns []interface{}) string {
 	lastTextRun := subtitleRuns[len(subtitleRuns)-1]
 	totalTracksText := ReadValueString(lastTextRun, []interface{}{"text"})
 	totalTracks := strings.Split(totalTracksText, " ")[0]

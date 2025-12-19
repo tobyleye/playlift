@@ -385,7 +385,7 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 
 	return CreatedPlaylist{
 		PlaylistId:  playlistId,
-		Link:        parsers.createPlaylistLink(playlistId),
+		Link:        parsers.CreatePlaylistLink(playlistId),
 		Title:       title,
 		Description: description,
 	}, nil

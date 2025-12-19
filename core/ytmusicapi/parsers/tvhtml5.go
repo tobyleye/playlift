@@ -326,7 +326,7 @@ func parseTVHTML5PlaylistItem(item interface{}) YoutubePlaylist {
 		Thumbnails:  thumbnailUrls,
 		TotalTracks: totalTracks,
 		PlaylistId:  playlistId,
-		Url:         createPlaylistLink(playlistId),
+		Url:         CreatePlaylistLink(playlistId),
 	}
 }
 
