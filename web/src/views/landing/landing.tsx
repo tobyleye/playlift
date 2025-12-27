@@ -50,7 +50,7 @@ export default function Landing() {
       } catch (err) {
         setLoading(false);
         toastHelper(toast, {
-          title: "Login failed",
+          title: "Oops!",
           description: `Unable to login. Please try again.`,
           status: "error",
         });
@@ -60,7 +60,7 @@ export default function Landing() {
     onError: (error) => {
       console.error("Login Failed:", error);
       toastHelper(toast, {
-        title: "Error",
+        title: "Oops!",
         description: `Couldn't complete login. Please try again.`,
         status: "error",
       });
