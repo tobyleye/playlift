@@ -99,7 +99,9 @@ const ConversionCard = ({ conversion }: { conversion: PlaylistConversion }) => {
           <Text color="whiteAlpha.700" fontSize="sm">
             Created
           </Text>
-          <Text color="whiteAlpha.700">{dayjs().format("MMM DD, YYYY")}</Text>
+          <Text color="whiteAlpha.700">
+            {dayjs(conversion.created_at).format("MMM DD, YYYY")}
+          </Text>
         </Box>
       </Box>
     </Box>

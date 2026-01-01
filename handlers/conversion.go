@@ -76,11 +76,13 @@ func (h Handlers) GetAllConversions(c echo.Context) error {
 
 	queryResult := h.Db.Model(&models.PlaylistConversion{}).Where(&models.PlaylistConversion{
 		UserId: user.UserId,
-	}).Find(&conversions).Order("created_at DESC")
+	}).Order("created_at DESC").Find(&conversions)
 
 	if queryResult.Error != nil {
 		log.Println("get all conversion error:", queryResult.Error)
 	}
+
+	log.Println("fetched the following conversions..", conversions)
 
 	return c.JSON(200, conversions)
 }
