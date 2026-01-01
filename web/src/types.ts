@@ -23,6 +23,7 @@ export type PlaylistConversion = {
   status: string;
   total_tracks: number;
   playlist_title: string;
+  created_at: string;
 };
 
 export type Status = "completed" | "pending" | "failed";
