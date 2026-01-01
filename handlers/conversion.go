@@ -81,8 +81,5 @@ func (h Handlers) GetAllConversions(c echo.Context) error {
 	if queryResult.Error != nil {
 		log.Println("get all conversion error:", queryResult.Error)
 	}
-
-	log.Println("fetched the following conversions..", conversions)
-
 	return c.JSON(200, conversions)
 }
