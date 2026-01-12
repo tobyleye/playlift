@@ -38,6 +38,9 @@ func SpotifyTokenExchange(code string) (*oauth2.Token, error) {
 	clientID := config.SPOTIFY_CLIENT_ID
 	clientSecret := config.SPOTIFY_CLIENT_SECRET
 
+	log.Println("exchanging spotify token..")
+	log.Println(map[string]string{redirectURI: redirectURI, clientID: clientID, clientSecret: clientSecret, code: code})
+
 	// Prepare the form data
 	formData := url.Values{}
 	formData.Set("code", code)

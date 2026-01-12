@@ -13,6 +13,7 @@ import SessionProvider from "./providers/SessionProvider.tsx";
 import { SWRConfig } from "swr";
 import useLoggedIn from "./hooks/useLoggedIn.ts";
 import "./css/animation.css";
+import Playground from "./views/playground.tsx";
 
 const Landing = lazy(() => import("./views/landing/landing.tsx"));
 const Home = lazy(() => import("./views/home/home.tsx"));
@@ -65,7 +66,6 @@ const router = createBrowserRouter([
       { index: true, Component: Landing },
       { path: "/privacy-policy", Component: PrivacyPolicy },
       { path: "/healthcheck", Component: HealthCheck },
-
       {
         path: "/convert",
         Component: Convert,

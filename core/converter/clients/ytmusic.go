@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/tobyleye/playlift/core/ytmusicapi"
@@ -59,6 +60,9 @@ func (c YoutubeConverterClient) SearchTrack(title string, artists []string) (*ty
 }
 
 func (c YoutubeConverterClient) CreatePlaylist(playlistTitle string, playlistDescription string, tracks []string) (string, error) {
+	log.Println("creating youtube playlist...", playlistTitle, playlistDescription)
+	log.Println("tracks....", tracks)
+
 	// Implementation for creating a playlist on YouTube
 	createdPlaylist, err := ytmusicapi.CreatePlaylist(c.client, playlistTitle,
 		playlistDescription, tracks)

@@ -14,8 +14,7 @@ import (
 
 var SpotifyAuthenticator = spotifyauth.New(
 	spotifyauth.WithRedirectURL(
-
-		os.Getenv("FRONTEND_BASE_URL")+"/convert/connect-spotify",
+		os.Getenv("SPOTIFY_REDIRECT_URL"),
 	),
 	spotifyauth.WithScopes(
 		spotifyauth.ScopeUserReadEmail,

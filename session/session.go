@@ -2,12 +2,12 @@ package session
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/sessions"
 	echoSessionMiddleware "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
-	"github.com/tobyleye/playlift/config"
 	"github.com/tobyleye/playlift/models"
 )
 
@@ -32,15 +32,26 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 	// 7 days
 	expiration := (time.Hour * 24) * 7
 
-	session.Options = &sessions.Options{
+	isProduction := os.Getenv("GO_ENV") == "production"
 
+	sessionOptions := &sessions.Options{
 		Path:     "/",
 		MaxAge:   int(expiration.Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   true,
-		Domain:   config.APP_DOMAIN,
 	}
+
+	if isProduction {
+		// Production settings
+		sessionOptions.SameSite = http.SameSiteNoneMode
+		sessionOptions.Secure = true
+	} else {
+		// Development settings
+		sessionOptions.SameSite = http.SameSiteNoneMode
+		sessionOptions.Secure = false
+		// Don't set Domain for local development
+	}
+
+	session.Options = sessionOptions
 
 	// since this function is called after login with youtube
 	// we set youtubeConnect to true

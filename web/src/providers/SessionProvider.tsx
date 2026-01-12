@@ -20,29 +20,27 @@ export default function SessionProvider({
   const isLoggedIn = session?.user_id || savedUserId;
 
   useEffect(() => {
-    if (isLoggedIn) {
-      const requestInterceptor = client.interceptors.response.use(
-        null,
-        (err) => {
-          if (err.response && err.response.status === 401) {
-            localStorage.removeItem("userId");
-            toastHelper(toast, {
-              title: "Session expired",
-              description: "Please log in again to continue",
-              status: "error",
-            });
-            navigate("/");
-            return Promise.reject(err);
-          }
-
-          return Promise.reject(err);
-        }
-      );
-
-      return () => {
-        client.interceptors.request.eject(requestInterceptor);
-      };
-    }
+    // if (isLoggedIn) {
+    //   const requestInterceptor = client.interceptors.response.use(
+    //     null,
+    //     (err) => {
+    //       if (err.response && err.response.status === 401) {
+    //         localStorage.removeItem("userId");
+    //         toastHelper(toast, {
+    //           title: "Session expired",
+    //           description: "Please log in again to continue",
+    //           status: "error",
+    //         });
+    //         navigate("/");
+    //         return Promise.reject(err);
+    //       }
+    //       return Promise.reject(err);
+    //     }
+    //   );
+    //   return () => {
+    //     client.interceptors.request.eject(requestInterceptor);
+    //   };
+    // }
   }, [isLoggedIn]);
 
   useEffect(() => {

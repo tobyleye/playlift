@@ -1,18 +1,19 @@
 module github.com/tobyleye/playlift
 
-go 1.23.0
-
-toolchain go1.24.0
+go 1.24.0
 
 require (
 	github.com/carlmjohnson/requests v0.24.2
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/sessions v1.4.0
+	github.com/hibiken/asynq v0.25.1
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo-contrib v0.17.2
 	github.com/labstack/echo/v4 v4.13.3
+	github.com/stretchr/testify v1.11.1
 	github.com/stripe/stripe-go/v81 v81.1.0
+	github.com/valkey-io/valkey-go v1.0.64
 	github.com/zmb3/spotify/v2 v2.4.2
 	golang.org/x/oauth2 v0.23.0
 	google.golang.org/api v0.180.0
@@ -26,11 +27,11 @@ require (
 	cloud.google.com/go/compute/metadata v0.5.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
@@ -43,8 +44,10 @@ require (
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/redis/go-redis/v9 v9.11.0 // indirect
-	github.com/valkey-io/valkey-go v1.0.64 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/redis/go-redis/v9 v9.17.2 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/spf13/cast v1.10.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
@@ -54,10 +57,15 @@ require (
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	golang.org/x/time v0.8.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 	google.golang.org/grpc v1.69.2 // indirect
-	google.golang.org/protobuf v1.36.1 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// Exclude old genproto to avoid ambiguous imports
+exclude google.golang.org/genproto v0.0.0-20200825200019-8632dd797987

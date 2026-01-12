@@ -85,3 +85,32 @@ func errorResponse(message string) interface{} {
 		Error string `json:"error"`
 	}{Error: message}
 }
+
+// extractPlaylistIdFromLink extracts the playlist ID from a Spotify or YouTube playlist URL
+func extractPlaylistIdFromLink(link, platform string) string {
+	if link == "" {
+		return ""
+	}
+
+	if platform == "spotify" {
+		// Spotify URL format: https://open.spotify.com/playlist/{id}
+		parts := strings.Split(link, "/playlist/")
+		if len(parts) >= 2 {
+			// Remove query parameters if any
+			id := strings.Split(parts[1], "?")[0]
+			return id
+		}
+	} else if platform == "youtube" {
+		// YouTube URL format: https://music.youtube.com/playlist?list={id}
+		if strings.Contains(link, "list=") {
+			parts := strings.Split(link, "list=")
+			if len(parts) >= 2 {
+				// Remove any additional parameters
+				id := strings.Split(parts[1], "&")[0]
+				return id
+			}
+		}
+	}
+
+	return ""
+}

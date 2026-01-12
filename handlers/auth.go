@@ -53,6 +53,8 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 	// the redirect uri
 	redirectUri := config.FRONTEND_BASE_URL
 
+	log.Println("user logging in with google, redirect uri:", body, code)
+
 	// if origin == "login" {
 	// 	redirectUri = config.FRONTEND_BASE_URL
 

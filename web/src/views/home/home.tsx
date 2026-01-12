@@ -199,47 +199,55 @@ export default function Home() {
                   })}
                 </SimpleGrid>
 
-                <Box mb={10}>
-                  <Heading mb={4} size={"md"}>
-                    Pending migrations
-                  </Heading>
-                  <SimpleGrid
-                    columns={{ base: 1, md: 2, lg: 3 }}
-                    gap={6}
-                    pointerEvents={isLoading ? "none" : "auto"}
-                    opacity={isLoading ? 0.5 : 1}
-                  >
-                    {pendingConversions.map((conversion) => {
-                      return (
-                        <ConversionCard
-                          key={conversion.conversion_id}
-                          conversion={conversion}
-                        />
-                      );
-                    })}
-                  </SimpleGrid>
-                </Box>
+                {pendingConversions.length > 0 && (
+                  <Box mb={10}>
+                    <Heading mb={4} size={"md"}>
+                      Pending migrations
+                    </Heading>
+                    <SimpleGrid
+                      columns={{ base: 1, md: 2, lg: 3 }}
+                      gap={6}
+                      pointerEvents={isLoading ? "none" : "auto"}
+                      opacity={isLoading ? 0.5 : 1}
+                    >
+                      {pendingConversions.map((conversion) => {
+                        return (
+                          <ConversionCard
+                            key={conversion.conversion_id}
+                            conversion={conversion}
+                          />
+                        );
+                      })}
+                    </SimpleGrid>
+                  </Box>
+                )}
 
-                <Box>
-                  <Heading mb={4} size={"md"}>
-                    Past migrations
-                  </Heading>
-                  <SimpleGrid
-                    columns={{ base: 1, md: 2, lg: 3 }}
-                    gap={6}
-                    pointerEvents={isLoading ? "none" : "auto"}
-                    opacity={isLoading ? 0.5 : 1}
-                  >
-                    {completedConversions.map((conversion) => {
-                      return (
-                        <ConversionCard
-                          key={conversion.conversion_id}
-                          conversion={conversion}
-                        />
-                      );
-                    })}
-                  </SimpleGrid>
-                </Box>
+                {completedConversions.length > 0 ? (
+                  <Box>
+                    <Heading mb={4} size={"md"}>
+                      Past migrations
+                    </Heading>
+                    <SimpleGrid
+                      columns={{ base: 1, md: 2, lg: 3 }}
+                      gap={6}
+                      pointerEvents={isLoading ? "none" : "auto"}
+                      opacity={isLoading ? 0.5 : 1}
+                    >
+                      {completedConversions.map((conversion) => {
+                        return (
+                          <ConversionCard
+                            key={conversion.conversion_id}
+                            conversion={conversion}
+                          />
+                        );
+                      })}
+                    </SimpleGrid>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Box>You don't have any migrations.</Box>
+                  </Box>
+                )}
               </Box>
             )}
           </Box>

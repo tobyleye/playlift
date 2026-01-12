@@ -199,7 +199,9 @@ function PlaylistsSelection() {
   const [activeTabIndex, setActiveTabIndex] = useState<number>(0);
 
   //  ids of the selected playlists
-  const selectedPlaylistsIds = selectedPlaylists.map((p) => p.playlist_id);
+  const selectedPlaylistsIds = selectedPlaylists.map(
+    (selection) => selection.playlist.playlist_id
+  );
 
   const toast = useToast();
   const toastRef = useRef<ToastId>();

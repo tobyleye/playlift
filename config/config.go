@@ -2,6 +2,7 @@ package config
 
 import (
 	"crypto/tls"
+	"fmt"
 	"log"
 	"os"
 
@@ -28,11 +29,19 @@ var (
 	VALKEY_PASSWORD              string
 	APP_DOMAIN                   string
 	VALKEY_CLIENT_OPTIONS        valkey.ClientOption
+	REDIS_HOST                   string
+	REDIS_PORT                   string
+	REDIS_PASSWORD               string
+	REDIS_ADDRESS                string
+	GO_ENV                       string
+	GOOGLE_REDIRECT_URL          string
 )
 
 const (
-	YOUTUBE_HOST = "music.youtube.com"
-	SPOTIFY_HOST = "open.spotify.com"
+	YOUTUBE_HOST  = "music.youtube.com"
+	SPOTIFY_HOST  = "open.spotify.com"
+	SPOTIFY       = "spotify"
+	YOUTUBE_MUSIC = "youtube_music"
 )
 
 func getEnvOrThrow(varname string) string {
@@ -41,6 +50,11 @@ func getEnvOrThrow(varname string) string {
 		log.Fatal(varname + " is not set")
 	}
 	return envValue
+}
+
+func IsProd() bool {
+	fmt.Println("go env...", GO_ENV)
+	return GO_ENV == "production"
 }
 
 func LoadEnv() {
@@ -72,12 +86,18 @@ func LoadEnv() {
 	STRIPE_SECRET_KEY = os.Getenv("STRIPE_SECRET_KEY")
 
 	FRONTEND_BASE_URL = os.Getenv("FRONTEND_BASE_URL")
+	GOOGLE_REDIRECT_URL = FRONTEND_BASE_URL
 
-	SPOTIFY_CONNECT_REDIRECT_URL = FRONTEND_BASE_URL + "/convert/connect-spotify"
+	SPOTIFY_CONNECT_REDIRECT_URL = getEnvOrThrow("SPOTIFY_REDIRECT_URL")
 
 	VALKEY_URL = getEnvOrThrow("VALKEY_URL")
 
 	APP_DOMAIN = os.Getenv("APP_DOMAIN")
+	REDIS_HOST = getEnvOrThrow("REDIS_HOST")
+	REDIS_PORT = getEnvOrThrow("REDIS_PORT")
+
+	REDIS_ADDRESS = fmt.Sprintf("%s:%s", REDIS_HOST, REDIS_PORT)
+	REDIS_PASSWORD = os.Getenv("REDIS_PASSWORD")
 
 	if GO_ENV == "production" {
 		VALKEY_CLIENT_OPTIONS = valkey.ClientOption{
