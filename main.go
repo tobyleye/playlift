@@ -122,7 +122,10 @@ func main() {
 	// Load templates
 	// define api routes
 	// public routes
-	e.GET("/health", func(c echo.Context) error {
+
+	api := e.Group("/api")
+
+	api.GET("/health", func(c echo.Context) error {
 		return c.JSON(200,
 			map[string]string{
 				"status": "ok",
@@ -133,7 +136,7 @@ func main() {
 	e.POST("/login/google/callback", handlers.LoginWithGoogleCallback)
 
 	// private routes
-	privateRoutes := e.Group("", ensureLogin)
+	privateRoutes := api.Group("", ensureLogin)
 
 	privateRoutes.POST("/connect/spotify/callback", handlers.SpotifyLoginCallback, ensureLogin)
 
