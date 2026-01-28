@@ -133,7 +133,7 @@ func main() {
 			})
 	})
 
-	e.POST("/login/google/callback", handlers.LoginWithGoogleCallback)
+	api.POST("/login/google/callback", handlers.LoginWithGoogleCallback)
 
 	// private routes
 	privateRoutes := api.Group("", ensureLogin)
