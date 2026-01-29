@@ -21,8 +21,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "."
           target: "/opt/playlift/"
-          rm: true
-          exclude: "node_modules,web/node_modules,web/dist,.git,.github"
 
       # SSH and build on server
       - name: Build and restart on EC2
