@@ -18,6 +18,7 @@ import (
 const (
 	TypeEmailDelivery   = "email:deliver"
 	TypeConvertPlaylist = "playlist:convert"
+	TypeSyncWatch       = "watch:sync"
 )
 
 type EmailDeliveryPayload struct {
@@ -35,6 +36,10 @@ func NewEmailDeliveryTask(userID string, tmplID string) (*asynq.Task, error) {
 
 func NewPlaylistConversionTask(conversionId string) *asynq.Task {
 	return asynq.NewTask(TypeConvertPlaylist, []byte(conversionId))
+}
+
+func NewSyncWatchTask(conversionId string, startTime time.Time) *asynq.Task {
+	return asynq.NewTask(TypeSyncWatch, []byte(conversionId), asynq.ProcessAt(startTime))
 }
 
 func HandleEmailDeliveryTask(ctx context.Context, t *asynq.Task) error {

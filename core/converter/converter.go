@@ -17,7 +17,15 @@ import (
 	"gorm.io/gorm"
 )
 
-func createClientsForUser(db *gorm.DB, userId string) (*http.Client, *spotify.Client, error) {
+type ConversionState struct {
+	ConversionID        string                                  `json:"conversion_id"`
+	PlaylistLink        string                                  `json:"playlist_link"`
+	Status              string                                  `json:"status"`
+	Result              map[string]models.TrackConversionResult `json:"result"`
+	CreatedPlaylistLink string                                  `json:"created_playlist_link"`
+}
+
+func CreateClientsForUser(db *gorm.DB, userId string) (*http.Client, *spotify.Client, error) {
 
 	spotifyClient, err := config.CreateUserSpotifyClient(db, userId)
 	if err != nil {
@@ -30,15 +38,6 @@ func createClientsForUser(db *gorm.DB, userId string) (*http.Client, *spotify.Cl
 		return nil, nil, err
 	}
 	return youtubeClient, spotifyClient, nil
-
-}
-
-type ConversionState struct {
-	ConversionID        string                                  `json:"conversion_id"`
-	PlaylistLink        string                                  `json:"playlist_link"`
-	Status              string                                  `json:"status"`
-	Result              map[string]models.TrackConversionResult `json:"result"`
-	CreatedPlaylistLink string                                  `json:"created_playlist_link"`
 }
 
 func (s *ConversionState) Save(ctx context.Context, cache valkey.Client) error {
@@ -133,7 +132,8 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 
 	err := func() error {
 
-		youtubeClient, spotifyClient, err := createClientsForUser(db, userId)
+		youtubeClient, spotifyClient, err := CreateClientsForUser(db, userId)
+
 		if err != nil {
 			return err
 		}

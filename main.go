@@ -20,6 +20,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/tobyleye/playlift/config"
+	cronjobs "github.com/tobyleye/playlift/cron-jobs"
 	"github.com/tobyleye/playlift/db"
 	"github.com/tobyleye/playlift/handlers"
 	"github.com/tobyleye/playlift/models"
@@ -180,7 +181,10 @@ func main() {
 	privateRoutes.POST("/logout", handlers.Logout)
 	privateRoutes.POST("/deactivate-account", handlers.DeactivateAccount)
 
+	cronjobs.StartCronJobs(db)
+
 	// serve frontend. this should always be done after routes are registered
+
 	port := os.Getenv("PORT")
 
 	fmt.Println("Starting server on port:", port)
