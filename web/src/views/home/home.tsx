@@ -74,8 +74,8 @@ export default function Home() {
       await api.restartConversion(conversionId);
       mutate(
         data!.filter((conv: any) =>
-          conv.id == conversionId ? { ...conv, status: "pending" } : conv
-        )
+          conv.id == conversionId ? { ...conv, status: "pending" } : conv,
+        ),
       );
     } catch {
       toast({
@@ -222,7 +222,7 @@ export default function Home() {
                   </Box>
                 )}
 
-                {completedConversions.length > 0 ? (
+                {completedConversions.length > 0 && (
                   <Box>
                     <Heading mb={4} size={"md"}>
                       Past migrations
@@ -242,10 +242,6 @@ export default function Home() {
                         );
                       })}
                     </SimpleGrid>
-                  </Box>
-                ) : (
-                  <Box>
-                    <Box>You don't have any migrations.</Box>
                   </Box>
                 )}
               </Box>
