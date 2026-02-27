@@ -23,6 +23,7 @@ type ConversionState struct {
 	Status              string                                  `json:"status"`
 	Result              map[string]models.TrackConversionResult `json:"result"`
 	CreatedPlaylistLink string                                  `json:"created_playlist_link"`
+	CreatedPlaylistId   string                                  `json:"created_playlist_id"`
 }
 
 func CreateClientsForUser(db *gorm.DB, userId string) (*http.Client, *spotify.Client, error) {
@@ -53,6 +54,7 @@ func (s *ConversionState) saveToDb(db *gorm.DB, timeTaken float64) {
 		Status:              s.Status,
 		Result:              s.Result,
 		CreatedPlaylistLink: s.CreatedPlaylistLink,
+		CreatedPlaylistId:   s.CreatedPlaylistId,
 		TimeTaken:           float64(timeTaken),
 	}
 
@@ -116,7 +118,8 @@ func searchTrack(ctx context.Context, cache valkey.Client, sourcePlatform string
 func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConversion) error {
 
 	conversionState := ConversionState{
-		ConversionID: conversion.ConversionID,
+		ConversionID:      conversion.ConversionID,
+		CreatedPlaylistId: conversion.CreatedPlaylistId,
 	}
 
 	startTime := time.Now()
@@ -281,7 +284,7 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 			return ""
 		}()
 
-		createdPlaylistLink, err := destinationClient.CreatePlaylist(
+		createdPlaylistLink, createdPlaylistId, err := destinationClient.CreatePlaylist(
 			playlistTitle,
 			"",
 			destinationTracksId,
@@ -293,6 +296,7 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 
 		conversionState.Result = conversionResults
 		conversionState.CreatedPlaylistLink = createdPlaylistLink
+		conversionState.CreatedPlaylistId = createdPlaylistId
 		conversionState.Status = "completed"
 		conversionState.Save(ctx, cache)
 
@@ -316,7 +320,14 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 
 		// Create watch if enabled
 		if conversion.EnableWatch && conversionState.CreatedPlaylistLink != "" {
-			// Extract destination playlist ID from the created playlist link
+			now := time.Now()
+			err := db.Model(&models.ConversionWatch{}).Where("conversion_id = ?", conversion.ConversionID).Updates(map[string]interface{}{
+				"last_synced_at":   now,
+				"last_track_count": conversion.TotalTracks,
+			}).Error
+			if err != nil {
+				log.Println("error updating conversion watch metadata:", err)
+			}
 		}
 	}
 

@@ -127,10 +127,6 @@ func main() {
 
 	ctx := context.Background()
 
-	if err != nil {
-		panic(err)
-	}
-
 	cache, err := valkey.NewClient(config.VALKEY_CLIENT_OPTIONS)
 
 	if err != nil {
@@ -181,7 +177,9 @@ func main() {
 	privateRoutes.POST("/logout", handlers.Logout)
 	privateRoutes.POST("/deactivate-account", handlers.DeactivateAccount)
 
-	cronjobs.StartCronJobs(db)
+	if err := cronjobs.StartCronJobs(db, client); err != nil {
+		log.Println("failed to start cron jobs", err)
+	}
 
 	// serve frontend. this should always be done after routes are registered
 

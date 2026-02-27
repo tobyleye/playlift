@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -142,6 +143,8 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 		log.Println("error creating session", err)
 		return c.JSON(500, map[string]string{"error": "server error"})
 	}
+
+	fmt.Println("session created...", userSession)
 
 	return c.JSON(200, map[string]interface{}{
 		"message": "Login successful",

@@ -111,12 +111,12 @@ func (c SpotifyClient) SearchTrack(title string, artists []string) (*types.Track
 	return &foundTrack, nil
 }
 
-func (c SpotifyClient) CreatePlaylist(playlistTitle string, playlistDescription string, tracks []string) (string, error) {
+func (c SpotifyClient) CreatePlaylist(playlistTitle string, playlistDescription string, tracks []string) (string, string, error) {
 	// Implementation for creating a playlist on Spotify
 	createdPlaylist, err := c.Client.CreatePlaylistForUser(c.context, c.spotifyUserId, playlistTitle, playlistDescription, false, false)
 
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	for i := 0; i < len(tracks); i += 100 {
@@ -134,14 +134,38 @@ func (c SpotifyClient) CreatePlaylist(playlistTitle string, playlistDescription 
 
 		if err != nil {
 			log.Println("error adding tracks to spotify playlist:", err)
-			return "", err
+			return "", "", err
 
 		}
 
 	}
 
-	return createdPlaylist.ExternalURLs["spotify"], nil
+	return createdPlaylist.ExternalURLs["spotify"], createdPlaylist.ID.String(), nil
 
+}
+
+// Todo: Verify this works
+func (c SpotifyClient) AddTracksToPlaylist(playlistId string, tracks []string) error {
+	if len(tracks) == 0 {
+		return nil
+	}
+
+	for i := 0; i < len(tracks); i += 100 {
+		remainingTracks := utils.Min(100, len(tracks[i:]))
+		batch := tracks[i : i+remainingTracks]
+
+		spotifyTracks := make([]spotify.ID, 0, len(batch))
+		for _, t := range batch {
+			spotifyTracks = append(spotifyTracks, spotify.ID(t))
+		}
+
+		_, err := c.Client.AddTracksToPlaylist(c.context, spotify.ID(playlistId), spotifyTracks...)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func NewSpotifyClient(client *spotify.Client, spotifyUserId string) PlatformClient {

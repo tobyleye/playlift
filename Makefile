@@ -43,6 +43,11 @@ clean:
 	@cd web && rm -rf dist/ node_modules/.vite
 	@go clean
 
+# Run database migrations (usage: make migrate or make migrate cmd=down)
+migrate:
+	@echo "Running migrations..."
+	@go run cmd/migrate/main.go $(or $(cmd),up)
+
 # Show help
 help:
 	@echo "Available commands:"
@@ -53,4 +58,5 @@ help:
 	@echo "  make install-deps - Install all dependencies"
 	@echo "  make stop         - Stop all running services"
 	@echo "  make clean        - Clean build artifacts"
+	@echo "  make migrate      - Run DB migrations (make migrate cmd=up|down|status|redo)"
 	@echo "  make help         - Show this help message"

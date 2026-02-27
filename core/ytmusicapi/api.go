@@ -391,6 +391,29 @@ func CreatePlaylist(client *http.Client, title string, description string, video
 	}, nil
 }
 
+// Verify this works
+func AddTracksToPlaylist(client *http.Client, playlistId string, videoIds []string) error {
+	if len(videoIds) == 0 {
+		return nil
+	}
+
+	actions := make([]map[string]string, 0, len(videoIds))
+	for _, videoId := range videoIds {
+		actions = append(actions, map[string]string{
+			"action":       "ACTION_ADD_VIDEO",
+			"addedVideoId": videoId,
+		})
+	}
+
+	body := map[string]interface{}{
+		"playlistId": playlistId,
+		"actions":    actions,
+	}
+
+	_, err := sendRequest(client, HTML5EmbeddedClient, "browse/edit_playlist", body)
+	return err
+}
+
 func FetchLikedPlaylist(client *http.Client) (YoutubePlaylist, error) {
 	// Fetch the liked playlists
 	playlistId := "LM" // Liked music playlist ID is always "LM"

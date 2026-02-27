@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/hibiken/asynq"
@@ -44,10 +45,15 @@ func main() {
 
 	// mux maps a type to a handler
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeEmailDelivery, tasks.HandleEmailDeliveryTask)
-	mux.HandleFunc(tasks.TypeConvertPlaylist, func(ctx context.Context, t *asynq.Task) error {
-		return tasks.HandlePlaylistConversion(db, cache, ctx, t)
+
+	tasksManager := tasks.NewTasksManager(db, cache)
+	mux.HandleFunc(tasks.TypeTestTask, func(ctx context.Context, t *asynq.Task) error {
+		fmt.Println("handling task email delivery!!!")
+		return nil
 	})
+
+	mux.HandleFunc(tasks.TypeConvertPlaylist, tasksManager.HandlePlaylistConversion)
+	mux.HandleFunc(tasks.TypeSyncWatch, tasksManager.HandleSyncWatchTask)
 	if err := srv.Run(mux); err != nil {
 		log.Fatalf("could not run server: %v", err)
 	}

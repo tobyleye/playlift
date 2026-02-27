@@ -46,9 +46,7 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 		sessionOptions.Secure = true
 	} else {
 		// Development settings
-		sessionOptions.SameSite = http.SameSiteNoneMode
-		sessionOptions.Secure = false
-		// Don't set Domain for local development
+		sessionOptions.SameSite = http.SameSiteLaxMode
 	}
 
 	session.Options = sessionOptions

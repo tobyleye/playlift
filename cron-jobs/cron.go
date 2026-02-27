@@ -1,19 +1,20 @@
 package cronjobs
 
 import (
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-co-op/gocron/v2"
+	"github.com/hibiken/asynq"
 	"github.com/tobyleye/playlift/models"
+	"github.com/tobyleye/playlift/tasks"
 	"gorm.io/gorm"
 )
 
-func StartCronJobs(db *gorm.DB) error {
+func StartCronJobs(db *gorm.DB, asynqClient *asynq.Client) error {
 	s, err := gocron.NewScheduler()
 	if err != nil {
-		log.Fatal("error starting cron jobs", err)
+		return err
 	}
 
 	startWatch := func() {
@@ -24,40 +25,26 @@ func StartCronJobs(db *gorm.DB) error {
 			return
 		}
 		for _, conversion := range conversions {
-			fmt.Println("starting conversion..", conversion.ConversionId, conversion.CreatedAt)
-
-			// tasks.NewSyncWatchTask(conversion.ConversionId, )
+			task := tasks.NewSyncWatchTask(conversion.ConversionId, time.Now())
+			if _, err := asynqClient.Enqueue(task); err != nil {
+				log.Println("error enqueuing watch sync task", conversion.ConversionId, err)
+			}
 		}
 	}
 
-	job1, err := s.NewJob(
+	_, err = s.NewJob(
 		gocron.DurationJob(
-			10*time.Second,
-		),
-		gocron.NewTask(func() {
-			fmt.Println("running job 1 handler")
-		}),
-	)
-
-	if err != nil {
-		fmt.Println("error creating job 1", err)
-	}
-
-	job2, err := s.NewJob(
-		gocron.DurationJob(
-			24*time.Second,
+			10*time.Minute,
 		),
 		gocron.NewTask(startWatch),
 	)
 
 	if err != nil {
-		fmt.Println("error creating job 2", err)
+		return err
 	}
 
-	fmt.Println("job..", job1.ID())
-	fmt.Println("job..", job2.ID())
-
 	s.Start()
+	log.Println("watch sync cron started")
 
 	return nil
 }

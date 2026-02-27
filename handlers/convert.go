@@ -71,6 +71,7 @@ func (h Handlers) Convert(c echo.Context) error {
 			SourcePlatform:      sourcePlatform,
 			DestinationPlatform: destinationPlatform,
 			Status:              "pending",
+			CreatedPlaylistId:   "",
 			CreatedAt:           time.Now(),
 			EnableWatch:         playlist.Watch,
 		}

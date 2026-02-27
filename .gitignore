@@ -13,6 +13,8 @@ test/
 
 tv-auth-flow
 
+playlift
+
 web/src/views/playground.tsx
 
 handlers/playground.go
