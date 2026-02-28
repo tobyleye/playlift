@@ -144,7 +144,6 @@ func (c SpotifyClient) CreatePlaylist(playlistTitle string, playlistDescription 
 
 }
 
-// Todo: Verify this works
 func (c SpotifyClient) AddTracksToPlaylist(playlistId string, tracks []string) error {
 	if len(tracks) == 0 {
 		return nil

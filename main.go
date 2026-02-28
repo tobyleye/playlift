@@ -88,9 +88,6 @@ func main() {
 		log.Fatal("Error connecting to Asynq Redis:", err)
 	}
 
-	// Start the watch sync scheduler (runs every 10 minutes)
-	// scheduler.StartWatchSyncScheduler(db, 10)
-
 	e := echo.New()
 	e.Use(echoSession.Middleware(SessionStore))
 

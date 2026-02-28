@@ -39,14 +39,10 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 		MaxAge:   int(expiration.Seconds()),
 		HttpOnly: true,
 	}
-
-	if isProduction {
-		// Production settings
+	// enable cookies to be ready by both localhost & 127.0.0.1.
+	if !isProduction {
 		sessionOptions.SameSite = http.SameSiteNoneMode
 		sessionOptions.Secure = true
-	} else {
-		// Development settings
-		sessionOptions.SameSite = http.SameSiteLaxMode
 	}
 
 	session.Options = sessionOptions

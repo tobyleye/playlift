@@ -33,13 +33,14 @@ export default function Landing() {
     flow: "auth-code",
     ux_mode: "popup",
     scope: ["https://www.googleapis.com/auth/youtube"].join(" "),
-
+    redirect_uri: window.location.origin,
     onSuccess: async (codeResponse) => {
       try {
         setLoading(true);
         const { data } = await client.post("/login/google/callback", {
           code: codeResponse.code,
           origin: "login",
+          redirect_url: window.location.origin,
         });
 
         const { user } = data.data;

@@ -141,6 +141,7 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 			return err
 		}
 
+		// spotifyClient
 		var sourceClient clients.PlatformClient
 		var destinationClient clients.PlatformClient
 
@@ -238,15 +239,15 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 						track, destinationClient)
 
 					if err != nil {
-						log.Println("error searching for track on youtube music:", err)
+						log.Printf("error searching for track on %s: %v\n", conversion.DestinationPlatform, err)
 						trackConversionResult.Error = "server error"
 
 					} else if searchResult == nil {
-						log.Println("no result found for track:", track.Title)
+						log.Printf("no result found for track on %s: %s\n", conversion.DestinationPlatform, track.Title)
 						trackConversionResult.Error = "Not found"
 
 					} else {
-						log.Println("found track on youtube music:", searchResult.Link)
+						log.Printf("found track on %s: %s\n", conversion.DestinationPlatform, searchResult.Link)
 						trackConversionResult.Data = searchResult.ID
 					}
 
