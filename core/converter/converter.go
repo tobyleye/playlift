@@ -176,9 +176,26 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 
 		db.Save(conversion)
 
+		// Carry over previous results if this is a re-run
+		previousResults := conversion.Result
+
 		destinationTracksId := []string{}
 
 		conversionResults := map[string]models.TrackConversionResult{}
+
+		// Filter out tracks that were already successfully converted
+		tracksToConvert := []types.Track{}
+		for _, track := range playlistTracks {
+			if prev, ok := previousResults[track.ID]; ok && prev.Data != "" {
+				// Already converted successfully — carry forward
+				conversionResults[track.ID] = prev
+				destinationTracksId = append(destinationTracksId, prev.Data)
+			} else {
+				tracksToConvert = append(tracksToConvert, track)
+			}
+		}
+
+		isRerun := len(previousResults) > 0
 
 		totalSearchWorkers := 10
 		trackQueue := make(chan *types.Track)
@@ -218,9 +235,9 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 			saved <- true
 		}()
 
-		// start workers to search for tracks on youtube music
+		// start workers to search for tracks
 		go func() {
-			for _, track := range playlistTracks {
+			for _, track := range tracksToConvert {
 				trackQueue <- &track
 			}
 			close(trackQueue)
@@ -273,33 +290,60 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 		// fmt.Println("DONE SAVING!!!..")
 
 		if len(destinationTracksId) == 0 {
+			conversionState.Result = conversionResults
+			conversionState.Status = "completed"
+			conversionState.Save(ctx, cache)
 			return nil
 		}
 
-		playlistTitle := func() string {
-			if conversion.SourcePlatform == config.SPOTIFY {
-				return fmt.Sprintf("Spotify/%s", playlistDetails.Title)
-			} else if conversion.SourcePlatform == config.YOUTUBE_MUSIC {
-				return fmt.Sprintf("YouTube Music/%s", playlistDetails.Title)
+		// If this is a re-run and we already have a destination playlist, add only the new tracks
+		if isRerun && conversion.CreatedPlaylistId != "" {
+			// Collect only the newly converted track IDs (not carried over)
+			newTrackIds := []string{}
+			for _, track := range tracksToConvert {
+				if result, ok := conversionResults[track.ID]; ok && result.Data != "" {
+					newTrackIds = append(newTrackIds, result.Data)
+				}
 			}
-			return ""
-		}()
 
-		createdPlaylistLink, createdPlaylistId, err := destinationClient.CreatePlaylist(
-			playlistTitle,
-			"",
-			destinationTracksId,
-		)
+			if len(newTrackIds) > 0 {
+				if err := destinationClient.AddTracksToPlaylist(conversion.CreatedPlaylistId, newTrackIds); err != nil {
+					return err
+				}
+			}
 
-		if err != nil {
-			return err
+			conversionState.Result = conversionResults
+			conversionState.CreatedPlaylistLink = conversion.CreatedPlaylistLink
+			conversionState.CreatedPlaylistId = conversion.CreatedPlaylistId
+			conversionState.Status = "completed"
+			conversionState.Save(ctx, cache)
+		} else {
+			// First-time conversion — create a new playlist
+			playlistTitle := func() string {
+				if conversion.SourcePlatform == config.SPOTIFY {
+					return fmt.Sprintf("Spotify/%s", playlistDetails.Title)
+				} else if conversion.SourcePlatform == config.YOUTUBE_MUSIC {
+					return fmt.Sprintf("YouTube Music/%s", playlistDetails.Title)
+				}
+				return ""
+			}()
+
+			createdPlaylistLink, createdPlaylistId, err := destinationClient.CreatePlaylist(
+				playlistTitle,
+				"",
+				destinationTracksId,
+			)
+
+			if err != nil {
+				return err
+			}
+
+			conversionState.Result = conversionResults
+			conversionState.CreatedPlaylistLink = createdPlaylistLink
+			conversionState.CreatedPlaylistId = createdPlaylistId
+			conversionState.Status = "completed"
+			conversionState.Save(ctx, cache)
 		}
-
-		conversionState.Result = conversionResults
-		conversionState.CreatedPlaylistLink = createdPlaylistLink
-		conversionState.CreatedPlaylistId = createdPlaylistId
-		conversionState.Status = "completed"
-		conversionState.Save(ctx, cache)
 
 		return nil
 	}()
