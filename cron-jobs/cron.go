@@ -18,13 +18,13 @@ func StartCronJobs(db *gorm.DB, asynqClient *asynq.Client) error {
 	}
 
 	startWatch := func() {
-		conversions := []models.ConversionWatch{}
-		err = db.Order("created_at ASC").Find(&conversions).Error
+		watchedConversions := []models.ConversionWatch{}
+		err = db.Order("created_at ASC").Find(&watchedConversions).Error
 		if err != nil {
 			log.Println("error fetching conversion watches for cron job", err)
 			return
 		}
-		for _, conversion := range conversions {
+		for _, conversion := range watchedConversions {
 			task := tasks.NewSyncWatchTask(conversion.ConversionId, time.Now())
 			if _, err := asynqClient.Enqueue(task); err != nil {
 				log.Println("error enqueuing watch sync task", conversion.ConversionId, err)

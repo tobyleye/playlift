@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/tobyleye/playlift/models"
@@ -42,10 +43,15 @@ func CreateSpotifyClient(token *oauth2.Token) *spotify.Client {
 
 	// refresh token if needed
 	// SpotifyAuthenticator.
-	// token, err := SpotifyAuthenticator.RefreshToken(ctx, token)
+	refreshedToken, err := SpotifyAuthenticator.RefreshToken(ctx, token)
 
-	// fmt.Println("error refreshing spotify token:", err)
-	// fmt.Printf("refreshed token: %#v\n", token)
+	if err != nil {
+		fmt.Println("error refreshing spotify token:", err)
+
+	} else {
+		fmt.Printf("refreshed token: %#v\n", refreshedToken)
+
+	}
 
 	httpClient := SpotifyAuthenticator.Client(ctx, token)
 

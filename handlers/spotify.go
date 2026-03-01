@@ -214,7 +214,6 @@ func (h Handlers) FetchUserSpotifyPlaylists(c echo.Context) error {
 			playlists.Playlists = append([]types.SimplePlaylistPageItem{formattedLikedPlaylist}, playlists.Playlists...)
 
 		}
-
 	}
 
 	if err != nil {
