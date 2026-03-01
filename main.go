@@ -15,10 +15,12 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/valkey-io/valkey-go"
 
+	"github.com/hibiken/asynq"
 	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/tobyleye/playlift/config"
+	cronjobs "github.com/tobyleye/playlift/cron-jobs"
 	"github.com/tobyleye/playlift/db"
 	"github.com/tobyleye/playlift/handlers"
 	"github.com/tobyleye/playlift/models"
@@ -65,24 +67,48 @@ func main() {
 
 	log.Println("DB connected ✅")
 
-	db.AutoMigrate(
+	err = db.AutoMigrate(
 		&models.User{},
 		&models.PlaylistConversion{},
 		&models.Token{},
+		&models.ConversionWatch{},
 	)
+
+	if err != nil {
+		log.Println("error running migration..", err)
+	}
+
+	client := asynq.NewClient(asynq.RedisClientOpt{
+		Addr:     fmt.Sprintf("%s:%s", config.REDIS_HOST, config.REDIS_PORT),
+		Password: config.REDIS_PASSWORD,
+	})
+
+	err = client.Ping()
+	if err != nil {
+		log.Fatal("Error connecting to Asynq Redis:", err)
+	}
 
 	e := echo.New()
 	e.Use(echoSession.Middleware(SessionStore))
 
 	corsConfig := middleware.CORSConfig{
-		AllowOrigins: []string{
-			"https://playlift.lol",
-			"https://www.playlift.lol",
-			config.FRONTEND_BASE_URL,
-		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
+	}
+
+	if config.IsProd() {
+		corsConfig.AllowOrigins = []string{
+			"https://playlift.lol",
+			"https://www.playlift.lol",
+		}
+	} else {
+		corsConfig.AllowOrigins = []string{
+			config.FRONTEND_BASE_URL,
+			"http://127.0.0.1:3500",
+			"http://localhost:3500",
+		}
+
 	}
 
 	e.Use(middleware.CORSWithConfig(corsConfig))
@@ -97,10 +123,6 @@ func main() {
 	}
 
 	ctx := context.Background()
-
-	if err != nil {
-		panic(err)
-	}
 
 	cache, err := valkey.NewClient(config.VALKEY_CLIENT_OPTIONS)
 
@@ -117,6 +139,7 @@ func main() {
 		Context:      ctx,
 		SessionStore: SessionStore,
 		Cache:        cache,
+		AsynqClient:  client,
 	}
 
 	// Load templates
@@ -154,7 +177,12 @@ func main() {
 	privateRoutes.POST("/logout", handlers.Logout)
 	privateRoutes.POST("/deactivate-account", handlers.DeactivateAccount)
 
+	if err := cronjobs.StartCronJobs(db, client); err != nil {
+		log.Println("failed to start cron jobs", err)
+	}
+
 	// serve frontend. this should always be done after routes are registered
+
 	port := os.Getenv("PORT")
 
 	fmt.Println("Starting server on port:", port)

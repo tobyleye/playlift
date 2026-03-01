@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gorilla/sessions"
+	"github.com/hibiken/asynq"
 	"github.com/valkey-io/valkey-go"
 	"github.com/zmb3/spotify/v2"
 	"google.golang.org/api/youtube/v3"
@@ -17,4 +18,5 @@ type Handlers struct {
 	YoutubeClient *youtube.Service
 	SessionStore  *sessions.CookieStore
 	Cache         valkey.Client
+	AsynqClient   *asynq.Client
 }

@@ -34,13 +34,11 @@ export default function SessionProvider({
             navigate("/");
             return Promise.reject(err);
           }
-
           return Promise.reject(err);
-        }
+        },
       );
-
       return () => {
-        client.interceptors.request.eject(requestInterceptor);
+        client.interceptors.response.eject(requestInterceptor);
       };
     }
   }, [isLoggedIn]);

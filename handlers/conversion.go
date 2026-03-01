@@ -68,6 +68,7 @@ func (h Handlers) GetAllConversions(c echo.Context) error {
 		DestinationPlatform string    `json:"destination_platform"`
 		SourcePlatform      string    `json:"source_platform"`
 		Status              string    `json:"status"`
+		EnableWatch         bool      `json:"enable_watch"`
 		TotalTracks         int       `json:"total_tracks"`
 		CreatedAt           time.Time `json:"created_at"`
 	}

@@ -1,5 +1,5 @@
 import { GradientButton } from "@/components/buttons";
-import { Playlist } from "@/types";
+import { PlaylistSelection } from "@/types";
 import {
   Modal,
   ModalOverlay,
@@ -10,24 +10,29 @@ import {
   Text,
   Heading,
   Box,
+  FormLabel,
+  FormControl,
 } from "@chakra-ui/react";
+import { Switch } from "@chakra-ui/react";
 
 export default function ConfirmationModal({
   open,
   setOpen,
   onConfirm,
   selectedPlaylists,
+  onChangeWatch,
 }: {
   open: boolean;
   setOpen: (show: boolean) => void;
   sourcePlatform: string;
   destinationPlatform: string;
-  selectedPlaylists: Playlist[];
+  selectedPlaylists: PlaylistSelection[];
+  onChangeWatch: (playlistId: string, watch: boolean) => void;
 
   onConfirm: () => void;
 }) {
   const totalTracks = selectedPlaylists.reduce(
-    (acc, playlist) => acc + Number(playlist.total_tracks),
+    (acc, selection) => acc + Number(selection.playlist.total_tracks),
     0
   );
 
@@ -51,7 +56,7 @@ export default function ConfirmationModal({
             You're about to migrate the following playlists
           </Text>
           <Box maxH="72" overflow="auto" mb={4}>
-            {selectedPlaylists.map((p) => (
+            {selectedPlaylists.map((selection) => (
               <Box
                 display="flex"
                 justifyContent="space-between"
@@ -60,12 +65,32 @@ export default function ConfirmationModal({
                 bg="gray.800"
                 p={2}
                 rounded="md"
-                key={p.playlist_id}
+                key={selection.playlist.playlist_id}
               >
-                <Text> {p.title}</Text>
-                <Text fontWeight="bold" fontSize="sm" color="gray.400">
-                  {p.total_tracks}
-                </Text>
+                <Box>
+                  <Text> {selection.playlist.title}</Text>
+                  <Text fontWeight="bold" fontSize="sm" color="gray.400">
+                    {selection.playlist.total_tracks}
+                  </Text>
+                </Box>
+
+                <Box>
+                  <FormControl
+                    display="flex"
+                    alignItems="center"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      onChangeWatch(
+                        selection.playlist.playlist_id,
+                        e.target.checked
+                      );
+                    }}
+                  >
+                    <FormLabel htmlFor="watch" mb="0">
+                      Watch
+                    </FormLabel>
+                    <Switch id="watch" />
+                  </FormControl>
+                </Box>
               </Box>
             ))}
           </Box>

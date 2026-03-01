@@ -13,7 +13,7 @@ import { useSessionContext } from "@/contexts/session";
 import "./connect-youtube";
 import "./connect-spotify";
 import "./playlist-selection";
-import ConfirmationModal from "./confirmation-modal";
+import ConfirmConversion from "./confirm-conversion";
 import { GradientButton, SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
 import BackdropLoader from "@/components/backdrop-loader";
@@ -38,12 +38,16 @@ import BackdropLoader from "@/components/backdrop-loader";
 //   ];
 // };
 
+export type PlaylistSelection = { watch: boolean; playlist: Playlist };
+
 export default function ConversionWizard() {
   const [youtubeConnected, setYoutubeConnected] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [loadingConnectionStatus, setLoadingConnectionStatus] = useState(true);
 
-  const [selectedPlaylists, setSelectedPlaylists] = useState<Playlist[]>([]);
+  const [selectedPlaylists, setSelectedPlaylists] = useState<
+    PlaylistSelection[]
+  >([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [sourcePlatform, setSourcePlatform] = useState(
     streamingServices.youtubeMusic
@@ -114,13 +118,20 @@ export default function ConversionWizard() {
   // });
 
   const togglePlaylist = (p: Playlist) => {
-    const selectedPlaylistIds = selectedPlaylists.map((pl) => pl.playlist_id);
+    const selectedPlaylistIds = selectedPlaylists.map(
+      (pl) => pl.playlist.playlist_id
+    );
     if (selectedPlaylistIds.includes(p.playlist_id)) {
       setSelectedPlaylists(
-        selectedPlaylists.filter((pl) => pl.playlist_id !== p.playlist_id)
+        selectedPlaylists.filter(
+          (pl) => pl.playlist.playlist_id !== p.playlist_id
+        )
       );
     } else {
-      setSelectedPlaylists([...selectedPlaylists, p]);
+      setSelectedPlaylists([
+        ...selectedPlaylists,
+        { playlist: p, watch: false },
+      ]);
     }
   };
 
@@ -129,8 +140,9 @@ export default function ConversionWizard() {
       destination: destinationPlatform.value,
       source: sourcePlatform.value,
       playlists: selectedPlaylists.map((pl) => ({
-        id: pl.playlist_id,
-        title: pl.title,
+        id: pl.playlist.playlist_id,
+        title: pl.playlist.title,
+        watch: pl.watch,
       })),
     };
     try {
@@ -156,13 +168,23 @@ export default function ConversionWizard() {
   return (
     <Box minHeight="100vh" pb={20}>
       <BGShapes />
-      <ConfirmationModal
+      <ConfirmConversion
         open={showConfirmation}
         setOpen={setShowConfirmation}
         onConfirm={startMigration}
         selectedPlaylists={selectedPlaylists}
         sourcePlatform={sourcePlatform.label}
         destinationPlatform={destinationPlatform.label}
+        onChangeWatch={(playlistId, watch) => {
+          setSelectedPlaylists(
+            selectedPlaylists.map((selection) => {
+              if (selection.playlist.playlist_id === playlistId) {
+                return { ...selection, watch };
+              }
+              return selection;
+            })
+          );
+        }}
       />
       <Box position="relative">
         <Box position="sticky" top={0}>

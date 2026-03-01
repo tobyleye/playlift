@@ -6,6 +6,8 @@ export type Playlist = {
   url: string;
 };
 
+export type PlaylistSelection = { watch: boolean; playlist: Playlist };
+
 export type Platform = "spotify" | "youtube_music";
 
 export type Step = {

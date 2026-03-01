@@ -57,5 +57,16 @@ type PlaylistConversion struct {
 	PlaylistTracks      []types.Track                    `gorm:"serializer:json;column:playlist_tracks" json:"playlist_tracks"`
 	Result              map[string]TrackConversionResult `gorm:"serializer:json;column:result" json:"result"`
 	CreatedPlaylistLink string                           `gorm:"column:created_playlist_link" json:"created_playlist_link"`
+	CreatedPlaylistId   string                           `gorm:"column:created_playlist_id" json:"created_playlist_id"`
 	TimeTaken           float64                          `gorm:"column:time_taken" json:"time_taken"`
+	EnableWatch         bool                             `gorm:"column:enable_watch;default:false" json:"enable_watch"`
+}
+
+type ConversionWatch struct {
+	WatchID        string    `gorm:"primaryKey;column:watch_id" json:"watch_id"`
+	UserId         string    `gorm:"column:user_id;index" json:"user_id"`
+	ConversionId   string    `gorm:"column:conversion_id" json:"conversion_id"`
+	LastSyncedAt   time.Time `gorm:"column:last_synced_at;default:null" json:"last_synced_at"`
+	LastTrackCount int       `gorm:"column:last_track_count" json:"last_track_count"`
+	CreatedAt      time.Time `gorm:"column:created_at" json:"created_at"`
 }

@@ -12,8 +12,7 @@ import EllipsisLoader from "@/components/ellipsis-loader";
 export default function ConnectSpotify() {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
-  const code = searchParams.get("code");
-  const error = searchParams.get("error");
+  const [code, setCode] = useState("");
   const navigate = useNavigate();
 
   const { spotifyConnected, setSpotifyConnected } = useConvertWizardContext();
@@ -23,40 +22,40 @@ export default function ConnectSpotify() {
   const toast = useToast();
 
   useEffect(() => {
-    if (error) {
-      console.log("error...", error);
+    const code = searchParams.get("code");
+    if (code) {
+      setCode(code);
+      navigate("/convert/connect-spotify", { replace: true });
     }
-  }, [error]);
+  }, [navigate, searchParams]);
 
   useEffect(() => {
-    const loginCallback = async () => {
-      try {
-        setLoading(true);
-        await client.post("/connect/spotify/callback", {
-          code,
-        });
-        setSpotifyConnected(true);
-        toastHelper(toast, {
-          title: "Spotify connected!",
-          description: "successfully connected to your Spotify account.",
-        });
-      } catch (err) {
-        console.error("Error connecting to Spotify:", err);
-        toastHelper(toast, {
-          title: "Connection failed",
-          description: `Unable to connect to Spotify. Please try again.`,
-          status: "error",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (code) {
-      navigate("/convert/connect-spotify", { replace: true });
-      loginCallback();
+      setLoading(true);
+      client
+        .post("/connect/spotify/callback", {
+          code,
+        })
+        .then(() => {
+          setSpotifyConnected(true);
+          toastHelper(toast, {
+            title: "Spotify connected!",
+            description: "successfully connected to your Spotify account.",
+          });
+        })
+        .catch((err) => {
+          console.error("Error connecting to Spotify:", err);
+          toastHelper(toast, {
+            title: "Connection failed",
+            description: `Unable to connect to Spotify. Please try again.`,
+            status: "error",
+          });
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
-  }, [code, navigate, setSpotifyConnected]);
+  }, [code, setSpotifyConnected, toast]);
 
   const connectSpotify = () => {
     let url = "https://accounts.spotify.com/authorize";

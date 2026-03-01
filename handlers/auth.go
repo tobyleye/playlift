@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -51,7 +52,9 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 	// Changed the ux_mode from redirect to popup and
 	// i think this way we can just use the base url of the frontend as
 	// the redirect uri
-	redirectUri := config.FRONTEND_BASE_URL
+	redirectURL, _ := body["redirect_url"].(string)
+
+	log.Println("user logging in with google, redirect uri:", body, code)
 
 	// if origin == "login" {
 	// 	redirectUri = config.FRONTEND_BASE_URL
@@ -67,7 +70,7 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 		ClientID:     config.GOOGLE_CLIENT_ID,
 		ClientSecret: config.GOOGLE_CLIENT_SECRET,
 		Endpoint:     google.Endpoint,
-		RedirectURL:  redirectUri,
+		RedirectURL:  redirectURL,
 		Scopes: []string{
 			"https://www.googleapis.com/auth/youtube",
 			"https://www.googleapis.com/auth/userinfo.email",
@@ -140,6 +143,8 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 		log.Println("error creating session", err)
 		return c.JSON(500, map[string]string{"error": "server error"})
 	}
+
+	fmt.Println("session created...", userSession)
 
 	return c.JSON(200, map[string]interface{}{
 		"message": "Login successful",
