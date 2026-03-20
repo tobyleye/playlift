@@ -59,47 +59,69 @@ func (h Handlers) Convert(c echo.Context) error {
 
 	var conversions = []*models.PlaylistConversion{}
 	var watches = []*models.ConversionWatch{}
+	var newConversions = []*models.PlaylistConversion{}
+	var newWatches = []*models.ConversionWatch{}
 
 	for _, playlist := range body.Playlists {
 
-		conversion := models.PlaylistConversion{
-			UserId:              user.UserId,
-			PlaylistId:          playlist.ID,
-			PlaylistTitle:       playlist.Title,
-			ConversionID:        uuid.New().String(),
-			TotalTracks:         -1,
-			SourcePlatform:      sourcePlatform,
-			DestinationPlatform: destinationPlatform,
-			Status:              "pending",
-			CreatedPlaylistId:   "",
-			CreatedAt:           time.Now(),
-			EnableWatch:         playlist.Watch,
-		}
+		// Check for an existing conversion for the same playlist
+		var existing models.PlaylistConversion
+		err := h.Db.Where(
+			"user_id = ? AND playlist_id = ? AND source_platform = ? AND destination_platform = ?",
+			user.UserId, playlist.ID, sourcePlatform, destinationPlatform,
+		).First(&existing).Error
 
-		conversions = append(conversions, &conversion)
-
-		if playlist.Watch == true {
-			val := models.ConversionWatch{
-				WatchID:      uuid.New().String(),
-				UserId:       user.UserId,
-				ConversionId: conversion.ConversionID,
-				CreatedAt:    time.Now(),
+		if err == nil && existing.ConversionID != "" {
+			// Existing conversion found — reset status and reuse it
+			existing.Status = "pending"
+			existing.PlaylistTitle = playlist.Title
+			existing.EnableWatch = playlist.Watch
+			if err := h.Db.Save(&existing).Error; err != nil {
+				log.Println("error updating existing conversion: ", err)
+				return c.JSON(500, errorResponse("internal server error"))
 			}
-			watches = append(watches, &val)
+			conversions = append(conversions, &existing)
+		} else {
+			// No existing conversion — create a new one
+			conversion := models.PlaylistConversion{
+				UserId:              user.UserId,
+				PlaylistId:          playlist.ID,
+				PlaylistTitle:       playlist.Title,
+				ConversionID:        uuid.New().String(),
+				TotalTracks:         -1,
+				SourcePlatform:      sourcePlatform,
+				DestinationPlatform: destinationPlatform,
+				Status:              "pending",
+				CreatedPlaylistId:   "",
+				CreatedAt:           time.Now(),
+				EnableWatch:         playlist.Watch,
+			}
+			newConversions = append(newConversions, &conversion)
+			conversions = append(conversions, &conversion)
+
+			if playlist.Watch {
+				val := models.ConversionWatch{
+					WatchID:      uuid.New().String(),
+					UserId:       user.UserId,
+					ConversionId: conversion.ConversionID,
+					CreatedAt:    time.Now(),
+				}
+				newWatches = append(newWatches, &val)
+				watches = append(watches, &val)
+			}
 		}
-
 	}
 
-	// h.Db.Transaction()
-
-	// create conversions in the database
-	if err := h.Db.Create(&conversions).Error; err != nil {
-		log.Println("error creating conversions: ", err)
-		return c.JSON(500, errorResponse("internal server error"))
+	// Create only new conversions in the database
+	if len(newConversions) > 0 {
+		if err := h.Db.Create(&newConversions).Error; err != nil {
+			log.Println("error creating conversions: ", err)
+			return c.JSON(500, errorResponse("internal server error"))
+		}
 	}
 
-	if len(watches) > 0 {
-		if err := h.Db.Create(&watches).Error; err != nil {
+	if len(newWatches) > 0 {
+		if err := h.Db.Create(&newWatches).Error; err != nil {
 			log.Println("error creating conversion watches: ", err)
 		}
 	}
