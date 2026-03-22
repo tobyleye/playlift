@@ -16,7 +16,7 @@ import "./css/animation.css";
 
 const Landing = lazy(() => import("./views/landing/landing.tsx"));
 const Home = lazy(() => import("./views/home/home.tsx"));
-const Convert = lazy(() => import("./views/convert/convert.tsx"));
+// const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
 // const ConnectSpotify = lazy(
 //   () => import("./views/convert/connect-spotify.tsx"),
