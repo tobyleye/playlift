@@ -13,20 +13,19 @@ import SessionProvider from "./providers/SessionProvider.tsx";
 import { SWRConfig } from "swr";
 import useLoggedIn from "./hooks/useLoggedIn.ts";
 import "./css/animation.css";
-import Playground from "./views/playground.tsx";
 
 const Landing = lazy(() => import("./views/landing/landing.tsx"));
 const Home = lazy(() => import("./views/home/home.tsx"));
 const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
 const ConnectSpotify = lazy(
-  () => import("./views/convert/connect-spotify.tsx")
+  () => import("./views/convert/connect-spotify.tsx"),
 );
 const ConnectYoutube = lazy(
-  () => import("./views/convert/connect-youtube.tsx")
+  () => import("./views/convert/connect-youtube.tsx"),
 );
 const PlaylistsSelection = lazy(
-  () => import("./views/convert/playlist-selection.tsx")
+  () => import("./views/convert/playlist-selection.tsx"),
 );
 const DetailsPage = lazy(() => import("./views/details-page/details-page.tsx"));
 const PrivacyPolicy = lazy(() => import("./views/privacy-policy.tsx"));
