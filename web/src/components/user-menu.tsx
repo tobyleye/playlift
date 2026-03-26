@@ -18,6 +18,7 @@ import { useState } from "react";
 export default function UserMenu() {
   const { session } = useSessionContext();
   const [logoutLoading, setLogoutLoading] = useState(false);
+
   return !session ? (
     <Box
       w={12}
@@ -38,6 +39,9 @@ export default function UserMenu() {
           as={MenuButton}
           cursor="pointer"
           shadow={"xl"}
+          border="1px solid"
+          rounded="full"
+          borderColor="rgba(255, 255, 255, .13)"
           _hover={{
             transition: "transform .25s ease",
             transform: "scale(0.96)",
@@ -46,17 +50,24 @@ export default function UserMenu() {
             transform: "scale(0.96)",
           }}
           transition="all 0.2s"
+          bg="brand.card2"
         >
           <Avatar
             className="avatar"
-            size={{ base: "sm", md: "md" }}
+            w={8}
+            h={8}
+            fontSize="sm"
+            border="none"
+            bg="border.subtle"
             name={session.name}
             src={session.picture}
-            border="2px solid"
-            borderColor="whiteAlpha.200"
-            bg="linear-gradient(to right, #9f7aea, #ec4899)"
             color="white"
             fontWeight="semibold"
+            sx={{
+              ".chakra-avatar__initials": {
+                fontSize: "14px",
+              },
+            }}
           />
         </Box>
         <MenuList
@@ -68,14 +79,14 @@ export default function UserMenu() {
         >
           <Box p={2}>
             <Box display="flex" alignItems="center" gap={2}>
-              <Avatar
+              {/* <Avatar
                 size="sm"
                 name={session.name}
                 src={session.picture}
                 bg="linear-gradient(to right, #9f7aea, #ec4899)"
                 color="white"
                 fontSize="xs"
-              />
+              /> */}
               <Box>
                 <Text fontSize="sm" fontWeight="medium" color="white">
                   {session.name}
@@ -93,6 +104,7 @@ export default function UserMenu() {
             as={Link}
             to="/home"
             bg="unset"
+            fontSize="sm"
             _hover={{ bg: "whiteAlpha.100" }}
             _focus={{ bg: "whiteAlpha.100" }}
             display="flex"
@@ -108,6 +120,7 @@ export default function UserMenu() {
             as={Link}
             to="/settings"
             bg="unset"
+            fontSize="sm"
             _hover={{ bg: "whiteAlpha.100" }}
             _focus={{ bg: "whiteAlpha.100" }}
             display="flex"
@@ -120,6 +133,7 @@ export default function UserMenu() {
           <Box h="1px" bg="whiteAlpha.200" />
 
           <MenuItem
+            fontSize="sm"
             onClick={() => {
               setLogoutLoading(true);
               api

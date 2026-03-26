@@ -5,28 +5,12 @@ import { client } from "@/api/api";
 import { useMigrateContext } from "../context";
 import { toastHelper } from "@/components/utils/toast";
 import EllipsisLoader from "@/components/ellipsis-loader";
-
-const SERIF = "'DM Serif Display', serif";
+import { CheckIcon } from "@/icons/check";
 
 function SpotifyIcon({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="#1DB954">
       <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="3,8 6.5,11.5 13,4.5" />
     </svg>
   );
 }
@@ -45,7 +29,6 @@ const PERMS = [
       <svg
         viewBox="0 0 16 16"
         fill="none"
-        stroke="#1DB954"
         strokeWidth="1.5"
         width="14"
         height="14"
@@ -67,7 +50,6 @@ const PERMS = [
       <svg
         viewBox="0 0 16 16"
         fill="none"
-        stroke="#1DB954"
         strokeWidth="1.5"
         width="14"
         height="14"
@@ -90,7 +72,6 @@ const PERMS = [
       <svg
         viewBox="0 0 16 16"
         fill="none"
-        stroke="#1DB954"
         strokeWidth="1.5"
         width="14"
         height="14"
@@ -159,8 +140,7 @@ export default function ConnectSpotifyStep() {
 
   return (
     <Box display="flex" flexDirection="column" gap="2rem">
-      {/* Hero */}
-      <Flex align="center" gap="1.25rem">
+      <Flex align="center" gap="1rem">
         <Flex
           w="56px"
           h="56px"
@@ -174,71 +154,64 @@ export default function ConnectSpotifyStep() {
         </Flex>
         <Box
           as="h1"
-          fontFamily={SERIF}
-          fontSize={{ base: "1.6rem", md: "2.2rem" }}
+          fontSize={{ base: "1.5rem", md: "2rem" }}
           color="text.primary"
           lineHeight={1.1}
         >
-          Connect
-          <br />
+          Connect{" "}
           <Box as="em" fontStyle="italic" color="text.muted2">
             Spotify
           </Box>
         </Box>
       </Flex>
 
-      {/* Subtitle */}
-      <Text
-        fontSize="14px"
-        color="text.muted"
-        lineHeight={1.7}
-        fontWeight={300}
-        maxW="480px"
-      >
+      <Text color="text.muted" lineHeight={1.7} fontWeight={300} maxW="480px">
         We'll create the migrated playlists directly in your Spotify library.
         Your existing playlists are never touched — we only ever add new ones.
       </Text>
 
-      <Box h="0.5px" bg="border.subtle" />
-
       {/* Permissions */}
-      <Flex gap="2rem" flexWrap="wrap">
+      <Flex
+        py={"2rem"}
+        border=".5px solid"
+        borderColor="border.subtle"
+        borderRight="transparent"
+        borderLeft="transparent"
+        gap="2rem"
+        flexWrap="wrap"
+      >
         {PERMS.map((p) => (
           <Flex key={p.label} align="flex-start" gap="10px">
             <Flex
-              w="30px"
-              h="30px"
-              borderRadius="8px"
-              bg="brand.spotifyDim"
+              w={8}
+              h={8}
+              rounded="lg"
+              bg="brand.accentDim2x"
               align="center"
               justify="center"
               flexShrink={0}
               mt="1px"
+              sx={{
+                svg: {
+                  width: "14px",
+                  height: "14px",
+                  stroke: "#C8F04A",
+                },
+              }}
             >
               {p.icon}
             </Flex>
             <Box>
-              <Text
-                fontSize="13px"
-                fontWeight={500}
-                color="text.primary"
-                mb="2px"
-              >
+              <Text fontWeight={500} color="text.primary">
                 {p.label}
               </Text>
-              <Text
-                fontSize="12px"
-                color="text.muted"
-                lineHeight={1.5}
-              >
+              <Text fontSize="sm" color="text.muted" lineHeight={1.5}>
                 {p.desc}
               </Text>
             </Box>
           </Flex>
         ))}
       </Flex>
-
-      <Box h="0.5px" bg="border.subtle" />
 
       {/* Action */}
       {spotifyConnected ? (
@@ -259,7 +232,7 @@ export default function ConnectSpotifyStep() {
             <CheckIcon />
             Connected
           </Flex>
-          <Box
+          {/* <Box
             as="button"
             fontSize="12px"
             color="text.muted2"
@@ -273,7 +246,7 @@ export default function ConnectSpotifyStep() {
             onClick={() => setSpotifyConnected(false)}
           >
             Switch account
-          </Box>
+          </Box> */}
         </Flex>
       ) : (
         <Box

@@ -1,4 +1,15 @@
-import { Box, Flex, Grid, Text, useToast } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  Grid,
+  Text,
+  useToast,
+  Tabs,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tab,
+} from "@chakra-ui/react";
 import { useMemo, useRef, useState } from "react";
 import { ToastId } from "@chakra-ui/react";
 import useSWRInfinite from "swr/infinite";
@@ -33,9 +44,7 @@ const ARTWORK_COLORS = [
 ];
 
 function getPlaylistBg(id: string) {
-  const hash = id
-    .split("")
-    .reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const hash = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return ARTWORK_COLORS[hash % ARTWORK_COLORS.length];
 }
 
@@ -153,12 +162,7 @@ function PlaylistCard({
         </Box>
       </Box>
 
-      <Text
-        fontSize="12px"
-        fontWeight={500}
-        color="text.primary"
-        noOfLines={1}
-      >
+      <Text fontSize="12px" fontWeight={500} color="text.primary" noOfLines={1}>
         {playlist.title}
       </Text>
       <Text fontSize="10px" color="text.muted">
@@ -169,9 +173,11 @@ function PlaylistCard({
 }
 
 function YoutubePlaylists({
+  search,
   selectedIds,
   onToggle,
 }: {
+  search: string;
   selectedIds: string[];
   onToggle: (p: Playlist) => void;
 }) {
@@ -188,10 +194,22 @@ function YoutubePlaylists({
           serverErrorToast(toast, { id: "yt-playlist-error" });
         },
         shouldRetryOnError: false,
-      }
+      },
     );
 
-  const playlists = data ? data.flatMap((d) => d.playlists) : [];
+  const playlists = useMemo(
+    () => (data ? data.flatMap((d) => d.playlists) : []),
+    [data],
+  );
+
+  const filteredPlaylists = useMemo(() => {
+    return search
+      ? playlists.filter((p) =>
+          p.title.toLowerCase().includes(search.toLowerCase()),
+        )
+      : playlists;
+  }, [search, playlists]);
+
   const lastPage = data ? data[data.length - 1] : null;
   const isLoadingMore =
     isLoading || (size > 0 && data && typeof data[size - 1] === "undefined");
@@ -206,11 +224,8 @@ function YoutubePlaylists({
 
   return (
     <Box>
-      <Grid
-        templateColumns="repeat(auto-fill, minmax(140px, 1fr))"
-        gap="8px"
-      >
-        {playlists.map((pl) => (
+      <Grid templateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap="8px">
+        {filteredPlaylists.map((pl) => (
           <PlaylistCard
             key={pl.playlist_id}
             playlist={pl}
@@ -246,9 +261,11 @@ function YoutubePlaylists({
 }
 
 function SpotifyPlaylists({
+  search,
   selectedIds,
   onToggle,
 }: {
+  search: string;
   selectedIds: string[];
   onToggle: (p: Playlist) => void;
 }) {
@@ -265,10 +282,22 @@ function SpotifyPlaylists({
           serverErrorToast(toast, { id: "sp-playlist-error" });
         },
         shouldRetryOnError: false,
-      }
+      },
     );
 
-  const playlists = data ? data.flatMap((d) => d.playlists) : [];
+  const playlists = useMemo(
+    () => (data ? data.flatMap((d) => d.playlists) : []),
+    [data],
+  );
+
+  const filteredPlaylists = useMemo(() => {
+    return search
+      ? playlists.filter((p) =>
+          p.title.toLowerCase().includes(search.toLowerCase()),
+        )
+      : playlists;
+  }, [search, playlists]);
+
   const lastPage = data ? data[data.length - 1] : null;
   const isLoadingMore =
     isLoading || (size > 0 && data && typeof data[size - 1] === "undefined");
@@ -283,11 +312,8 @@ function SpotifyPlaylists({
 
   return (
     <Box>
-      <Grid
-        templateColumns="repeat(auto-fill, minmax(140px, 1fr))"
-        gap="8px"
-      >
-        {playlists.map((pl) => (
+      <Grid templateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap="8px">
+        {filteredPlaylists.map((pl) => (
           <PlaylistCard
             key={pl.playlist_id}
             playlist={pl}
@@ -322,8 +348,6 @@ function SpotifyPlaylists({
   );
 }
 
-const SERIF = "'DM Serif Display', serif";
-
 export default function PlaylistSelectionStep() {
   const {
     selectedPlaylists,
@@ -341,7 +365,7 @@ export default function PlaylistSelectionStep() {
 
   const selectedIds = useMemo(
     () => selectedPlaylists.map((pl) => pl.playlist.playlist_id),
-    [selectedPlaylists]
+    [selectedPlaylists],
   );
 
   const isYTSource =
@@ -366,43 +390,8 @@ export default function PlaylistSelectionStep() {
     setSelectedPlaylists([]);
   };
 
-  return (
-    <Box display="flex" flexDirection="column" gap={5}>
-      {/* Header */}
-      <Flex align="flex-start" justify="space-between" flexWrap="wrap" gap="10px">
-        <Box>
-          <Box
-            as="h1"
-            fontFamily={SERIF}
-            fontSize={{ base: "1.5rem", md: "2rem" }}
-            color="text.primary"
-            lineHeight={1.15}
-          >
-            Pick your
-            <br />
-            <Box
-              as="em"
-              fontStyle="italic"
-              color="text.muted"
-            >
-              playlists
-            </Box>
-          </Box>
-          <Text
-            fontSize="14px"
-            color="text.muted"
-            mt="0.5rem"
-            lineHeight={1.65}
-            fontWeight={300}
-            maxW="420px"
-          >
-            Select the playlists you want to migrate. You can change direction
-            anytime.
-          </Text>
-        </Box>
-      </Flex>
-
-      {/* Direction toggle + selection count */}
+  const renderOld = () => {
+    return (
       <Flex align="center" gap="10px" flexWrap="wrap">
         <Flex
           align="center"
@@ -511,41 +500,221 @@ export default function PlaylistSelectionStep() {
           </Box>
         )}
       </Flex>
+    );
+  };
 
-      {/* Search */}
-      <Box>
-        <Box
-          as="input"
-          bg="brand.card"
-          border="0.5px solid"
-          borderColor="border.subtle"
-          borderRadius="8px"
-          color="text.primary"
-          fontFamily="body"
-          fontSize="13px"
-          px="12px"
-          py="6px"
-          w={{ base: "100%", sm: "200px" }}
-          outline="none"
-          transition="border-color .15s"
-          _focus={{ borderColor: "brand.accentBorder" }}
-          placeholder="Search playlists…"
-          value={search}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setSearch(e.target.value)
-          }
-          sx={{
-            "::placeholder": { color: "text.muted2" },
-          }}
-        />
-      </Box>
+  return (
+    <Box display="flex" flexDirection="column" gap={5}>
+      {/* Header */}
+      <Flex
+        align="flex-start"
+        justify="space-between"
+        flexWrap="wrap"
+        gap="10px"
+      >
+        <Box>
+          <Box
+            as="h1"
+            fontSize={{ base: "1.5rem", md: "2rem" }}
+            color="text.primary"
+            lineHeight={1.15}
+          >
+            Pick your{` `}
+            <Box as="em" fontStyle="italic" color="text.muted">
+              playlists
+            </Box>
+          </Box>
+          <Text
+            fontSize="sm"
+            color="text.muted"
+            mt="0.5rem"
+            lineHeight={1.65}
+            fontWeight={300}
+            maxW="420px"
+          >
+            Select the playlists you want to migrate.
+            {/* You can change direction anytime. */}
+          </Text>
+        </Box>
+      </Flex>
 
-      {/* Playlist grid */}
-      {isYTSource ? (
-        <YoutubePlaylists selectedIds={selectedIds} onToggle={togglePlaylist} />
-      ) : (
-        <SpotifyPlaylists selectedIds={selectedIds} onToggle={togglePlaylist} />
-      )}
+      {/* Direction toggle + selection count */}
+
+      <Tabs
+        isLazy
+        variant="unstyled"
+        // index={activeTabIndex}
+        onChange={(index) => {
+          // setActiveTabIndex(index);
+          // some crazy logic to switch platforms.
+
+          const sourcePlatform = [
+            streamingServices.youtubeMusic,
+            streamingServices.spotify,
+          ][index];
+
+          const destinationPlatform =
+            sourcePlatform.value === streamingServices.youtubeMusic.value
+              ? streamingServices.spotify
+              : streamingServices.youtubeMusic;
+
+          toast.close(toastRef.current!);
+
+          toastRef.current = toastHelper(toast, {
+            title: "Platforms Switched",
+            description: `Now transferring from ${sourcePlatform.label}  to ${destinationPlatform.label} `,
+          });
+
+          setSourcePlatform(sourcePlatform);
+          setDestinationPlatform(destinationPlatform);
+          setSelectedPlaylists([]);
+        }}
+      >
+        <Flex align="center" mb={6} gap={4}>
+          <TabList
+            display="grid"
+            gridTemplateColumns="1fr 1fr"
+            alignItems="center"
+            gap="20px"
+            bg="brand.card"
+            border="0.5px solid"
+            borderColor="border.subtle"
+            borderRadius="999px"
+            px="16px"
+            maxWidth="xs"
+          >
+            {/* Source label */}
+            <Tab
+              value="youtube_music"
+              p="8px 4px"
+              display="flex"
+              alignItems="center"
+              gap="6px"
+              position="relative"
+              _selected={{
+                borderBottom: 0,
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  height: "2px",
+                  bottom: 0,
+                  bg: "brand.accent",
+                  // left: "0%",
+                  left: "50%",
+                  width: "40%",
+                  transform: "translateX(-50%)",
+                  rounded: "sm",
+                },
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#FF3B30">
+                <path d="M23.5 6.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C17.1 2.7 12 2.7 12 2.7s-5.1 0-8.3.2c-.5.1-1.5.1-2.3 1-.7.7-.9 2.3-.9 2.3S.2 8 .2 9.8v1.7c0 1.8.3 3.5.3 3.5s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.5.2 7.5.2s5.1 0 8.3-.2c.5-.1 1.5-.1 2.3-1 .7-.7.9-2.3.9-2.3s.3-1.8.3-3.5V9.8c0-1.8-.3-3.6-.3-3.6zM9.7 14.7V8.5l6.2 3.1-6.2 3.1z" />
+              </svg>
+
+              <Text fontSize="13px" fontWeight={500} color="text.primary">
+                Youtube music
+              </Text>
+            </Tab>
+
+            {/* Destination label */}
+            <Tab
+              value="spotify"
+              p="8px 4px"
+              display="flex"
+              alignItems="center"
+              gap="6px"
+              position="relative"
+              _selected={{
+                borderBottom: 0,
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  height: "2px",
+                  // width: "full",
+                  // width: "40%",
+                  // left: 0,
+                  bottom: 0,
+                  bg: "brand.accent",
+                  left: "50%",
+                  width: "40%",
+                  transform: "translateX(-50%)",
+                  rounded: "sm",
+                },
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954">
+                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+              </svg>
+              <Text fontSize="13px" fontWeight={500} color="text.primary">
+                Spotify
+              </Text>
+            </Tab>
+          </TabList>
+
+          {selectedPlaylists.length > 0 && (
+            <Box
+              fontSize="12px"
+              bg="brand.accentDim"
+              border="0.5px solid"
+              borderColor="brand.accentBorder"
+              color="brand.accent"
+              borderRadius="999px"
+              px="10px"
+              py="2px"
+              fontWeight={500}
+            >
+              {selectedPlaylists.length} selected
+            </Box>
+          )}
+        </Flex>
+
+        {/* Search */}
+        <Box mb={8}>
+          <Box
+            as="input"
+            bg="brand.card"
+            border="0.5px solid"
+            borderColor="border.subtle"
+            borderRadius="8px"
+            color="text.primary"
+            fontFamily="body"
+            fontSize="13px"
+            px="12px"
+            py="6px"
+            w={{ base: "100%", sm: "200px" }}
+            outline="none"
+            transition="border-color .15s"
+            _focus={{ borderColor: "brand.accentBorder" }}
+            placeholder="Search playlists…"
+            value={search}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setSearch(e.target.value)
+            }
+            sx={{
+              "::placeholder": { color: "text.muted2" },
+            }}
+          />
+        </Box>
+
+        <TabPanels>
+          <TabPanel p={0}>
+            <YoutubePlaylists
+              search={search}
+              selectedIds={selectedIds}
+              onToggle={togglePlaylist}
+            />
+          </TabPanel>
+
+          {/* initially not mounted */}
+          <TabPanel p={0}>
+            <SpotifyPlaylists
+              search={search}
+              selectedIds={selectedIds}
+              onToggle={togglePlaylist}
+            />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </Box>
   );
 }

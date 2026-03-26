@@ -97,8 +97,8 @@ export default function Home() {
         <Container maxW="68rem" display="flex" justifyContent="end">
           <StyledLink
             borderRadius="full"
-            bgGradient="linear(to-r, pink.500, purple.500)"
-            color="white"
+            bg="brand.accent"
+            color="brand.card2"
             w={14}
             h={14}
             display="grid"

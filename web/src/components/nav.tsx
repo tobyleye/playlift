@@ -1,46 +1,41 @@
-import { Box, Link as StyledLink } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import Logo from "@/components/logo";
 import UserMenu from "./user-menu";
 import useLoggedIn from "@/hooks/useLoggedIn";
+import { GemIcon } from "@/icons/gem";
 
 export default function Nav({ rightElement }: { rightElement?: ReactNode }) {
   const isLoggedIn = useLoggedIn();
 
   return (
-    <Box as="nav" py={4}>
-      <Box
-        w={{
-          base: "full",
-          lg: "90%",
-        }}
-        mx="auto"
-        display="flex"
-        alignItems="center"
-        px={4}
+    <Flex
+      as="nav"
+      align="center"
+      justify="space-between"
+      px={6}
+      h="54px"
+      borderBottom="0.5px solid"
+      borderColor="border.subtle"
+      bg="brand.surface"
+      position="sticky"
+      top={0}
+      zIndex={10}
+    >
+      <Flex
+        as={Link}
+        to={isLoggedIn ? "/home" : "/"}
+        align="center"
+        gap={2}
+        fontFamily="heading"
+        fontSize="1.1rem"
+        color="text.primary"
       >
-        <Box color="white" flexShrink={0} mr={6}>
-          <StyledLink
-            as={Link}
-            to={isLoggedIn ? "/home" : "/"}
-            fontWeight={800}
-            fontSize="2xl"
-            textDecor={"none"}
-            _hover={{ textDecor: "none" }}
-            display="flex"
-            alignItems="center"
-            gap={1}
-          >
-            <Logo />
-            Playlift
-          </StyledLink>
-        </Box>
+        <GemIcon />
+        Playlift
+      </Flex>
 
-        <Box ml="auto" flex={1} display="flex" justifyContent="flex-end">
-          {rightElement ? rightElement : <UserMenu />}
-        </Box>
-      </Box>
-    </Box>
+      <Box>{rightElement ? rightElement : <UserMenu />}</Box>
+    </Flex>
   );
 }

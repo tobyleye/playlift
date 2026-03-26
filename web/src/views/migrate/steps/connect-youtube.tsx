@@ -6,58 +6,8 @@ import { useMigrateContext } from "../context";
 import { useSessionContext } from "@/contexts/session";
 import { toastHelper } from "@/components/utils/toast";
 import EllipsisLoader from "@/components/ellipsis-loader";
-
-function YouTubeIcon({ size = 32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="#FF3B30">
-      <path d="M23.5 6.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C17.1 2.7 12 2.7 12 2.7s-5.1 0-8.3.2c-.5.1-1.5.1-2.3 1-.7.7-.9 2.3-.9 2.3S.2 8 .2 9.8v1.7c0 1.8.3 3.5.3 3.5s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.5.2 7.5.2s5.1 0 8.3-.2c.5-.1 1.5-.1 2.3-1 .7-.7.9-2.3.9-2.3s.3-1.8.3-3.5V9.8c0-1.8-.3-3.6-.3-3.6zM9.7 14.7V8.5l6.2 3.1-6.2 3.1z" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="3,8 6.5,11.5 13,4.5" />
-    </svg>
-  );
-}
-
-// function PermCheckIcon({ muted = false }: { muted?: boolean }) {
-//   if (muted) {
-//     return (
-//       <svg
-//         width="12"
-//         height="12"
-//         viewBox="0 0 12 12"
-//         fill="none"
-//         stroke="currentColor"
-//         strokeWidth="1.8"
-//       >
-//         <path strokeLinecap="round" d="M2 6h8" />
-//       </svg>
-//     );
-//   }
-//   return (
-//     <svg
-//       width="12"
-//       height="12"
-//       viewBox="0 0 12 12"
-//       fill="none"
-//       stroke="currentColor"
-//       strokeWidth="1.8"
-//     >
-//       <polyline points="2,6 4.5,8.5 10,3" />
-//     </svg>
-//   );
-// }
+import { YouTubeIcon } from "@/icons/youtube";
+import { CheckIcon } from "@/icons/check";
 
 export default function ConnectYouTubeStep() {
   const { youtubeConnected, setYoutubeConnected } = useMigrateContext();
@@ -106,50 +56,43 @@ export default function ConnectYouTubeStep() {
   });
 
   return (
-    <Box display="flex" flexDirection="column" gap={6}>
-      <Box>
-        <Flex mb={4} alignItems="center" gap={2}>
-          <Flex
-            w="60px"
-            h="60px"
-            borderRadius="lg"
-            bg="brand.youtubeDim"
-            align="center"
-            justify="center"
-          >
-            <YouTubeIcon />
-          </Flex>
-          <Box
-            as="h1"
-            fontSize={{ base: "1.5rem", md: "2rem" }}
-            color="text.primary"
-            lineHeight={1.15}
-          >
-            Connect{" "}
-            <Box as="span" color="brand.youtube">
-              YouTube
-            </Box>
-          </Box>
-        </Flex>
-        <Text
-          color="text.muted"
-          mt="0.5rem"
-          lineHeight={1.65}
-          fontWeight={300}
-          maxW="420px"
+    <Box display="flex" flexDirection="column" gap="2rem">
+      <Flex align="center" gap="1rem">
+        <Flex
+          w="56px"
+          h="56px"
+          borderRadius="14px"
+          bg="brand.youtubeDim"
+          align="center"
+          justify="center"
         >
-          We'll read your playlists so you can choose which ones to migrate. We
-          never modify or delete anything on your account.
-        </Text>
-      </Box>
+          <YouTubeIcon />
+        </Flex>
+        <Box
+          as="h1"
+          fontSize={{ base: "1.5rem", md: "2rem" }}
+          color="text.primary"
+          lineHeight={1.15}
+        >
+          Connect{" "}
+          <Box as="span" fontStyle="italic" color="text.muted2">
+            YouTube
+          </Box>
+        </Box>
+      </Flex>
+      <Text color="text.muted" lineHeight={1.7} fontWeight={300} maxW="480px">
+        We'll read your playlists so you can choose which ones to migrate. We
+        never modify or delete anything on your account.
+      </Text>
+
+      {/* Permissions */}
 
       <Flex
-        mb={4}
-        py={10}
+        py="2rem"
         gap="2rem"
         flexWrap="wrap"
         border="1px solid"
-        borderColor="rgba(255,255,255,0.07)"
+        borderColor="border.subtle"
         borderRight="transparent"
         borderLeft="transparent"
       >
@@ -169,7 +112,7 @@ export default function ConnectYouTubeStep() {
                 <circle cx="8" cy="8" r="2" />
               </svg>
             ),
-            title: "Read-only access",
+            label: "Read-only access",
             desc: (
               <>
                 {" "}
@@ -192,7 +135,7 @@ export default function ConnectYouTubeStep() {
                 <path stroke-linecap="round" d="M5 5V4a3 3 0 0 1 6 0v1" />
               </svg>
             ),
-            title: `Your data stays yours`,
+            label: `Your data stays yours`,
 
             desc: (
               <span>
@@ -213,7 +156,7 @@ export default function ConnectYouTubeStep() {
                 <polyline stroke-linecap="round" points="3,8 6,11 13,4" />
               </svg>
             ),
-            title: `Revoke anytime`,
+            label: `Revoke anytime`,
             desc: (
               <>
                 Disconnect from your
@@ -223,7 +166,12 @@ export default function ConnectYouTubeStep() {
             ),
           },
         ].map((each) => (
-          <Box display="flex" alignItems="flex-start" gap={2}>
+          <Box
+            key={each.label}
+            display="flex"
+            alignItems="flex-start"
+            gap="10px"
+          >
             <Box
               w={8}
               h={8}
@@ -241,38 +189,55 @@ export default function ConnectYouTubeStep() {
             >
               {each.icon}
             </Box>
-            <Flex flexDir="column" align="flex-start">
-              <Box as="strong" color="#f0f0f0">
-                {each.title}
-              </Box>
-              <Box color="text.muted" fontSize="sm">
+            <Box>
+              <Text fontWeight={500} color="#f0f0f0">
+                {each.label}
+              </Text>
+              <Text color="text.muted" fontSize="sm">
                 {each.desc}
-              </Box>
-            </Flex>
+              </Text>
+            </Box>
           </Box>
         ))}
       </Flex>
 
-      <Box maxW="260px">
+      <Box>
         {youtubeConnected ? (
-          <Flex
-            bg="brand.spotifyDim"
-            border="1px solid"
-            borderColor="brand.spotifyBorder"
-            borderRadius="9px"
-            color="brand.spotify"
-            fontFamily="body"
-            fontWeight={500}
-            fontSize="14px"
-            py="12px"
-            px="28px"
-            w="100%"
-            align="center"
-            justify="center"
-            gap="8px"
-          >
-            <CheckIcon />
-            Connected
+          <Flex align="center" gap="12px" alignSelf="flex-start">
+            <Flex
+              bg="brand.spotifyDim"
+              border="1px solid"
+              borderColor="brand.spotifyBorder"
+              color="brand.spotify"
+              fontFamily="body"
+              borderRadius="999px"
+              fontWeight={500}
+              fontSize="14px"
+              py="8px"
+              px="28px"
+              align="center"
+              justify="center"
+              gap="8px"
+            >
+              <CheckIcon />
+              Connected
+            </Flex>
+
+            {/* <Box
+              as="button"
+              fontSize="sm"
+              color="text.muted2"
+              cursor="pointer"
+              bg="none"
+              border="none"
+              fontFamily="body"
+              p={0}
+              transition="color .15s"
+              _hover={{ color: "text.muted" }}
+              onClick={() => setYoutubeConnected(false)}
+            >
+              Switch account
+            </Box> */}
           </Flex>
         ) : (
           <Box
@@ -283,8 +248,8 @@ export default function ConnectYouTubeStep() {
             fontFamily="body"
             fontWeight={700}
             fontSize="14px"
-            py="12px"
-            px="20px"
+            py="13px"
+            px="28px"
             w="100%"
             cursor="pointer"
             transition="transform .15s"

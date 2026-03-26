@@ -1,4 +1,4 @@
-import { Box, Flex, Grid, Text, useToast, Spinner } from "@chakra-ui/react";
+import { Box, Flex, Text, useToast, Spinner } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { MigrateContext } from "./context";
@@ -8,57 +8,11 @@ import api from "@/api/api";
 import { toastHelper } from "@/components/utils/toast";
 import BackdropLoader from "@/components/backdrop-loader";
 import { useSessionContext } from "@/contexts/session";
-
-const SERIF = "'DM Serif Display', serif";
-
-function GemIcon() {
-  return (
-    <Box
-      w="20px"
-      h="20px"
-      bg="brand.accent"
-      borderRadius="5px"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      flexShrink={0}
-    >
-      <svg width="11" height="11" viewBox="0 0 11 11" fill="#0d0d0d">
-        <polygon points="5.5,1 10,5.5 5.5,10 1,5.5" />
-      </svg>
-    </Box>
-  );
-}
-
-function ArrowIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path strokeLinecap="round" d="M3 8h10M9 4l4 4-4 4" />
-    </svg>
-  );
-}
-
-function CheckSmIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="2,6 5,9 10,3" />
-    </svg>
-  );
-}
+import { CheckSmIcon } from "@/icons/check";
+import { GemIcon } from "@/icons/gem";
+import { ArrowIcon } from "@/icons/arrow";
+import Sidebar from "./sidebar";
+import UserMenu from "@/components/user-menu";
 
 function SuccessPanel({ totalPlaylists }: { totalPlaylists: number }) {
   return (
@@ -86,7 +40,7 @@ function SuccessPanel({ totalPlaylists }: { totalPlaylists: number }) {
       <Box>
         <Box
           as="h2"
-          fontFamily={SERIF}
+          fontFamily="heading"
           fontSize="2rem"
           color="text.primary"
           mb={2}
@@ -121,24 +75,6 @@ function SuccessPanel({ totalPlaylists }: { totalPlaylists: number }) {
     </Flex>
   );
 }
-
-const STEP_DEFS = [
-  {
-    path: "connect-youtube",
-    label: "Connect YouTube",
-    desc: "Authorize read access to your playlists",
-  },
-  {
-    path: "connect-spotify",
-    label: "Connect Spotify",
-    desc: "Authorize playlist creation access",
-  },
-  {
-    path: "select-playlists",
-    label: "Pick playlists",
-    desc: "Select what you want to migrate",
-  },
-];
 
 function stepFromPathname(pathname: string): 1 | 2 | 3 {
   if (pathname.includes("connect-spotify")) return 2;
@@ -292,7 +228,7 @@ export default function MigrateWizard() {
     >
       {migrating && <BackdropLoader loadingText="Starting migration" />}
 
-      <Box bg="brand.bg" minH="100vh" fontFamily="body" color="text.primary">
+      <Box height="100%">
         {/* Nav */}
         <Flex
           as="nav"
@@ -303,283 +239,175 @@ export default function MigrateWizard() {
           borderBottom="0.5px solid"
           borderColor="border.subtle"
           bg="brand.surface"
+          position="sticky"
+          top={0}
+          zIndex={10}
         >
           <Flex
             as={Link}
-            to="/"
+            to={session ? "/home" : "/"}
             align="center"
             gap={2}
-            fontFamily={SERIF}
+            fontFamily="heading"
             fontSize="1.1rem"
             color="text.primary"
           >
             <GemIcon />
             Playlift
           </Flex>
-          <Text fontSize="12px" color="text.muted2">
-            Step {step} of 3
-          </Text>
+
+          {session && <UserMenu />}
         </Flex>
 
-        {/* Shell */}
-        <Grid
-          templateColumns={{ base: "1fr", md: "280px 1fr" }}
-          minH="calc(100vh - 54px)"
+        {/* sidebar */}
+        <Box
+          position="fixed"
+          top={"54px"}
+          left={0}
+          width="280px"
+          bottom={0}
+          display={{ base: "none", md: "flex" }}
         >
-          {/* Sidebar */}
-          <Flex
-            display={{ base: "none", md: "flex" }}
-            direction="column"
-            gap={8}
-            bg="brand.surface"
-            borderRight="0.5px solid"
-            borderColor="border.subtle"
-            px={6}
-            py={8}
-          >
-            <Box>
-              <Box
-                as="h2"
-                fontFamily={SERIF}
-                fontSize="1.4rem"
-                lineHeight={1.2}
-                color="text.primary"
-              >
-                Let's get
-                <br />
-                <Box as="em" fontStyle="italic" color="text.muted">
-                  your music
-                </Box>
-                <br />
-                moving.
-              </Box>
-              <Text
-                fontSize="13px"
-                color="text.muted2"
-                lineHeight={1.6}
-                fontWeight={300}
-                mt="0.4rem"
-              >
-                Connect your accounts and pick playlists to migrate. Takes
-                about a minute.
-              </Text>
-            </Box>
+          <Sidebar step={step} showSuccess={showSuccess} />
+        </Box>
 
-            {/* Step list */}
-            <Box display="flex" flexDirection="column">
-              {STEP_DEFS.map((s, i) => {
-                const num = i + 1;
-                const isActive = step === num && !showSuccess;
-                const isDone = num < step || showSuccess;
-                return (
-                  <Box
-                    key={s.path}
-                    position="relative"
-                    display="flex"
-                    gap="14px"
-                    alignItems="flex-start"
-                    py="12px"
-                    sx={{
-                      "&:not(:last-child)::after": {
-                        content: '""',
-                        position: "absolute",
-                        left: "14px",
-                        top: "44px",
-                        width: "1px",
-                        height: "calc(100% - 10px)",
-                        background: "rgba(255,255,255,0.07)",
-                      },
-                    }}
-                  >
-                    <Flex
-                      w="28px"
-                      h="28px"
-                      borderRadius="50%"
-                      align="center"
-                      justify="center"
-                      fontSize="12px"
-                      fontWeight={isActive ? 700 : 500}
-                      flexShrink={0}
-                      position="relative"
-                      zIndex={1}
-                      border="1px solid"
-                      transition="all .3s"
-                      borderColor={
-                        isActive
-                          ? "brand.accent"
-                          : isDone
-                            ? "brand.spotifyBorder"
-                            : "rgba(255,255,255,0.12)"
-                      }
-                      bg={
-                        isActive
-                          ? "brand.accent"
-                          : isDone
-                            ? "brand.spotifyDim"
-                            : "transparent"
-                      }
-                      color={
-                        isActive
-                          ? "brand.bg"
-                          : isDone
-                            ? "brand.spotify"
-                            : "text.muted2"
-                      }
-                    >
-                      {isDone ? <CheckSmIcon /> : num}
-                    </Flex>
-                    <Box pt="3px">
-                      <Text
-                        fontSize="13px"
-                        fontWeight={500}
-                        transition="color .3s"
-                        color={
-                          isActive
-                            ? "text.primary"
-                            : isDone
-                              ? "brand.spotify"
-                              : "text.muted2"
-                        }
-                      >
-                        {s.label}
-                      </Text>
-                      <Text
-                        fontSize="11px"
-                        color="text.muted2"
-                        mt="2px"
-                        lineHeight={1.5}
-                      >
-                        {s.desc}
-                      </Text>
-                    </Box>
-                  </Box>
-                );
-              })}
-            </Box>
-          </Flex>
-
+        <Box
+          height="100%"
+          marginLeft={{
+            base: "0",
+            md: "280px",
+          }}
+          position="relative"
+          pb={"4rem"}
+        >
           {/* Main content */}
-          <Flex direction="column">
-            <Box
-              flex={1}
-              p={{ base: "1.5rem 1.25rem", md: "2.5rem 2.5rem 1.5rem" }}
-              display="flex"
-              flexDirection="column"
-              gap={6}
+
+          <Box
+            flex={1}
+            p={{ base: "1.5rem 1.25rem", md: "2.5rem 2.5rem 1.5rem" }}
+            display="flex"
+            flexDirection="column"
+            gap={6}
+          >
+            {/* Mobile step bar */}
+            <Flex
+              display={{ base: "flex", md: "none" }}
+              gap="6px"
+              align="center"
             >
-              {/* Mobile step bar */}
-              <Flex
-                display={{ base: "flex", md: "none" }}
-                gap="6px"
-                align="center"
-              >
-                {[1, 2, 3].map((i) => (
-                  <Box
-                    key={i}
-                    flex={1}
-                    h="3px"
-                    borderRadius="999px"
-                    transition="background .3s"
-                    bg={
-                      i < step || showSuccess
-                        ? "brand.spotify"
-                        : i === step
-                          ? "brand.accent"
-                          : "rgba(255,255,255,0.08)"
-                    }
-                  />
-                ))}
-                <Text fontSize="12px" color="text.muted2" whiteSpace="nowrap">
-                  Step {step} of 3
-                </Text>
+              {[1, 2, 3].map((i) => (
+                <Box
+                  key={i}
+                  flex={1}
+                  h="3px"
+                  borderRadius="999px"
+                  transition="background .3s"
+                  bg={
+                    i < step || showSuccess
+                      ? "brand.spotify"
+                      : i === step
+                        ? "brand.accent"
+                        : "rgba(255,255,255,0.08)"
+                  }
+                />
+              ))}
+              <Text fontSize="12px" color="text.muted2" whiteSpace="nowrap">
+                Step {step} of 3
+              </Text>
+            </Flex>
+
+            {/* Panels */}
+            {loadingStatus ? (
+              <Flex flex={1} align="center" justify="center" minH="40vh">
+                <Spinner
+                  thickness="3px"
+                  speed="0.65s"
+                  color="brand.accent"
+                  size="md"
+                />
               </Flex>
+            ) : showSuccess ? (
+              <SuccessPanel totalPlaylists={selectedPlaylists.length} />
+            ) : (
+              <Outlet />
+            )}
+          </Box>
 
-              {/* Panels */}
-              {loadingStatus ? (
-                <Flex flex={1} align="center" justify="center" minH="40vh">
-                  <Spinner
-                    thickness="3px"
-                    speed="0.65s"
-                    color="brand.accent"
-                    size="md"
-                  />
-                </Flex>
-              ) : showSuccess ? (
-                <SuccessPanel totalPlaylists={selectedPlaylists.length} />
-              ) : (
-                <Outlet />
-              )}
-            </Box>
-
-            {/* Footer bar */}
-            {!showSuccess && (
-              <Box
-                borderTop="0.5px solid"
-                borderColor="border.subtle"
-                px={{ base: "1.25rem", md: "2rem" }}
-                py="0.9rem"
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-                gap="12px"
-                bg="brand.surface"
-                mt="auto"
-              >
-                <Text fontSize="13px" color="text.muted">
-                  {footerInfo}
-                </Text>
-                <Flex gap={2}>
-                  {step > 1 && (
-                    <Box
-                      as="button"
-                      bg="rgba(255,255,255,0.06)"
-                      border="0.5px solid"
-                      borderColor="border.subtle"
-                      borderRadius="9px"
-                      color="text.muted"
-                      fontFamily="body"
-                      fontSize="13px"
-                      fontWeight={500}
-                      px="18px"
-                      py="9px"
-                      cursor="pointer"
-                      transition="all .15s"
-                      _hover={{
-                        bg: "rgba(255,255,255,0.1)",
-                        color: "text.primary",
-                      }}
-                      onClick={goBack}
-                    >
-                      ← Back
-                    </Box>
-                  )}
+          {/* Footer bar */}
+          {!showSuccess && (
+            <Box
+              position="fixed"
+              bottom={0}
+              right={0}
+              borderTop="0.5px solid"
+              left={{
+                base: 0,
+                md: "280px",
+              }}
+              borderColor="border.subtle"
+              px={{ base: "1.25rem", md: "2rem" }}
+              py="0.9rem"
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap="12px"
+              bg="brand.surface"
+              mt="auto"
+            >
+              <Text fontSize="13px" color="text.muted">
+                {footerInfo}
+              </Text>
+              <Flex gap={2}>
+                {step > 1 && (
                   <Box
                     as="button"
-                    bg="brand.accent"
+                    bg="rgba(255,255,255,0.06)"
+                    border="0.5px solid"
+                    borderColor="border.subtle"
                     borderRadius="9px"
-                    color="brand.bg"
+                    color="text.muted"
                     fontFamily="body"
-                    fontWeight={700}
                     fontSize="13px"
-                    px="22px"
+                    fontWeight={500}
+                    px="18px"
                     py="9px"
-                    cursor={canProceed ? "pointer" : "not-allowed"}
-                    opacity={canProceed ? 1 : 0.3}
+                    cursor="pointer"
                     transition="all .15s"
-                    _hover={canProceed ? { transform: "scale(1.02)" } : {}}
-                    onClick={canProceed ? goNext : undefined}
-                    display="flex"
-                    alignItems="center"
-                    gap="6px"
+                    _hover={{
+                      bg: "rgba(255,255,255,0.1)",
+                      color: "text.primary",
+                    }}
+                    onClick={goBack}
                   >
-                    {step === 3 ? "Start migration" : "Continue"}
-                    <ArrowIcon />
+                    ← Back
                   </Box>
-                </Flex>
-              </Box>
-            )}
-          </Flex>
-        </Grid>
+                )}
+                <Box
+                  as="button"
+                  bg="brand.accent"
+                  borderRadius="9px"
+                  color="brand.bg"
+                  fontFamily="body"
+                  fontWeight={700}
+                  fontSize="13px"
+                  px="22px"
+                  py="9px"
+                  cursor={canProceed ? "pointer" : "not-allowed"}
+                  opacity={canProceed ? 1 : 0.3}
+                  transition="all .15s"
+                  _hover={canProceed ? { transform: "scale(1.02)" } : {}}
+                  onClick={canProceed ? goNext : undefined}
+                  display="flex"
+                  alignItems="center"
+                  gap="6px"
+                >
+                  {step === 3 ? "Start migration" : "Continue"}
+                  <ArrowIcon />
+                </Box>
+              </Flex>
+            </Box>
+          )}
+        </Box>
       </Box>
     </MigrateContext.Provider>
   );
