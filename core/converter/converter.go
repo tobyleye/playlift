@@ -116,7 +116,7 @@ func searchTrack(ctx context.Context, cache valkey.Client, sourcePlatform string
 }
 
 func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConversion) error {
-
+	log.Println("\nconverting conversion...", conversion)
 	conversionState := ConversionState{
 		ConversionID:      conversion.ConversionID,
 		CreatedPlaylistId: conversion.CreatedPlaylistId,

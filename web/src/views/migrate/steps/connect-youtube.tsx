@@ -250,12 +250,11 @@ export default function ConnectYouTubeStep() {
             fontSize="14px"
             py="13px"
             px="28px"
-            w="100%"
             cursor="pointer"
             transition="transform .15s"
             _hover={{ transform: "scale(1.02)" }}
             onClick={() => connect()}
-            display="flex"
+            display="inline-flex"
             alignItems="center"
             justifyContent="center"
             gap="8px"

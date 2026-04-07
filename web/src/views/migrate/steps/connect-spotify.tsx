@@ -89,11 +89,18 @@ export default function ConnectSpotifyStep() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const [code, setcode] = useState("");
 
   useEffect(() => {
     const code = searchParams.get("code");
     if (code) {
       navigate("/convert/connect-spotify", { replace: true });
+      setcode(code);
+    }
+  }, [searchParams, navigate]);
+
+  useEffect(() => {
+    if (code) {
       setLoading(true);
       client
         .post("/connect/spotify/callback", { code })
@@ -113,8 +120,7 @@ export default function ConnectSpotifyStep() {
         })
         .finally(() => setLoading(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [code, setSpotifyConnected, toast]);
 
   const connectSpotify = () => {
     let url = "https://accounts.spotify.com/authorize";
