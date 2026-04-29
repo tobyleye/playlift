@@ -52,6 +52,14 @@ func getEnvOrThrow(varname string) string {
 	return envValue
 }
 
+func getEnv(name string, _default string) string {
+	val := os.Getenv(name)
+	if val == "" {
+		val = _default
+	}
+	return val
+}
+
 func IsProd() bool {
 	fmt.Println("go env...", GO_ENV)
 	return GO_ENV == "production"
@@ -88,7 +96,7 @@ func LoadEnv() {
 	FRONTEND_BASE_URL = os.Getenv("FRONTEND_BASE_URL")
 	GOOGLE_REDIRECT_URL = FRONTEND_BASE_URL
 
-	SPOTIFY_CONNECT_REDIRECT_URL = getEnvOrThrow("SPOTIFY_REDIRECT_URL")
+	SPOTIFY_CONNECT_REDIRECT_URL = getEnv(`SPOTIFY_REDIRECT_URL`, fmt.Sprintf(`%s/convert/connect-spotify`, FRONTEND_BASE_URL))
 
 	VALKEY_URL = getEnvOrThrow("VALKEY_URL")
 
