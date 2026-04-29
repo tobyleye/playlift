@@ -41,11 +41,17 @@ const PrivateRouteProtector = () => {
   }
 };
 
+const googleClientId =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  import.meta.env.VITE_APP_GOOGLE_CLIENT_ID;
+
+console.log("your client id is:", googleClientId);
+
 function Root() {
   return (
     <ChakraProvider theme={theme}>
       <SessionProvider>
-        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <GoogleOAuthProvider clientId={googleClientId}>
           <SWRConfig>
             <Suspense fallback={<div />}>
               <Outlet />
