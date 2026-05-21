@@ -66,6 +66,7 @@ func IsProd() bool {
 }
 
 func LoadEnv() {
+	fmt.Println("initializing env variables...")
 
 	err := godotenv.Load()
 
