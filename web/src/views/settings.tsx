@@ -134,7 +134,7 @@ export default function Settings() {
                   <Box as="header" mb={7}>
                     <HStack>
                       <Icon as={User} color="white" />
-                      <Heading size="md" color="white">
+                      <Heading fontFamily="body" size="md" color="white">
                         Account Information
                       </Heading>
                     </HStack>
@@ -150,7 +150,7 @@ export default function Settings() {
                       bg="purple.500"
                     />
                     <VStack align="start" spacing={1}>
-                      <Heading fontSize="md" color="white">
+                      <Heading fontFamily="body" fontSize="md" color="white">
                         {session?.name}
                       </Heading>
                       <Text color="whiteAlpha.700">{session?.email}</Text>
@@ -168,7 +168,7 @@ export default function Settings() {
                 <CardBody>
                   <HStack mb={2}>
                     <Icon as={AlertTriangle} color="red.400" />
-                    <Heading size="md" color="red.400">
+                    <Heading fontFamily="body" size="md" color="red.400">
                       Danger Zone
                     </Heading>
                   </HStack>

@@ -16,17 +16,28 @@ import "./css/animation.css";
 
 const Landing = lazy(() => import("./views/landing/landing.tsx"));
 const Home = lazy(() => import("./views/home/home.tsx"));
-const Convert = lazy(() => import("./views/convert/convert.tsx"));
+// const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
+// const ConnectSpotify = lazy(
+//   () => import("./views/convert/connect-spotify.tsx"),
+// );
+// const ConnectYoutube = lazy(
+//   () => import("./views/convert/connect-youtube.tsx"),
+// );
+// const PlaylistsSelection = lazy(
+//   () => import("./views/convert/playlist-selection.tsx"),
+// );
+const Migrate = lazy(() => import("./views/migrate/migrate.tsx"));
 const ConnectSpotify = lazy(
-  () => import("./views/convert/connect-spotify.tsx"),
+  () => import("./views/migrate/steps/connect-spotify.tsx"),
 );
 const ConnectYoutube = lazy(
-  () => import("./views/convert/connect-youtube.tsx"),
+  () => import("./views/migrate/steps/connect-youtube.tsx"),
 );
 const PlaylistsSelection = lazy(
-  () => import("./views/convert/playlist-selection.tsx"),
+  () => import("./views/migrate/steps/playlist-selection.tsx"),
 );
+
 const DetailsPage = lazy(() => import("./views/details-page/details-page.tsx"));
 const PrivacyPolicy = lazy(() => import("./views/privacy-policy.tsx"));
 const Settings = lazy(() => import("./views/settings.tsx"));
@@ -70,10 +81,9 @@ const router = createBrowserRouter([
     children: [
       { index: true, Component: Landing },
       { path: "/privacy-policy", Component: PrivacyPolicy },
-      { path: "/healthcheck", Component: HealthCheck },
       {
         path: "/convert",
-        Component: Convert,
+        Component: Migrate,
         children: [
           {
             index: true,
@@ -84,6 +94,20 @@ const router = createBrowserRouter([
           { path: "select-playlists", Component: PlaylistsSelection },
         ],
       },
+      { path: "/healthcheck", Component: HealthCheck },
+      // {
+      //   path: "/convert",
+      //   Component: Convert,
+      //   children: [
+      //     {
+      //       index: true,
+      //       Component: () => <Navigate to="connect-youtube" replace />,
+      //     },
+      //     { path: "connect-youtube", index: true, Component: ConnectYoutube },
+      //     { path: "connect-spotify", Component: ConnectSpotify },
+      //     { path: "select-playlists", Component: PlaylistsSelection },
+      //   ],
+      // },
       {
         Component: PrivateRouteProtector,
         children: [

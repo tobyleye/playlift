@@ -1,32 +1,17 @@
-import {
-  Box,
-  Text,
-  Heading,
-  SimpleGrid,
-  Link as StyledLink,
-  Icon,
-  useToast,
-} from "@chakra-ui/react";
-import { Link, Navigate, Outlet, useNavigate } from "react-router-dom";
-import { ArrowRight, Music, Play } from "lucide-react";
-import Nav from "@/components/nav";
+import { Box, Flex, Grid, Text, useToast } from "@chakra-ui/react";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useSessionContext } from "@/contexts/session";
 import { useGoogleLogin } from "@react-oauth/google";
 import { FcGoogle } from "react-icons/fc";
-import { SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
 import { client } from "@/api/api";
 import { useState } from "react";
-import useLoggedIn from "@/hooks/useLoggedIn";
 import BackdropLoader from "@/components/backdrop-loader";
 
 export default function Landing() {
   const { session, loadingSession, setSession } = useSessionContext();
-
-  const isLoggedIn = useLoggedIn();
   const navigate = useNavigate();
   const toast = useToast();
-
   const [loading, setLoading] = useState(false);
 
   const login = useGoogleLogin({
@@ -42,9 +27,7 @@ export default function Landing() {
           origin: "login",
           redirect_url: window.location.origin,
         });
-
         const { user } = data.data;
-
         localStorage.setItem("userId", user.user_id);
         setSession(user);
         navigate("/home", { replace: true });
@@ -52,7 +35,7 @@ export default function Landing() {
         setLoading(false);
         toastHelper(toast, {
           title: "Oops!",
-          description: `Unable to login. Please try again.`,
+          description: "Unable to login. Please try again.",
           status: "error",
         });
         console.error("Error connecting to YouTube Music:", err);
@@ -62,302 +45,503 @@ export default function Landing() {
       console.error("Login Failed:", error);
       toastHelper(toast, {
         title: "Oops!",
-        description: `Couldn't complete login. Please try again.`,
+        description: "Couldn't complete login. Please try again.",
         status: "error",
       });
     },
-    // redirect_uri: window.location.origin + "/login/callback",
   });
 
-  if (isLoggedIn) {
-    return <Navigate to="/home" replace />;
-  }
-
   return (
-    <Box>
+    <Box bg="brand.bg" minH="100vh" color="text.primary">
       {loading && <BackdropLoader loadingText="Signing you in" />}
 
-      <BGShapes />
-      <Box position="relative">
-        <Nav
-          rightElement={
-            loadingSession ? (
-              <Box />
-            ) : !session ? (
-              <SecondaryButton onClick={login} fontSize="md" py={2}>
-                <Icon as={FcGoogle} />
-                Login
-              </SecondaryButton>
-            ) : null
-          }
-        />
-
-        <Box as="main" px={6} mt={6}>
-          <Box mb={20} maxWidth={896} mx="auto">
-            {/*   heading */}
-            <Box mb={16} textAlign="center">
-              <Heading
-                fontSize={{ base: "5xl", lg: "7xl" }}
-                fontWeight={700}
-                color="white"
-                mb={4}
-              >
-                {/* Move Your Playlists */}
-                Your Music, <br />
-                Wherever You Go
-                {/* Keep your music collection unified across all platforms. */}
-              </Heading>
-
-              <Text
-                maxW="2xl"
-                mx="auto"
-                color="gray.200"
-                fontSize={{ base: "xl", lg: "2xl" }}
-                lineHeight={1.4}
-                mb={12}
-              >
-                Seamlessly migrate your music playlists between{" "}
-                <Box as="span" fontWeight="bold">
-                  Spotify
-                </Box>{" "}
-                and{" "}
-                <Box as="span" fontWeight="bold">
-                  YouTube Music
-                </Box>
-                .
-              </Text>
-
-              {/* start migration button */}
-
-              <StyledLink
-                as={Link}
-                to="/convert"
-                bgGradient=" linear(to-r, rgb(219, 39, 119), rgb(124, 58, 237))"
-                bgColor={"rgba(15, 23, 42, 0.9)"}
-                display="inline-flex"
-                alignItems="center"
-                justifyContent="center"
-                h={10}
-                px={8}
-                rounded="full"
-                color="white"
-                transition=".3s cubic-bezier(0.4, 0, 0.2, 1)"
-                fontWeight={600}
-                _hover={{
-                  transform: "scale(1.05)",
-                  ".btn-icon": {
-                    transform: "translateX(4px)",
-                  },
-                }}
-              >
-                <Box
-                  as="span"
-                  fontSize="lg"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  Start Migration
-                  <Icon
-                    ml={2}
-                    className="btn-icon"
-                    transition=".3s cubic-bezier(0.4, 0, 0.2, 1)"
-                  >
-                    <ArrowRight />
-                  </Icon>
-                </Box>
-              </StyledLink>
-            </Box>
-
-            {/* feature cards */}
-            <SimpleGrid columns={{ base: 1, lg: 3 }} gap={6}>
-              {[
-                {
-                  icon: <Music />,
-                  iconBg:
-                    "linear-gradient(to right, rgb(74, 222, 128), rgb(59, 130, 246))",
-                  title: "Easy Connection",
-                  description:
-                    " Connect your Spotify and YouTube Music accounts securely",
-                },
-                {
-                  icon: <ArrowRight />,
-                  iconBg:
-                    "linear-gradient(to right, rgb(192, 132, 252), rgb(236, 72, 153))",
-                  title: "Fast Transfer",
-                  description:
-                    "Migrate multiple playlists in just a few clicks",
-                },
-                {
-                  icon: <Play />,
-                  iconBg:
-                    "linear-gradient(to right, rgb(34, 211, 238), rgb(168, 85, 247))",
-                  title: "Keep Listening",
-                  description: "Your music follows you across all platforms",
-                },
-              ].map((feature, index) => (
-                <Box
-                  key={`feature-${index}`}
-                  bg="rgba(255,255,255,.1)"
-                  rounded="lg"
-                  px={6}
-                  py={6}
-                  color="white"
-                  textAlign="center"
-                  backdropFilter="blur(16px)"
-                  transition=".3s cubic-bezier(.4,0,.2,1)"
-                  _hover={{
-                    bg: "#fff3",
-                    transform: "scale(1.05)",
-                  }}
-                >
-                  <Box
-                    bg={feature.iconBg}
-                    w={12}
-                    h={12}
-                    rounded="lg"
-                    mb={4}
-                    display="inline-grid"
-                    placeItems="center"
-                    color="white"
-                  >
-                    {feature.icon}
-                  </Box>
-                  <Text fontSize="lg" fontWeight={600} mb={2}>
-                    {feature.title}
-                  </Text>
-                  <Text color="gray.300">{feature.description}</Text>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Box>
-        </Box>
-
-        <Box
-          as="footer"
-          display="flex"
-          flexDir={{ base: "column", lg: "row" }}
-          gap={4}
-          alignItems="center"
-          justifyContent="space-between"
-          pt={4}
-          pb={6}
-          px={4}
+      {/* Nav */}
+      <Box borderBottom="0.5px solid" borderColor="border.subtle">
+        <Flex
+          align="center"
+          justify="space-between"
+          px={6}
+          py="1.1rem"
+          maxW="1100px"
           mx="auto"
-          w={{
-            base: "full",
-            lg: "90%",
-          }}
+        >
+          <Flex
+            align="center"
+            gap={2}
+            fontFamily="heading"
+            fontWeight={800}
+            fontSize="1.05rem"
+            letterSpacing="-0.02em"
+            color="text.primary"
+          >
+            <GemIcon />
+            Playlift
+          </Flex>
+
+          <Flex align="center" gap={2}>
+            {!loadingSession && !session && (
+              <Box
+                as="button"
+                bg="border.subtle"
+                border="1px solid"
+                borderColor="border.strong"
+                borderRadius="9px"
+                color="text.primary"
+                fontSize="13px"
+                fontWeight={500}
+                px="18px"
+                py="7px"
+                cursor="pointer"
+                transition="all .15s"
+                _hover={{
+                  bg: "border.medium",
+                  borderColor: "border.strong",
+                }}
+                onClick={() => login()}
+                display="flex"
+                alignItems="center"
+                gap={2}
+              >
+                <FcGoogle />
+                Sign in
+              </Box>
+            )}
+            <Box
+              as={Link}
+              to="/convert"
+              bg="brand.accent"
+              borderRadius="9px"
+              color="brand.bg"
+              // fontFamily="heading"
+              fontWeight={700}
+              fontSize="13px"
+              px="18px"
+              py="8px"
+              cursor="pointer"
+              transition="transform .15s"
+              letterSpacing="0.01em"
+              display="inline-block"
+              _hover={{ transform: "scale(1.03)", textDecoration: "none" }}
+            >
+              Get started
+            </Box>
+          </Flex>
+        </Flex>
+      </Box>
+
+      {/* Hero */}
+      <Flex
+        direction="column"
+        align="center"
+        textAlign="center"
+        gap="1.75rem"
+        px={6}
+        pt={{ base: "3.5rem", md: "5.5rem" }}
+        pb={{ base: "3rem", md: "5rem" }}
+        maxW="1100px"
+        mx="auto"
+      >
+        <Box
+          as="h1"
+          // fontFamily="heading"
+          fontSize={{ base: "2.6rem", md: "4.6rem" }}
+          fontWeight={800}
+          letterSpacing="-0.03em"
+          lineHeight={1.06}
+          color="text.primary"
+          maxW="720px"
           sx={{
-            a: {
-              color: "whiteAlpha.800",
-              textDecor: "none",
-              _hover: {
-                color: "white",
-                textDecor: "underline",
-              },
+            em: {
+              fontStyle: "italic",
+              color: "rgba(240,240,240,0.3)",
+              fontWeight: 400,
             },
           }}
         >
-          <Box display="flex" alignItems="center" gap={4}>
-            <StyledLink
-              as={Link}
-              to="mailto:hey@playlift.lol?subject=Hey Playlift"
-              fontWeight="semibold"
-              color="whiteAlpha.800"
-            >
-              Contact us
-            </StyledLink>
-            <StyledLink
-              as={Link}
-              to="/privacy-policy"
-              fontWeight="semibold"
-              color="whiteAlpha.800"
-            >
-              Privacy Policy
-            </StyledLink>
+          Your music,
+          <br />
+          <em>every</em> platform.
+        </Box>
+
+        <Text
+          fontSize={{ base: "16px", md: "18px" }}
+          color="text.muted"
+          maxW="440px"
+          lineHeight={1.7}
+          fontWeight={300}
+        >
+          Move your playlists between <Box as="span">YouTube</Box> and{" "}
+          <Box as="span">Spotify</Box> in seconds. No copying links. No lost
+          tracks.
+        </Text>
+
+        <Flex align="center" gap="10px" flexWrap="wrap" justify="center">
+          <Box
+            as={Link}
+            to="/convert"
+            bg="brand.accent"
+            borderRadius="9px"
+            color="brand.bg"
+            // fontFamily="heading"
+            fontWeight={700}
+            fontSize="14px"
+            px="28px"
+            py="13px"
+            cursor="pointer"
+            transition="transform .15s"
+            letterSpacing="0.01em"
+            display="flex"
+            alignItems="center"
+            gap={2}
+            _hover={{ transform: "scale(1.03)", textDecoration: "none" }}
+            _active={{ transform: "scale(0.97)" }}
+          >
+            Start for free
+            <ArrowIcon />
           </Box>
-          <Box>
-            <StyledLink
+        </Flex>
+      </Flex>
+
+      <Box h="0.5px" bg="border.subtle" />
+
+      {/* How it works */}
+      <Box
+        maxW="1100px"
+        mx="auto"
+        px={6}
+        py={{ base: "3rem", md: "4.5rem" }}
+        id="how-it-works"
+      >
+        <Text
+          fontSize="11px"
+          letterSpacing="0.12em"
+          textTransform="uppercase"
+          color="brand.accent"
+          fontWeight={500}
+          mb="0.75rem"
+        >
+          How it works
+        </Text>
+        <Box
+          as="h2"
+          // fontFamily="heading"
+          fontSize={{ base: "1.7rem", md: "2.5rem" }}
+          fontWeight={800}
+          letterSpacing="-0.02em"
+          lineHeight={1.12}
+          mb="1rem"
+          color="text.primary"
+        >
+          Three steps.
+          <br />
+          Done.
+        </Box>
+        <Text
+          fontSize="15px"
+          color="text.muted"
+          maxW="460px"
+          lineHeight={1.7}
+          fontWeight={300}
+          mb="2rem"
+        >
+          Connect your accounts, pick your playlists, and migrate. Simple as
+          that.
+        </Text>
+
+        <Grid
+          templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }}
+          gap="10px"
+        >
+          {[
+            {
+              num: "1",
+              title: "Connect your accounts",
+              desc: "Log in with YouTube and Spotify. We only ask for the permissions we actually need — your account is created automatically.",
+            },
+            {
+              num: "2",
+              title: "Pick your playlists",
+              desc: "Your playlists load automatically. Select one, a few, or all of them — then choose where they're going.",
+            },
+            {
+              num: "3",
+              title: "Watch them migrate",
+              desc: "We match every track and build the playlist on the other side. Live progress, track by track.",
+            },
+          ].map((step) => (
+            <Box
+              key={step.num}
+              bg="brand.card"
+              border="0.5px solid"
+              borderColor="border.subtle"
+              borderRadius="14px"
+              p="1.35rem"
+              display="flex"
+              flexDirection="column"
+              gap="12px"
+              transition="border-color .2s"
+              _hover={{ borderColor: "border.medium" }}
+            >
+              <Flex
+                w="28px"
+                h="28px"
+                borderRadius="8px"
+                bg="brand.accentDim"
+                border="0.5px solid"
+                borderColor="brand.accentBorder"
+                align="center"
+                justify="center"
+                // fontFamily="heading"
+                fontSize="13px"
+                fontWeight={700}
+                color="brand.accent"
+                flexShrink={0}
+              >
+                {step.num}
+              </Flex>
+              <Text
+                // fontFamily="heading"
+                fontSize="15px"
+                fontWeight={700}
+                color="text.primary"
+              >
+                {step.title}
+              </Text>
+              <Text fontSize="13px" color="text.muted" lineHeight={1.65}>
+                {step.desc}
+              </Text>
+            </Box>
+          ))}
+        </Grid>
+      </Box>
+
+      <Box h="0.5px" bg="border.subtle" />
+
+      {/* CTA */}
+      <Flex
+        direction="column"
+        align="center"
+        py={{ base: "3rem", md: "5rem" }}
+        px={6}
+      >
+        <Box
+          bg="brand.card"
+          border="0.5px solid"
+          borderColor="brand.accentBorder"
+          borderRadius={{ base: "14px", md: "20px" }}
+          p={{ base: "2rem 1.25rem", md: "3rem 2rem" }}
+          w="100%"
+          maxW="540px"
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          gap="1.5rem"
+        >
+          <Flex align="center" gap="16px">
+            <Flex
+              w="52px"
+              h="52px"
+              borderRadius="14px"
+              bg="brand.youtubeDim"
+              align="center"
+              justify="center"
+            >
+              <YouTubeIcon />
+            </Flex>
+            <Flex
+              w="28px"
+              h="28px"
+              borderRadius="50%"
+              bg="brand.accentDim"
+              border="0.5px solid"
+              borderColor="brand.accentBorder"
+              align="center"
+              justify="center"
+              color="brand.accent"
+            >
+              <ArrowIcon size={13} />
+            </Flex>
+            <Flex
+              w="52px"
+              h="52px"
+              borderRadius="14px"
+              bg="brand.spotifyDim"
+              align="center"
+              justify="center"
+            >
+              <SpotifyIcon />
+            </Flex>
+          </Flex>
+
+          <Box
+            as="h2"
+            // fontFamily="heading"
+            fontSize={{ base: "1.4rem", md: "2rem" }}
+            fontWeight={800}
+            letterSpacing="-0.02em"
+            color="text.primary"
+            textAlign="center"
+            lineHeight={1.15}
+          >
+            Move your music today.
+          </Box>
+
+          <Box
+            as={Link}
+            to="/convert"
+            bg="brand.accent"
+            borderRadius="9px"
+            color="brand.bg"
+            // fontFamily="heading"
+            fontWeight={700}
+            fontSize="15px"
+            py="15px"
+            w="100%"
+            cursor="pointer"
+            transition="transform .15s"
+            letterSpacing="0.01em"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            gap={2}
+            _hover={{ transform: "scale(1.02)", textDecoration: "none" }}
+          >
+            Get started free
+            <ArrowIcon />
+          </Box>
+        </Box>
+      </Flex>
+
+      <Box h="0.5px" bg="border.subtle" />
+
+      {/* Footer */}
+      <Flex
+        align="center"
+        justify="space-between"
+        flexWrap="wrap"
+        gap="12px"
+        px={6}
+        py="1.75rem"
+        maxW="1100px"
+        mx="auto"
+      >
+        <Flex
+          align="center"
+          gap="6px"
+          // fontFamily="heading"
+          fontWeight={700}
+          fontSize="0.9rem"
+        >
+          <Box
+            w="16px"
+            h="16px"
+            borderRadius="4px"
+            bg="brand.accent"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <svg width="9" height="9" viewBox="0 0 11 11" fill="#0d0d0d">
+              <polygon points="5.5,1 10,5.5 5.5,10 1,5.5" />
+            </svg>
+          </Box>
+          Playlift
+        </Flex>
+
+        <Flex gap="16px" fontSize="12px">
+          <Box
+            as={Link}
+            to="/privacy-policy"
+            transition="color .15s"
+            _hover={{ textDecoration: "none" }}
+          >
+            Privacy
+          </Box>
+          <Box
+            as="a"
+            href="mailto:hey@playlift.lol?subject=Hey Playlift"
+            transition="color .15s"
+            _hover={{ textDecoration: "none" }}
+          >
+            Contact
+          </Box>
+        </Flex>
+
+        <Text fontSize="12px">
+          {/* <Box as="a"
               fontWeight="semibold"
               href="http://oluwatobi.vercel.app"
               rel="noreferrer"
               target="_blank"
             >
               Oluwatobi
-            </StyledLink>
+            </Box>
             {"・"}
-            ❤️
+            ❤️ */}
+          With ❤️ by{" "}
+          <Box
+            as="a"
+            fontWeight="semibold"
+            href="http://oluwatobi.vercel.app"
+            rel="noreferrer"
+            target="_blank"
+          >
+            Oluwatobi
           </Box>
-        </Box>
-        <Outlet />
-      </Box>
+        </Text>
+      </Flex>
+
+      <Outlet />
     </Box>
   );
 }
 
-function BGShapes() {
+function GemIcon() {
   return (
     <Box
-      pos={"absolute"}
-      inset={0}
-      pointerEvents="none"
-      className="absolute inset-0 pointer-events-none"
+      w="20px"
+      h="20px"
+      bg="brand.accent"
+      borderRadius="5px"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      flexShrink={0}
     >
-      <Box
-        pos="absolute"
-        top={20}
-        left={10}
-        w={32}
-        h={32}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(236, 72, 153), rgb(139, 92, 246))"
-        opacity={0.2}
-      ></Box>
-      <Box
-        pos="absolute"
-        top={40}
-        right={20}
-        w={24}
-        h={24}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))"
-        opacity={0.3}
-        className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-30 animate-bounce"
-      ></Box>
-      <Box
-        pos="absolute"
-        bottom={20}
-        left="25%"
-        w={40}
-        h={40}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(34, 197, 94), rgb(20, 184, 166))"
-        opacity={0.2}
-        className="absolute bottom-20 left-1/4 w-40 h-40 bg-gradient-to-r from-green-500 to-teal-500 rounded-full opacity-20 animate-pulse delay-1000"
-      ></Box>
-      {/* <Box
-        pos="absolute"
-        bottom={40}
-        right="33.3%"
-        w={28}
-        h={28}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(249, 115, 22), rgb(239, 68, 68))"
-        opacity={0.25}
-        className="absolute bottom-40 right-1/3 w-28 h-28 bg-gradient-to-r from-orange-500 to-red-500 rounded-full opacity-25 animate-bounce delay-500"
-      ></Box>
-      <Box
-        pos="absolute"
-        top={"50%"}
-        left={"50%"}
-        w={20}
-        h={20}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(234, 179, 8), rgb(249, 115, 22))"
-        opacity={0.3}
-        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full opacity-30 animate-spin"
-      ></Box> */}
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="#0d0d0d">
+        <polygon points="5.5,1 10,5.5 5.5,10 1,5.5" />
+      </svg>
     </Box>
+  );
+}
+
+function ArrowIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path strokeLinecap="round" d="M3 8h10M9 4l4 4-4 4" />
+    </svg>
+  );
+}
+
+function YouTubeIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="#FF3B30">
+      <path d="M23.5 6.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C17.1 2.7 12 2.7 12 2.7s-5.1 0-8.3.2c-.5.1-1.5.1-2.3 1-.7.7-.9 2.3-.9 2.3S.2 8 .2 9.8v1.7c0 1.8.3 3.5.3 3.5s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 7.5.2 7.5.2s5.1 0 8.3-.2c.5-.1 1.5-.1 2.3-1 .7-.7.9-2.3.9-2.3s.3-1.8.3-3.5V9.8c0-1.8-.3-3.6-.3-3.6zM9.7 14.7V8.5l6.2 3.1-6.2 3.1z" />
+    </svg>
+  );
+}
+
+function SpotifyIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="#1DB954">
+      <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+    </svg>
   );
 }

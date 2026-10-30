@@ -53,6 +53,9 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 	// i think this way we can just use the base url of the frontend as
 	// the redirect uri
 	redirectURL, _ := body["redirect_url"].(string)
+	if redirectURL == "" {
+		redirectURL = config.FRONTEND_BASE_URL
+	}
 
 	log.Println("user logging in with google, redirect uri:", body, code)
 
