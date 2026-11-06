@@ -13,3 +13,11 @@ func Max(a, b int) int {
 	}
 	return b
 }
+
+func Map(list []interface{}, f func(e interface{}, i int) interface{}) []interface{} {
+	r := []interface{}{}
+	for i, e := range list {
+		r = append(r, f(e, i))
+	}
+	return r
+}

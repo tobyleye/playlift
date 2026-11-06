@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/tobyleye/playlift/config"
@@ -18,11 +19,12 @@ func OpenDb() (*gorm.DB, error) {
 		DBName:               config.DB_NAME,
 		Net:                  "tcp",
 		Addr:                 fmt.Sprintf("%s:%s", config.DB_HOST, config.DB_PORT),
-		AllowNativePasswords: true,
+		AllowNativePasswords: false,
 		ParseTime:            true,
 		ConnectionAttributes: "charset:utf8mb4",
 	}
 	dbConnUrl := dbConfig.FormatDSN()
+	log.Printf("mysql DSN: %q", dbConnUrl)
 	db, err := gorm.Open(gormMysql.Open(dbConnUrl))
 	return db, err
 }

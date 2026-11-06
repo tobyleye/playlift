@@ -1,5 +1,12 @@
 import axios from "axios";
 import config from "../config";
+import type {
+  GuestConversionStatusResponse,
+  GuestConversionsResponse,
+  GuestConvertPayload,
+  GuestConvertResponse,
+  GuestLoadPlaylistResponse,
+} from "@/views/landing/guest-convert/types";
 
 export const client = axios.create({
   baseURL: config.API_BASE_URL + "/api",
@@ -19,7 +26,7 @@ const api = {
   convert(
     playlists: { id: string; title: string }[],
     destination: string,
-    source: string
+    source: string,
   ) {
     return client
       .post("/convert", {
@@ -74,6 +81,42 @@ const api = {
 
   deactivateAccount: () => {
     return client.post("/deactivate-account");
+  },
+
+  guestLoadPlaylist: (playlistUrl: string) => {
+    return client
+      .get<GuestLoadPlaylistResponse>("/guest/loadplaylist", {
+        params: {
+          playlist_url: playlistUrl,
+        },
+      })
+      .then((res) => res.data);
+  },
+
+  guestConvert: (payload: GuestConvertPayload) => {
+    return client
+      .post<GuestConvertResponse>("/guest/convert", payload)
+      .then((res) => res.data);
+  },
+
+  guestConversionStatus: (conversionId: string) => {
+    return client
+      .get<GuestConversionStatusResponse>(
+        `/guest/conversion-status/${conversionId}`,
+      )
+      .then((res) => res.data);
+  },
+
+  guestConversions: () => {
+    return client
+      .get<GuestConversionsResponse>("/guest/conversions")
+      .then((res) => res.data);
+  },
+
+  guestRetryConversion: (conversionId: string) => {
+    return client
+      .post<GuestConvertResponse>(`/guest/conversions/${conversionId}/retry`)
+      .then((res) => res.data);
   },
 };
 

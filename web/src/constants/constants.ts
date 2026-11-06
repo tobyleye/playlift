@@ -1,3 +1,6 @@
+import SpotifyIcon from "@/icons/spotify";
+import YoutubeMusicIcon from "@/icons/youtubemusic";
+
 export const streamingServices = {
   youtubeMusic: {
     label: "YouTube Music",
@@ -23,6 +26,15 @@ export const getServiceColor = (value: string) => {
     return "youtube-red";
   } else if (value === "spotify") {
     return "spotify-green";
+  }
+  return;
+};
+
+export const getServiceIcon = (value: string) => {
+  if (value === streamingServices.youtubeMusic.value) {
+    return YoutubeMusicIcon;
+  } else if (value === streamingServices.spotify.value) {
+    return SpotifyIcon;
   }
   return;
 };

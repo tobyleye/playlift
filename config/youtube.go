@@ -63,3 +63,26 @@ func CreateYoutubeClientForUser(db *gorm.DB, userId string) (*http.Client, error
 
 	return httpClient, nil
 }
+
+func CreateSystemYoutubeClient(db *gorm.DB) (*http.Client, error) {
+	var token models.Token
+
+	db.Where(&models.SystemToken{
+		Platform: "youtube",
+	}).First(&token)
+
+	if token.UserId == "" {
+		return nil, errors.New("system token isn't added yet")
+	}
+
+	oauthToken := &oauth2.Token{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		TokenType:    token.TokenType,
+		Expiry:       token.ExpiresIn,
+	}
+
+	httpClient := CreateHTTPClient(context.Background(), oauthToken)
+
+	return httpClient, nil
+}

@@ -1,363 +1,234 @@
-import {
-  Box,
-  Text,
-  Heading,
-  SimpleGrid,
-  Link as StyledLink,
-  Icon,
-  useToast,
-} from "@chakra-ui/react";
-import { Link, Navigate, Outlet, useNavigate } from "react-router-dom";
+import { Box, Text, Heading, SimpleGrid, useToast } from "@chakra-ui/react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Music, Play } from "lucide-react";
-import Nav from "@/components/nav";
-import { useSessionContext } from "@/contexts/session";
-import { useGoogleLogin } from "@react-oauth/google";
-import { FcGoogle } from "react-icons/fc";
-import { SecondaryButton } from "@/components/buttons";
 import { toastHelper } from "@/components/utils/toast";
-import { client } from "@/api/api";
-import { useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import useLoggedIn from "@/hooks/useLoggedIn";
-import BackdropLoader from "@/components/backdrop-loader";
+import useGuestConversion from "./guest-convert/use-guest-conversion";
+import useGuestLogin from "./guest-convert/use-guest-login";
+import GuestShell from "./guest-convert/guest-shell";
+import PasteForm from "./guest-convert/paste-form";
+import PlaylistPreview from "./guest-convert/playlist-preview";
+import ResumeConversions from "./guest-convert/resume-conversions";
+import Stepper from "./guest-convert/stepper";
+import DevStepNav, { DevStep } from "./guest-convert/dev-step-nav";
 
 export default function Landing() {
-  const { session, loadingSession, setSession } = useSessionContext();
-
   const isLoggedIn = useLoggedIn();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
+  const { login, signingIn } = useGuestLogin();
 
-  const [loading, setLoading] = useState(false);
-
-  const login = useGoogleLogin({
-    flow: "auth-code",
-    ux_mode: "popup",
-    scope: ["https://www.googleapis.com/auth/youtube"].join(" "),
-    redirect_uri: window.location.origin,
-    onSuccess: async (codeResponse) => {
-      try {
-        setLoading(true);
-        const { data } = await client.post("/login/google/callback", {
-          code: codeResponse.code,
-          origin: "login",
-          redirect_url: window.location.origin,
-        });
-
-        const { user } = data.data;
-
-        localStorage.setItem("userId", user.user_id);
-        setSession(user);
-        navigate("/home", { replace: true });
-      } catch (err) {
-        setLoading(false);
-        toastHelper(toast, {
-          title: "Oops!",
-          description: `Unable to login. Please try again.`,
-          status: "error",
-        });
-        console.error("Error connecting to YouTube Music:", err);
-      }
-    },
-    onError: (error) => {
-      console.error("Login Failed:", error);
+  const onGuestError = useCallback(
+    (description: string) => {
       toastHelper(toast, {
         title: "Oops!",
-        description: `Couldn't complete login. Please try again.`,
+        description,
         status: "error",
       });
     },
-    // redirect_uri: window.location.origin + "/login/callback",
-  });
+    [toast],
+  );
+
+  const guest = useGuestConversion({ onError: onGuestError });
+  const inFlow = guest.step !== "paste";
+
+  // the dev bar on the conversion page steps back here through history state
+  const devStep = (location.state as { devStep?: DevStep } | null)?.devStep;
+  const { showSample } = guest;
+  useEffect(() => {
+    if (!import.meta.env.DEV || !devStep) return;
+    showSample(devStep);
+    navigate(".", { replace: true, state: null });
+  }, [devStep, showSample, navigate]);
+
+  // each panel starts from the top, the way the flow reads
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [guest.step]);
 
   if (isLoggedIn) {
     return <Navigate to="/home" replace />;
   }
 
   return (
-    <Box>
-      {loading && <BackdropLoader loadingText="Signing you in" />}
+    <GuestShell onLogin={login} signingIn={signingIn}>
+      {import.meta.env.DEV && (
+        <DevStepNav step={guest.step} onChange={guest.showSample} />
+      )}
 
-      <BGShapes />
-      <Box position="relative">
-        <Nav
-          rightElement={
-            loadingSession ? (
-              <Box />
-            ) : !session ? (
-              <SecondaryButton onClick={login} fontSize="md" py={2}>
-                <Icon as={FcGoogle} />
-                Login
-              </SecondaryButton>
-            ) : null
-          }
-        />
+      {inFlow ? (
+        <>
+          <Stepper current={0} />
 
-        <Box as="main" px={6} mt={6}>
-          <Box mb={20} maxWidth={896} mx="auto">
-            {/*   heading */}
-            <Box mb={16} textAlign="center">
-              <Heading
-                fontSize={{ base: "5xl", lg: "7xl" }}
-                fontWeight={700}
-                color="white"
-                mb={4}
-              >
-                {/* Move Your Playlists */}
-                Your Music, <br />
-                Wherever You Go
-                {/* Keep your music collection unified across all platforms. */}
-              </Heading>
+          {guest.step === "preview" && guest.playlist && (
+            <PlaylistPreview
+              source={guest.link?.platform}
+              playlist={guest.playlist}
+              destination={guest.destination}
+              onSelectDestination={guest.setDestination}
+              onStart={guest.startMatching}
+              isStarting={guest.starting}
+              onBack={guest.reset}
+            />
+          )}
 
-              <Text
-                maxW="2xl"
-                mx="auto"
-                color="gray.200"
-                fontSize={{ base: "xl", lg: "2xl" }}
-                lineHeight={1.4}
-                mb={12}
-              >
-                Seamlessly migrate your music playlists between{" "}
-                <Box as="span" fontWeight="bold">
-                  Spotify
-                </Box>{" "}
-                and{" "}
-                <Box as="span" fontWeight="bold">
-                  YouTube Music
-                </Box>
-                .
-              </Text>
+        </>
+      ) : (
+        <>
+          {/*   heading */}
+          <Box mb={16} textAlign="center">
+            <Heading
+              fontSize={{ base: "5xl", lg: "7xl" }}
+              fontWeight={700}
+              color="white"
+              mb={4}
+            >
+              {/* Move Your Playlists */}
+              Your Music, <br />
+              Wherever You Go
+              {/* Keep your music collection unified across all platforms. */}
+            </Heading>
 
-              {/* start migration button */}
+            <Text
+              maxW="2xl"
+              mx="auto"
+              color="gray.200"
+              fontSize={{ base: "xl", lg: "2xl" }}
+              lineHeight={1.4}
+              mb={12}
+            >
+              Seamlessly migrate your music playlists between{" "}
+              <Box as="span" fontWeight="bold">
+                Spotify
+              </Box>{" "}
+              and{" "}
+              <Box as="span" fontWeight="bold">
+                YouTube Music
+              </Box>
+              .
+            </Text>
 
-              <StyledLink
-                as={Link}
-                to="/convert"
-                bgGradient=" linear(to-r, rgb(219, 39, 119), rgb(124, 58, 237))"
-                bgColor={"rgba(15, 23, 42, 0.9)"}
-                display="inline-flex"
+            {/* start migration button */}
+
+            {/* <StyledLink
+              as={Link}
+              to="/convert"
+              bgGradient=" linear(to-r, rgb(219, 39, 119), rgb(124, 58, 237))"
+              bgColor={"rgba(15, 23, 42, 0.9)"}
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              h={10}
+              px={8}
+              rounded="full"
+              color="white"
+              transition=".3s cubic-bezier(0.4, 0, 0.2, 1)"
+              fontWeight={600}
+              _hover={{
+                transform: "scale(1.05)",
+                ".btn-icon": {
+                  transform: "translateX(4px)",
+                },
+              }}
+            >
+              <Box
+                as="span"
+                fontSize="lg"
+                display="flex"
                 alignItems="center"
                 justifyContent="center"
-                h={10}
-                px={8}
-                rounded="full"
+              >
+                Start Migration
+                <Icon
+                  ml={2}
+                  className="btn-icon"
+                  transition=".3s cubic-bezier(0.4, 0, 0.2, 1)"
+                >
+                  <ArrowRight />
+                </Icon>
+              </Box>
+            </StyledLink> */}
+          </Box>
+
+          <ResumeConversions />
+
+          <Box mb={16}>
+            <PasteForm
+              onSubmit={guest.loadPlaylist}
+              isLoading={guest.loadingPlaylist}
+            />
+          </Box>
+          {/* feature cards */}
+          <SimpleGrid columns={{ base: 1, lg: 3 }} gap={6}>
+            {[
+              {
+                icon: <Music />,
+                iconBg:
+                  "linear-gradient(to right, rgb(74, 222, 128), rgb(59, 130, 246))",
+                title: "Easy Connection",
+                description:
+                  " Connect your Spotify and YouTube Music accounts securely",
+              },
+              {
+                icon: <ArrowRight />,
+                iconBg:
+                  "linear-gradient(to right, rgb(192, 132, 252), rgb(236, 72, 153))",
+                title: "Fast Transfer",
+                description:
+                  "Migrate multiple playlists in just a few clicks",
+              },
+              {
+                icon: <Play />,
+                iconBg:
+                  "linear-gradient(to right, rgb(34, 211, 238), rgb(168, 85, 247))",
+                title: "Keep Listening",
+                description:
+                  "Your music follows you across all platforms",
+              },
+            ].map((feature, index) => (
+              <Box
+                key={`feature-${index}`}
+                bg="rgba(255,255,255,.1)"
+                rounded="lg"
+                px={6}
+                py={6}
                 color="white"
-                transition=".3s cubic-bezier(0.4, 0, 0.2, 1)"
-                fontWeight={600}
+                textAlign="center"
+                backdropFilter="blur(16px)"
+                transition=".3s cubic-bezier(.4,0,.2,1)"
                 _hover={{
+                  bg: "#fff3",
                   transform: "scale(1.05)",
-                  ".btn-icon": {
-                    transform: "translateX(4px)",
-                  },
                 }}
               >
                 <Box
-                  as="span"
-                  fontSize="lg"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  Start Migration
-                  <Icon
-                    ml={2}
-                    className="btn-icon"
-                    transition=".3s cubic-bezier(0.4, 0, 0.2, 1)"
-                  >
-                    <ArrowRight />
-                  </Icon>
-                </Box>
-              </StyledLink>
-            </Box>
-
-            {/* feature cards */}
-            <SimpleGrid columns={{ base: 1, lg: 3 }} gap={6}>
-              {[
-                {
-                  icon: <Music />,
-                  iconBg:
-                    "linear-gradient(to right, rgb(74, 222, 128), rgb(59, 130, 246))",
-                  title: "Easy Connection",
-                  description:
-                    " Connect your Spotify and YouTube Music accounts securely",
-                },
-                {
-                  icon: <ArrowRight />,
-                  iconBg:
-                    "linear-gradient(to right, rgb(192, 132, 252), rgb(236, 72, 153))",
-                  title: "Fast Transfer",
-                  description:
-                    "Migrate multiple playlists in just a few clicks",
-                },
-                {
-                  icon: <Play />,
-                  iconBg:
-                    "linear-gradient(to right, rgb(34, 211, 238), rgb(168, 85, 247))",
-                  title: "Keep Listening",
-                  description: "Your music follows you across all platforms",
-                },
-              ].map((feature, index) => (
-                <Box
-                  key={`feature-${index}`}
-                  bg="rgba(255,255,255,.1)"
+                  bg={feature.iconBg}
+                  w={12}
+                  h={12}
                   rounded="lg"
-                  px={6}
-                  py={6}
+                  mb={4}
+                  display="inline-grid"
+                  placeItems="center"
                   color="white"
-                  textAlign="center"
-                  backdropFilter="blur(16px)"
-                  transition=".3s cubic-bezier(.4,0,.2,1)"
-                  _hover={{
-                    bg: "#fff3",
-                    transform: "scale(1.05)",
-                  }}
                 >
-                  <Box
-                    bg={feature.iconBg}
-                    w={12}
-                    h={12}
-                    rounded="lg"
-                    mb={4}
-                    display="inline-grid"
-                    placeItems="center"
-                    color="white"
-                  >
-                    {feature.icon}
-                  </Box>
-                  <Text fontSize="lg" fontWeight={600} mb={2}>
-                    {feature.title}
-                  </Text>
-                  <Text color="gray.300">{feature.description}</Text>
+                  {feature.icon}
                 </Box>
-              ))}
-            </SimpleGrid>
-          </Box>
-        </Box>
-
-        <Box
-          as="footer"
-          display="flex"
-          flexDir={{ base: "column", lg: "row" }}
-          gap={4}
-          alignItems="center"
-          justifyContent="space-between"
-          pt={4}
-          pb={6}
-          px={4}
-          mx="auto"
-          w={{
-            base: "full",
-            lg: "90%",
-          }}
-          sx={{
-            a: {
-              color: "whiteAlpha.800",
-              textDecor: "none",
-              _hover: {
-                color: "white",
-                textDecor: "underline",
-              },
-            },
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={4}>
-            <StyledLink
-              as={Link}
-              to="mailto:hey@playlift.lol?subject=Hey Playlift"
-              fontWeight="semibold"
-              color="whiteAlpha.800"
-            >
-              Contact us
-            </StyledLink>
-            <StyledLink
-              as={Link}
-              to="/privacy-policy"
-              fontWeight="semibold"
-              color="whiteAlpha.800"
-            >
-              Privacy Policy
-            </StyledLink>
-          </Box>
-          <Box>
-            <StyledLink
-              fontWeight="semibold"
-              href="http://oluwatobi.vercel.app"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Oluwatobi
-            </StyledLink>
-            {"・"}
-            ❤️
-          </Box>
-        </Box>
-        <Outlet />
-      </Box>
-    </Box>
-  );
-}
-
-function BGShapes() {
-  return (
-    <Box
-      pos={"absolute"}
-      inset={0}
-      pointerEvents="none"
-      className="absolute inset-0 pointer-events-none"
-    >
-      <Box
-        pos="absolute"
-        top={20}
-        left={10}
-        w={32}
-        h={32}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(236, 72, 153), rgb(139, 92, 246))"
-        opacity={0.2}
-      ></Box>
-      <Box
-        pos="absolute"
-        top={40}
-        right={20}
-        w={24}
-        h={24}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(6, 182, 212), rgb(59, 130, 246))"
-        opacity={0.3}
-        className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-30 animate-bounce"
-      ></Box>
-      <Box
-        pos="absolute"
-        bottom={20}
-        left="25%"
-        w={40}
-        h={40}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(34, 197, 94), rgb(20, 184, 166))"
-        opacity={0.2}
-        className="absolute bottom-20 left-1/4 w-40 h-40 bg-gradient-to-r from-green-500 to-teal-500 rounded-full opacity-20 animate-pulse delay-1000"
-      ></Box>
-      {/* <Box
-        pos="absolute"
-        bottom={40}
-        right="33.3%"
-        w={28}
-        h={28}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(249, 115, 22), rgb(239, 68, 68))"
-        opacity={0.25}
-        className="absolute bottom-40 right-1/3 w-28 h-28 bg-gradient-to-r from-orange-500 to-red-500 rounded-full opacity-25 animate-bounce delay-500"
-      ></Box>
-      <Box
-        pos="absolute"
-        top={"50%"}
-        left={"50%"}
-        w={20}
-        h={20}
-        rounded="full"
-        bg="linear-gradient(to right, rgb(234, 179, 8), rgb(249, 115, 22))"
-        opacity={0.3}
-        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full opacity-30 animate-spin"
-      ></Box> */}
-    </Box>
+                <Text fontSize="lg" fontWeight={600} mb={2}>
+                  {feature.title}
+                </Text>
+                <Text color="gray.300">{feature.description}</Text>
+              </Box>
+            ))}
+          </SimpleGrid>
+        </>
+      )}
+    </GuestShell>
   );
 }

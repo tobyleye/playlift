@@ -1,17 +1,12 @@
 package tasks
 
 import (
-	"context"
-	"errors"
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/tobyleye/playlift/core/converter"
-	"github.com/tobyleye/playlift/models"
-	"github.com/valkey-io/valkey-go"
-	"gorm.io/gorm"
 )
 
 // A list of task types.
@@ -21,57 +16,42 @@ const (
 	TypeTestTask        = "test:task"
 )
 
-func NewPlaylistConversionTask(conversionId string) *asynq.Task {
-	return asynq.NewTask(TypeConvertPlaylist, []byte(conversionId))
+type ConversionTaskPayload struct {
+	ConversionId string `json:"conversion_id"`
+	Demo         bool   `json:"demo"`
+}
+
+func NewPlaylistConversionTask(conversionId string, demo bool) (*asynq.Task, error) {
+
+	payload := ConversionTaskPayload{
+		ConversionId: conversionId,
+		Demo:         demo,
+	}
+
+	fmt.Println("creating payload..", payload)
+
+	var buffer bytes.Buffer
+
+	if err := json.NewEncoder(&buffer).Encode(payload); err != nil {
+		return nil, err
+	}
+
+	return asynq.NewTask(TypeConvertPlaylist, buffer.Bytes()), nil
 }
 
 func NewSyncWatchTask(conversionId string, startTime time.Time) *asynq.Task {
 	return asynq.NewTask(TypeSyncWatch, []byte(conversionId), asynq.ProcessAt(startTime))
 }
 
-type TasksManager struct {
-	db    *gorm.DB
-	cache valkey.Client
+func NewTestTask(conversionId string) *asynq.Task {
+	return asynq.NewTask(TypeTestTask, []byte(conversionId))
 }
 
-func (t *TasksManager) HandlePlaylistConversion(ctx context.Context, task *asynq.Task) error {
-
-	conversionId := string(task.Payload())
-
-	log.Println("handling conversion for conversion id...", conversionId)
-	conversion := models.PlaylistConversion{}
-
-	if err := t.db.First(&conversion, "conversion_id = ?", conversionId).Error; err != nil {
-		log.Println("error querying conversion from db ...", err)
-		return fmt.Errorf("could not find conversion: %v: %w", err, asynq.SkipRetry)
+func EnqueuePlaylistConversionTask(client *asynq.Client, conversionId string, demo bool) (*asynq.TaskInfo, error) {
+	task, err := NewPlaylistConversionTask(conversionId, demo)
+	if err != nil {
+		return nil, err
 	}
 
-	log.Println("Playlist start for: ", conversion)
-	converter.Convert(t.db, t.cache, &conversion)
-	log.Println("conversion is done...")
-	return nil
-}
-
-func (t *TasksManager) HandleSyncWatchTask(ctx context.Context, task *asynq.Task) error {
-	conversionId := string(task.Payload())
-	if conversionId == "" {
-		return fmt.Errorf("invalid watch sync payload: %w", asynq.SkipRetry)
-	}
-
-	log.Println("handling watch sync for conversion id...", conversionId)
-	if err := converter.SyncWatch(t.db, t.cache, conversionId); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("watch conversion not found: %v: %w", err, asynq.SkipRetry)
-		}
-		return err
-	}
-
-	return nil
-}
-
-func NewTasksManager(db *gorm.DB, cache valkey.Client) *TasksManager {
-	return &TasksManager{
-		db:    db,
-		cache: cache,
-	}
+	return client.Enqueue(task)
 }

@@ -7,8 +7,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/tobyleye/playlift/config"
-	"github.com/tobyleye/playlift/core/converter/clients"
 	"github.com/tobyleye/playlift/models"
 	"github.com/tobyleye/playlift/types"
 	"github.com/valkey-io/valkey-go"
@@ -59,30 +57,26 @@ func SyncWatch(db *gorm.DB, cache valkey.Client, conversionId string) error {
 		return errors.New("could not resolve destination playlist id")
 	}
 
-	youtubeClient, spotifyClient, err := CreateClientsForUser(db, conversion.UserId)
-	if err != nil {
-		return fmt.Errorf("failed to create platform clients: %w", err)
-	}
+	// youtubeClient, spotifyClient, err := CreateClientsForUser(db, conversion.UserId)
+
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create platform clients: %w", err)
+	// }
 
 	user := models.User{}
 	if err := db.Where("user_id = ?", conversion.UserId).First(&user).Error; err != nil {
 		return fmt.Errorf("failed to fetch user for watch sync: %w", err)
 	}
 
-	var sourceClient clients.PlatformClient
-	var destinationClient clients.PlatformClient
+	sourceClient, err := CreateConverterClient(db, user.UserId, conversion.SourcePlatform, false, nil, nil)
 
-	if conversion.SourcePlatform == config.SPOTIFY {
-		sourceClient = clients.NewSpotifyClient(spotifyClient, "")
-		destinationClient = clients.NewYoutubeConverterClient(youtubeClient)
-	} else if conversion.SourcePlatform == config.YOUTUBE_MUSIC {
-		sourceClient = clients.NewYoutubeConverterClient(youtubeClient)
-		destinationClient = clients.NewSpotifyClient(spotifyClient, user.SpotifyId)
-	} else {
-		return fmt.Errorf("unsupported source platform: %s", conversion.SourcePlatform)
+	destinationClient, err := CreateConverterClient(db, user.UserId, conversion.DestinationPlatform, false, nil, nil)
+
+	if err != nil {
+		return err
 	}
 
-	latestTracks, err := sourceClient.GetPlaylistTracks(conversion.PlaylistId)
+	latestTracks, err := sourceClient.GetPlaylistTracks(conversion.PlaylistId, nil)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest source tracks: %w", err)
 	}
