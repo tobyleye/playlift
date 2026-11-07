@@ -219,6 +219,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/stripe/stripe-go/v81 v81.1.0 h1:OlpGPO2vhS2raLR/NuvHKeRUZ57FTkdZBTcd5Hhoyos=
 github.com/stripe/stripe-go/v81 v81.1.0/go.mod h1:C/F4jlmnGNacvYtBp/LUHCvVUJEZffFQCobkzwY1WOo=
+github.com/tobyleye/go-ytmusicapi v0.1.1 h1:WLYLbP9Ly2zPoZXIag8f3nR8U56Zl4vhYM4Mt8gkCss=
+github.com/tobyleye/go-ytmusicapi v0.1.1/go.mod h1:q2tQUYtR06HJ9DwB65AIxv5ij3Gd0akDigSby0cUuX0=
 github.com/valkey-io/valkey-go v1.0.64 h1:3u4+b6D6zs9JQs254TLy4LqitCMHHr9XorP9GGk7XY4=
 github.com/valkey-io/valkey-go v1.0.64/go.mod h1:bHmwjIEOrGq/ubOJfh5uMRs7Xj6mV3mQ/ZXUbmqpjqY=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
