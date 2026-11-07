@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -12,6 +13,12 @@ import (
 )
 
 var SESSION_NAME = "sess"
+
+var IsProduction = os.Getenv("GO_ENV") == "production"
+
+func init() {
+	fmt.Println("is production...", IsProduction)
+}
 
 type UserSession struct {
 	UserId           string `json:"user_id"`
@@ -32,15 +39,13 @@ func CreateSession(c echo.Context, user *models.User) (UserSession, error) {
 	// 7 days
 	expiration := (time.Hour * 24) * 7
 
-	isProduction := os.Getenv("GO_ENV") == "production"
-
 	sessionOptions := &sessions.Options{
 		Path:     "/",
 		MaxAge:   int(expiration.Seconds()),
 		HttpOnly: true,
 	}
 	// enable cookies to be ready by both localhost & 127.0.0.1.
-	if !isProduction {
+	if !IsProduction {
 		sessionOptions.SameSite = http.SameSiteNoneMode
 		sessionOptions.Secure = true
 	}

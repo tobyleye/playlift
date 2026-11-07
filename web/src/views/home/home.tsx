@@ -215,6 +215,7 @@ export default function Home() {
                           <ConversionCard
                             key={conversion.conversion_id}
                             conversion={conversion}
+                            onDeleted={mutate}
                           />
                         );
                       })}
@@ -238,6 +239,7 @@ export default function Home() {
                           <ConversionCard
                             key={conversion.conversion_id}
                             conversion={conversion}
+                            onDeleted={mutate}
                           />
                         );
                       })}

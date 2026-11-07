@@ -15,6 +15,9 @@ import useLoggedIn from "./hooks/useLoggedIn.ts";
 import "./css/animation.css";
 
 const Landing = lazy(() => import("./views/landing/landing.tsx"));
+const GuestConversion = lazy(
+  () => import("./views/landing/guest-conversion.tsx"),
+);
 const Home = lazy(() => import("./views/home/home.tsx"));
 const Convert = lazy(() => import("./views/convert/convert.tsx"));
 
@@ -33,12 +36,13 @@ const Settings = lazy(() => import("./views/settings.tsx"));
 const HealthCheck = lazy(() => import("./views/HealthCheck.tsx"));
 
 const PrivateRouteProtector = () => {
-  const loggedIn = useLoggedIn();
-  if (!loggedIn) {
-    return <Navigate to="/" replace />;
-  } else {
-    return <Outlet />;
-  }
+  return <Outlet />;
+  // const loggedIn = useLoggedIn();
+  // if (!loggedIn) {
+  //   return <Navigate to="/" replace />;
+  // } else {
+  //   return <Outlet />;
+  // }
 };
 
 const googleClientId =
@@ -69,6 +73,7 @@ const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, Component: Landing },
+      { path: "/guest/conversions/:conversionId", Component: GuestConversion },
       { path: "/privacy-policy", Component: PrivacyPolicy },
       { path: "/healthcheck", Component: HealthCheck },
       {
@@ -88,7 +93,7 @@ const router = createBrowserRouter([
         Component: PrivateRouteProtector,
         children: [
           { path: "/home", Component: Home },
-          { path: "/details/:id", Component: DetailsPage },
+          { path: "/converts/:id", Component: DetailsPage },
           { path: "/settings", Component: Settings },
         ],
       },

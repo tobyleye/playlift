@@ -26,6 +26,11 @@ type ConversionState struct {
 	CreatedPlaylistId   string                                  `json:"created_playlist_id"`
 }
 
+const (
+	TOTAL_WORKERS         = 10
+	TOTAL_TRACKS_FOR_DEMO = 10
+)
+
 func CreateClientsForUser(db *gorm.DB, userId string) (*http.Client, *spotify.Client, error) {
 
 	spotifyClient, err := config.CreateUserSpotifyClient(db, userId)
@@ -71,7 +76,7 @@ func (s *ConversionState) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, s) // Unmarshal the JSON bytes into the struct
 }
 
-func searchTrack(ctx context.Context, cache valkey.Client, sourcePlatform string, track *types.Track, client clients.PlatformClient) (*types.Track, error) {
+func searchTrack(ctx context.Context, cache valkey.Client, sourcePlatform string, track *types.Track, client clients.ConverterClient) (*types.Track, error) {
 	var cacheKey string
 	if sourcePlatform == config.SPOTIFY {
 		cacheKey = fmt.Sprintf("spotify(%s)-youtube", track.ID)
@@ -115,7 +120,7 @@ func searchTrack(ctx context.Context, cache valkey.Client, sourcePlatform string
 
 }
 
-func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConversion) error {
+func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConversion, isDemo bool, ytmusicClient *http.Client, spotifyClient *spotify.Client) error {
 
 	conversionState := ConversionState{
 		ConversionID:      conversion.ConversionID,
@@ -124,33 +129,48 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 
 	startTime := time.Now()
 
-	user := &models.User{}
-	db.First(user, "user_id = ?", conversion.UserId)
-
 	// handle single conversion
 	userId := conversion.UserId
 
 	// create context
 	ctx := context.Background()
 
+	fmt.Println("demo task...", isDemo)
+
 	err := func() error {
 
-		youtubeClient, spotifyClient, err := CreateClientsForUser(db, userId)
+		sourceClient, err := CreateConverterClient(db, userId, conversion.SourcePlatform, isDemo, ytmusicClient, spotifyClient)
+		if err != nil {
+			return err
+		}
+
+		destinationClient, err := CreateConverterClient(db, userId, conversion.DestinationPlatform, isDemo, ytmusicClient, spotifyClient)
 
 		if err != nil {
 			return err
 		}
 
-		// spotifyClient
-		var sourceClient clients.PlatformClient
-		var destinationClient clients.PlatformClient
+		// youtubeClient, spotifyClient, err := CreateClientsForUser(db, userId)
 
-		if conversion.SourcePlatform == config.SPOTIFY {
-			sourceClient = clients.NewSpotifyClient(spotifyClient, user.SpotifyId)
-			destinationClient = clients.NewYoutubeConverterClient(youtubeClient)
-		} else if conversion.SourcePlatform == config.YOUTUBE_MUSIC {
-			destinationClient = clients.NewSpotifyClient(spotifyClient, user.SpotifyId)
-			sourceClient = clients.NewYoutubeConverterClient(youtubeClient)
+		// if err != nil {
+		// 	return err
+		// }
+
+		// spotifyClient
+		// var sourceClient clients.MusicPlatformClient
+		// var destinationClient clients.MusicPlatformClient
+
+		// if conversion.SourcePlatform == config.SPOTIFY {
+		// 	sourceClient = clients.NewSpotifyClient(spotifyClient, user.SpotifyId)
+		// 	destinationClient = clients.NewYoutubeConverterClient(youtubeClient)
+		// } else if conversion.SourcePlatform == config.YOUTUBE_MUSIC {
+		// 	destinationClient = clients.NewSpotifyClient(spotifyClient, user.SpotifyId)
+		// 	sourceClient = clients.NewYoutubeConverterClient(youtubeClient)
+		// }
+
+		var totalTracks int
+		if isDemo {
+			totalTracks = TOTAL_TRACKS_FOR_DEMO
 		}
 
 		// get playlist details
@@ -163,7 +183,7 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 		conversion.PlaylistLink = playlistDetails.Link
 		conversion.TotalTracks = playlistDetails.TotalTracks
 
-		playlistTracks, err := sourceClient.GetPlaylistTracks(conversion.PlaylistId)
+		playlistTracks, err := sourceClient.GetPlaylistTracks(conversion.PlaylistId, totalTracks)
 
 		if err != nil {
 			return err
@@ -185,6 +205,7 @@ func Convert(db *gorm.DB, cache valkey.Client, conversion *models.PlaylistConver
 
 		// Filter out tracks that were already successfully converted
 		tracksToConvert := []types.Track{}
+
 		for _, track := range playlistTracks {
 			if prev, ok := previousResults[track.ID]; ok && prev.Data != "" {
 				// Already converted successfully — carry forward

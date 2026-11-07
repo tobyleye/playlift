@@ -77,6 +77,7 @@ export default function ConnectYoutube() {
         const { data } = await client.post("/login/google/callback", {
           code: codeResponse.code,
           origin: "connect",
+          
         });
         // not likely to not have data, but just in case
         if (!data) throw new Error("No data received");

@@ -127,8 +127,14 @@ func (h Handlers) Convert(c echo.Context) error {
 	}
 
 	for _, conversion := range conversions {
-		task := tasks.NewPlaylistConversionTask(conversion.ConversionID)
+
+		testTask := tasks.NewTestTask(conversion.ConversionID)
+		log.Println("creating test task..", testTask)
+		h.AsynqClient.Enqueue(testTask)
+
+		task, _ := tasks.NewPlaylistConversionTask(conversion.ConversionID, false)
 		taskInfo, err := h.AsynqClient.Enqueue(task)
+
 		if err != nil {
 			log.Println("error enqueing conversion task..", err)
 		} else {

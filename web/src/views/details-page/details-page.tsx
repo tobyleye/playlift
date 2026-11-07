@@ -22,10 +22,11 @@ import {
   Loader,
   MusicIcon,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import useSWR from "swr";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import config from "@/config";
 
 type Track = {
   id: string;
@@ -77,8 +78,8 @@ const StatusBadge = ({ status }: { status: string }) => {
         status === "completed"
           ? "green.400"
           : status === "pending"
-          ? "yellow.400"
-          : "red.400"
+            ? "yellow.400"
+            : "red.400"
       }
       textTransform="capitalize"
     >
@@ -89,15 +90,37 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
+const useSocket = (conversionId: string) => {
+  useEffect(() => {
+    const uri = `ws://localhost:8181/api/conversions/${conversionId}/subscribe`; //  config.API_BASE_URL + `/conversions/${conversionId}/subscribe`;
+    const ws = new WebSocket(uri);
+
+    ws.onopen = function () {
+      console.log("Connected");
+    };
+
+    ws.onmessage = function (evt) {
+      const data = evt.data;
+      console.log("message received", { data });
+    };
+
+    return () => {
+      // close connection at the end of
+      ws.close();
+    };
+  }, [conversionId]);
+};
+
 export default function DetailsPage() {
-  const { id } = useParams();
+  const params = useParams<{ id: string }>();
+  const id = params.id!;
 
   const { data, error, isLoading } = useSWR<ConversionDetails>(
     ["details", id],
-    () => api.fetchSingleConversion(id!),
+    () => api.fetchSingleConversion(id),
     {
       shouldRetryOnError: false,
-    }
+    },
   );
 
   const [trackFilter, setTrackFilter] = useState<string>("all");
@@ -126,11 +149,11 @@ export default function DetailsPage() {
         }
 
         successRate = Math.round(
-          (completedCount / data.playlist_tracks.length) * 100
+          (completedCount / data.playlist_tracks.length) * 100,
         );
 
         overallProgress = Math.round(
-          (totalProcessed / data.playlist_tracks.length) * 100
+          (totalProcessed / data.playlist_tracks.length) * 100,
         );
       }
 
@@ -167,6 +190,7 @@ export default function DetailsPage() {
     return playlistTracks;
   }, [data, trackFilter]);
 
+  useSocket(id);
   return (
     <Box pb={10}>
       <Nav />

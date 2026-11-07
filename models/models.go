@@ -10,7 +10,17 @@ import (
 
 type Token struct {
 	ID           uint      `gorm:"primaryKey;autoIncrement;unique" json:"_id"`
+	Platform     string    `json:"platform"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	TokenType    string    `json:"token_type"`
+	ExpiresIn    time.Time `json:"expires_in"`
+	CreatedAt    time.Time `json:"created_at"`
 	UserId       string    `gorm:"size:200;not null" json:"user_id"`
+}
+
+type SystemToken struct {
+	ID           uint      `gorm:"primaryKey;autoIncrement;unique" json:"_id"`
 	Platform     string    `json:"platform"`
 	AccessToken  string    `json:"access_token"`
 	RefreshToken string    `json:"refresh_token"`

@@ -16,6 +16,13 @@ type Query struct {
 	Type     string
 }
 
+type ConversionLink struct {
+	Platform string `json:"platform"`
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Link     string `json:"link"`
+}
+
 var YOUTUBE_MUSIC = "youtube_music"
 var SPOTIFY = "spotify"
 
@@ -30,10 +37,10 @@ func isPlatformSupported(platform string) bool {
 	return false
 }
 
-func parseLink(link string) (Query, error) {
+func ParseConversionLink(link string) (ConversionLink, error) {
 	urlObj, err := url.Parse(link)
 	if err != nil {
-		return Query{}, err
+		return ConversionLink{}, err
 	}
 
 	if urlObj.Host == config.YOUTUBE_HOST {
@@ -49,8 +56,7 @@ func parseLink(link string) (Query, error) {
 			queryType = "track"
 			queryId = urlQuery.Get("v")
 		}
-		query := Query{Platform: YOUTUBE_MUSIC, ID: queryId, Type: queryType}
-		return query, nil
+		return ConversionLink{Platform: YOUTUBE_MUSIC, ID: queryId, Type: queryType, Link: link}, nil
 
 	} else if urlObj.Host == config.SPOTIFY_HOST {
 		path := urlObj.Path
@@ -60,11 +66,10 @@ func parseLink(link string) (Query, error) {
 		mediaType := parts[1]
 		id := parts[2]
 
-		query := Query{Platform: SPOTIFY, ID: id, Type: mediaType}
-		return query, nil
+		return ConversionLink{Platform: SPOTIFY, ID: id, Type: mediaType, Link: link}, nil
 	}
 
-	return Query{}, errors.New("link is invalid")
+	return ConversionLink{}, errors.New("link is invalid")
 }
 
 func requestBodyToMap(c echo.Context) map[string]interface{} {
@@ -73,10 +78,10 @@ func requestBodyToMap(c echo.Context) map[string]interface{} {
 	return body
 }
 
-func requestBodyToStruct(c echo.Context, v interface{}) {
+func requestBodyToStruct(c echo.Context, v interface{}) error {
 	decoder := json.NewDecoder(c.Request().Body)
-	decoder.DisallowUnknownFields() // Prevent unknown fields
-	decoder.Decode(v)
+	// decoder.DisallowUnknownFields() // Prevent unknown fields
+	return decoder.Decode(v)
 }
 
 func errorResponse(message string) interface{} {

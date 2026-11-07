@@ -4,56 +4,105 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"html/template"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/gorilla/sessions"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/valkey-io/valkey-go"
+	"gorm.io/gorm"
 
+	"github.com/gorilla/websocket"
 	"github.com/hibiken/asynq"
-	echoSession "github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/tobyleye/playlift/config"
+	core "github.com/tobyleye/playlift/core"
 	cronjobs "github.com/tobyleye/playlift/cron-jobs"
 	"github.com/tobyleye/playlift/db"
 	"github.com/tobyleye/playlift/handlers"
 	"github.com/tobyleye/playlift/models"
+	"github.com/tobyleye/playlift/server"
 	"github.com/tobyleye/playlift/session"
 )
 
-type Template struct {
-	templates *template.Template
-}
-
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
-}
-
-func ensureLogin(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		user, err := session.GetUserFromSession(c)
-		if err != nil {
-			log.Println("error getting user session in middleware", err)
-			return c.JSON(401, map[string]string{"error": "unauthorized"})
-		}
-		if user.UserId == "" {
-			return c.JSON(401, map[string]string{"error": "unauthorized"})
-		}
-
-		c.Set("user", user)
-		return next(c)
+var (
+	upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			fmt.Println("checking origin inside websocket..")
+			return true
+		},
 	}
+)
+
+type SocketHandler struct {
+	db     *gorm.DB
+	pubsub valkey.Client
+}
+
+func (h *SocketHandler) Handle(c echo.Context) error {
+	log.Println("inside socket handler...")
+	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
+	if err != nil {
+		return err
+	}
+	defer ws.Close()
+
+	conversionId := c.Param("id")
+	log.Println("listening for  conversion: ", conversionId)
+	// go func() {
+	ctx := context.TODO()
+	err = h.pubsub.Receive(
+		ctx,
+		h.pubsub.B().Subscribe().Channel(conversionId).Build(),
+		func(msg valkey.PubSubMessage) {
+
+			fmt.Printf(
+				"Channel: %s, Message: %s\n",
+				msg.Channel,
+				msg.Message,
+			)
+
+			err := ws.WriteMessage(websocket.TextMessage, []byte(msg.Message))
+			if err != nil {
+				fmt.Println("failed to write ws message", err)
+			}
+		},
+	)
+
+	return nil
+
+	// for {
+	// 	// Write
+	// 	err := ws.WriteMessage(websocket.TextMessage, []byte("Hello, Client!"))
+	// 	if err != nil {
+	// 		c.Logger().Error("failed to write WS message", "error", err)
+	// 	}
+
+	// 	// Read
+	// 	_, msg, err := ws.ReadMessage()
+	// 	if err != nil {
+	// 		c.Logger().Error("failed to read WS message", "error", err)
+	// 	}
+	// 	fmt.Printf("%s\n", msg)
+	// }
 }
 
 func main() {
 	// loads and initializes environment variables
-	config.LoadEnv()
+
+	// err := godotenv.Load()
+	// config.LoadEnv()
+
+	// if err != nil {
+	// 	log.Fatal("Error occurred loading the project .env", err)
+	// }
+	dir, err := os.Getwd()
+	log.Println("[main] working directory is: " + dir)
+
 	// Register the UserSession type with gob for session serialization
 	gob.Register(session.UserSession{})
 
@@ -72,24 +121,26 @@ func main() {
 		&models.PlaylistConversion{},
 		&models.Token{},
 		&models.ConversionWatch{},
+		&models.SystemToken{},
 	)
 
 	if err != nil {
 		log.Println("error running migration..", err)
 	}
 
-	client := asynq.NewClient(asynq.RedisClientOpt{
-		Addr:     fmt.Sprintf("%s:%s", config.REDIS_HOST, config.REDIS_PORT),
-		Password: config.REDIS_PASSWORD,
-	})
+	redisAddr := fmt.Sprintf("%s:%s", config.REDIS_HOST, config.REDIS_PORT)
+	fmt.Println("connecting to redis", redisAddr)
+
+	client := asynq.NewClient(
+		asynq.RedisClientOpt{
+			Addr:     redisAddr,
+			Password: config.REDIS_PASSWORD,
+		})
 
 	err = client.Ping()
 	if err != nil {
 		log.Fatal("Error connecting to Asynq Redis:", err)
 	}
-
-	e := echo.New()
-	e.Use(echoSession.Middleware(SessionStore))
 
 	corsConfig := middleware.CORSConfig{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -111,18 +162,9 @@ func main() {
 
 	}
 
-	e.Use(middleware.CORSWithConfig(corsConfig))
-
-	// Optional: Explicit OPTIONS handler for debugging
-	e.OPTIONS("/*", func(c echo.Context) error {
-		return c.NoContent(http.StatusOK)
-	})
-
-	e.Renderer = &Template{
-		templates: nil,
-	}
-
 	ctx := context.Background()
+
+	fmt.Println("valkey client options {init address}...", config.VALKEY_CLIENT_OPTIONS.InitAddress, config.VALKEY_CLIENT_OPTIONS.Username, config.VALKEY_CLIENT_OPTIONS.Password)
 
 	cache, err := valkey.NewClient(config.VALKEY_CLIENT_OPTIONS)
 
@@ -134,48 +176,27 @@ func main() {
 
 	log.Println("Valkey connected ✅", res)
 
-	handlers := handlers.Handlers{
-		Db:           db,
-		Context:      ctx,
-		SessionStore: SessionStore,
-		Cache:        cache,
-		AsynqClient:  client,
+	appSpotifyClient := core.NewAppSpotifyClient()
+	publicYTMusicClient := core.NewPublicYTMusicClient(db)
+
+	Handlers := handlers.Handlers{
+		Db:                  db,
+		Context:             ctx,
+		SessionStore:        SessionStore,
+		Cache:               cache,
+		AsynqClient:         client,
+		AppSpotifyClient:    appSpotifyClient,
+		PublicYTMusicClient: publicYTMusicClient,
 	}
 
-	// Load templates
-	// define api routes
-	// public routes
+	server := server.NewServer(
+		Handlers,
+		SessionStore,
+	)
 
-	api := e.Group("/api")
+	socketHandler := &SocketHandler{db: db, pubsub: cache}
 
-	api.GET("/health", func(c echo.Context) error {
-		return c.JSON(200,
-			map[string]string{
-				"status": "ok",
-				"time":   time.Now().Format(time.RFC3339),
-			})
-	})
-
-	api.POST("/login/google/callback", handlers.LoginWithGoogleCallback)
-
-	// private routes
-	privateRoutes := api.Group("", ensureLogin)
-
-	privateRoutes.POST("/connect/spotify/callback", handlers.SpotifyLoginCallback, ensureLogin)
-
-	privateRoutes.GET("/user/session", handlers.GetUserSession, ensureLogin)
-
-	privateRoutes.POST("/convert", handlers.Convert)
-	privateRoutes.GET("/conversions/:id", handlers.GetSingleConversion)
-	privateRoutes.POST("/conversions/:id/restart", handlers.RestartConversion)
-	privateRoutes.DELETE("/conversions/:id", handlers.DeleteConversion)
-	privateRoutes.GET("/conversions", handlers.GetAllConversions)
-
-	privateRoutes.GET("/playlists/youtube", handlers.FetchUserYoutubePlaylists)
-	privateRoutes.GET("/playlists/spotify", handlers.FetchUserSpotifyPlaylists)
-	privateRoutes.GET("/connection-status", handlers.GetConnectionStatus)
-	privateRoutes.POST("/logout", handlers.Logout)
-	privateRoutes.POST("/deactivate-account", handlers.DeactivateAccount)
+	server.GET("/conversions/:id/subscribe", socketHandler.Handle)
 
 	if err := cronjobs.StartCronJobs(db, client); err != nil {
 		log.Println("failed to start cron jobs", err)
@@ -186,5 +207,6 @@ func main() {
 	port := os.Getenv("PORT")
 
 	fmt.Println("Starting server on port:", port)
-	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
+	server.Logger.Fatal(server.Start(fmt.Sprintf(":%s", port)))
+
 }

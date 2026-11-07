@@ -48,12 +48,24 @@ func (h Handlers) GetSingleConversion(c echo.Context) error {
 
 func (h Handlers) DeleteConversion(c echo.Context) error {
 	conversionId := c.Param("id")
+	user, _ := session.GetUserFromSession(c)
+
 	var conversion models.PlaylistConversion
-	h.Db.First(&conversion, "id = ?", conversionId)
+
+	h.Db.Where(models.PlaylistConversion{
+		UserId:       user.UserId,
+		ConversionID: conversionId,
+	}).First(&conversion)
+
 	if conversion.ConversionID == "" {
 		return c.JSON(404, struct{}{})
 	}
-	h.Db.Delete(&conversion)
+
+	if err := h.Db.Delete(&conversion).Error; err != nil {
+
+		return c.JSON(500, struct{}{})
+	}
+
 	return c.JSON(200, struct{}{})
 }
 

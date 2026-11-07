@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/tobyleye/playlift/core/ytmusicapi"
+	"github.com/tobyleye/go-ytmusicapi"
 	"github.com/tobyleye/playlift/formatters"
 	"github.com/tobyleye/playlift/types"
 )
@@ -28,7 +28,7 @@ func (c YoutubeConverterClient) GetPlaylistDetails(playlistId string) (types.Pla
 
 }
 
-func (c YoutubeConverterClient) GetPlaylistTracks(playlistId string) ([]types.Track, error) {
+func (c YoutubeConverterClient) GetPlaylistTracks(playlistId string, count interface{}) ([]types.Track, error) {
 	// Implementation for fetching playlist tracks from YouTube
 	playlistTracks, err := ytmusicapi.FetchAllPlaylistTracks(c.client, playlistId)
 	if err != nil {
@@ -42,7 +42,7 @@ func (c YoutubeConverterClient) GetPlaylistTracks(playlistId string) ([]types.Tr
 
 func (c YoutubeConverterClient) SearchTrack(title string, artists []string) (*types.Track, error) {
 	// Implementation for searching a track on YouTube
-	searchResult, err := ytmusicapi.SearchOne(c.client, types.SearchQuery{
+	searchResult, err := ytmusicapi.SearchOne(c.client, ytmusicapi.SearchQuery{
 		Title:   title,
 		Artists: artists,
 		Type:    "audio",
@@ -81,6 +81,6 @@ func (c YoutubeConverterClient) AddTracksToPlaylist(playlistId string, tracks []
 	return ytmusicapi.AddTracksToPlaylist(c.client, playlistId, tracks)
 }
 
-func NewYoutubeConverterClient(client *http.Client) PlatformClient {
+func NewYoutubeConverterClient(client *http.Client) ConverterClient {
 	return &YoutubeConverterClient{client: client}
 }

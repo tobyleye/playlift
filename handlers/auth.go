@@ -52,8 +52,8 @@ func (h Handlers) LoginWithGoogleCallback(c echo.Context) error {
 	// Changed the ux_mode from redirect to popup and
 	// i think this way we can just use the base url of the frontend as
 	// the redirect uri
-	redirectURL, _ := body["redirect_url"].(string)
-
+	// redirectURL, _ := body["redirect_url"].(string)
+	redirectURL := config.FRONTEND_BASE_URL
 	log.Println("user logging in with google, redirect uri:", body, code)
 
 	// if origin == "login" {

@@ -12,13 +12,13 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-type SpotifyClient struct {
+type SpotifyConverterClient struct {
 	*spotify.Client
 	spotifyUserId string
 	context       context.Context
 }
 
-func (c SpotifyClient) GetPlaylistDetails(playlistId string) (types.PlaylistDetails, error) {
+func (c SpotifyConverterClient) GetPlaylistDetails(playlistId string) (types.PlaylistDetails, error) {
 
 	if playlistId == "LM" {
 		return types.PlaylistDetails{
@@ -41,16 +41,33 @@ func (c SpotifyClient) GetPlaylistDetails(playlistId string) (types.PlaylistDeta
 	}, nil
 }
 
-func (c SpotifyClient) GetPlaylistTracks(playlistId string) ([]types.Track, error) {
+func (c SpotifyConverterClient) GetPlaylistTracks(playlistId string, count interface{}) ([]types.Track, error) {
+	realCount := count.(int)
+
+	fmt.Println("realCount..", realCount)
+
 	// Implementation for fetching playlist tracks from YouTube
 	var playlistTracks []*spotify.FullTrack
 	// options := spotify.RequestOption() // Spotify API allows a maximum of 100 items per request, but we use 50 for better performance
 
 	offset := 0
-	limit := 50
+	const MAX_LIMIT = 50
 
 	for {
+		var limit int
+
 		hasNext := false
+		totalFetched := len(playlistTracks)
+		remaining := realCount - totalFetched
+
+		if realCount > 0 {
+			limit = utils.Min(remaining, MAX_LIMIT)
+		} else {
+			limit = MAX_LIMIT // default limit to use
+		}
+
+		fmt.Printf("fetching playlist.. limit=%d\n", limit)
+
 		if playlistId == "LM" {
 			savedTracks, err := c.Client.CurrentUsersTracks(c.context, spotify.Limit(limit), spotify.Offset(offset))
 			if err != nil {
@@ -60,7 +77,6 @@ func (c SpotifyClient) GetPlaylistTracks(playlistId string) ([]types.Track, erro
 			for _, track := range savedTracks.Tracks {
 				playlistTracks = append(playlistTracks, &track.FullTrack)
 			}
-
 			hasNext = savedTracks.Next != ""
 		} else {
 			tracks, err := c.Client.GetPlaylistItems(c.context, spotify.ID(playlistId),
@@ -79,7 +95,7 @@ func (c SpotifyClient) GetPlaylistTracks(playlistId string) ([]types.Track, erro
 
 		}
 
-		if !hasNext {
+		if !hasNext || (realCount > 0 && remaining > 0) {
 			break
 		}
 
@@ -93,7 +109,7 @@ func (c SpotifyClient) GetPlaylistTracks(playlistId string) ([]types.Track, erro
 
 }
 
-func (c SpotifyClient) SearchTrack(title string, artists []string) (*types.Track, error) {
+func (c SpotifyConverterClient) SearchTrack(title string, artists []string) (*types.Track, error) {
 	// Implementation for searching a track on Spotify
 	query := fmt.Sprintf("track:%s artist:%s", title, strings.Join(artists, ", "))
 	result, err := c.Client.Search(c.context, query, spotify.SearchTypeTrack, spotify.Limit(1))
@@ -111,7 +127,7 @@ func (c SpotifyClient) SearchTrack(title string, artists []string) (*types.Track
 	return &foundTrack, nil
 }
 
-func (c SpotifyClient) CreatePlaylist(playlistTitle string, playlistDescription string, tracks []string) (string, string, error) {
+func (c SpotifyConverterClient) CreatePlaylist(playlistTitle string, playlistDescription string, tracks []string) (string, string, error) {
 	// Implementation for creating a playlist on Spotify
 	createdPlaylist, err := c.Client.CreatePlaylistForUser(c.context, c.spotifyUserId, playlistTitle, playlistDescription, false, false)
 
@@ -144,7 +160,7 @@ func (c SpotifyClient) CreatePlaylist(playlistTitle string, playlistDescription 
 
 }
 
-func (c SpotifyClient) AddTracksToPlaylist(playlistId string, tracks []string) error {
+func (c SpotifyConverterClient) AddTracksToPlaylist(playlistId string, tracks []string) error {
 	if len(tracks) == 0 {
 		return nil
 	}
@@ -167,6 +183,6 @@ func (c SpotifyClient) AddTracksToPlaylist(playlistId string, tracks []string) e
 	return nil
 }
 
-func NewSpotifyClient(client *spotify.Client, spotifyUserId string) PlatformClient {
-	return &SpotifyClient{Client: client, context: context.Background(), spotifyUserId: spotifyUserId}
+func NewSpotifyClient(client *spotify.Client, spotifyUserId string) ConverterClient {
+	return &SpotifyConverterClient{Client: client, context: context.Background(), spotifyUserId: spotifyUserId}
 }

@@ -13,6 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
+
+
 var SpotifyAuthenticator = spotifyauth.New(
 	spotifyauth.WithRedirectURL(
 		os.Getenv("SPOTIFY_REDIRECT_URL"),
@@ -32,6 +34,7 @@ var SpotifyAuthenticator = spotifyauth.New(
 		os.Getenv("SPOTIFY_CLIENT_SECRET"),
 	),
 )
+
 
 func CreateSpotifyClient(token *oauth2.Token) *spotify.Client {
 
